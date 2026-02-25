@@ -1,0 +1,70 @@
+# TypeScript Compiled Output
+*.js
+*.js.map
+*.d.ts
+dist/
+build/
+out/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary Files
+tmp/
+temp/
+.cache/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# Build & Distribution
+dist/
+build/
+lib/
+es/
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+
+# Documentation Build
+docs/_build/
+docs/.build/
+
+# Misc
+.turbo/
+.next/
