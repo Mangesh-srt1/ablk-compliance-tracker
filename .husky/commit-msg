@@ -1,0 +1,31 @@
+#!/bin/sh
+. "$(cd -- "$(dirname -- "$0")" && pwd)/_/husky.sh"
+
+echo "✏️ Validating commit message..."
+
+COMMIT_MSG=$(cat "$1")
+
+# Conventional commits pattern: type(scope): message
+# Examples: feat(api): add new endpoint, fix(db): resolve connection issue
+if echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?!?:\s.+'; then
+  echo "✅ Commit message follows conventional commit format"
+  exit 0
+elif echo "$COMMIT_MSG" | grep -qE '(merge|Merge)'; then
+  echo "✅ Merge commit allowed"
+  exit 0
+else
+  echo "❌ Commit message does not follow conventional commit format"
+  echo ""
+  echo "📋 Expected format:"
+  echo "   feat(scope): description"
+  echo "   fix(scope): description"
+  echo "   docs(scope): description"
+  echo "   style(scope): description"
+  echo "   refactor(scope): description"
+  echo "   perf(scope): description"
+  echo "   test(scope): description"
+  echo "   chore(scope): description"
+  echo ""
+  echo "📖 See: https://www.conventionalcommits.org/"
+  exit 1
+fi

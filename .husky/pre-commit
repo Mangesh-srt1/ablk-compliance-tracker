@@ -1,0 +1,45 @@
+#!/bin/sh
+. "$(cd -- "$(dirname -- "$0")" && pwd)/_/husky.sh"
+
+echo "🔍 Pre-commit hook: Running linting and type checking..."
+
+# Change to compliance-system directory if not already there
+cd compliance-system 2>/dev/null || cd "$(dirname -- "$0")/../../compliance-system" || {
+  echo "❌ Could not find compliance-system directory"
+  exit 1
+}
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$')
+
+if [ -z "$STAGED_FILES" ]; then
+  echo "✅ No TypeScript/JavaScript files to check"
+  exit 0
+fi
+
+echo "📝 Staged files:"
+echo "$STAGED_FILES" | sed 's/^/   /'
+
+# Run ESLint on staged files
+echo ""
+echo "🔧 Running ESLint..."
+npx eslint $STAGED_FILES --max-warnings 0 || {
+  echo "❌ ESLint check failed"
+  exit 1
+}
+
+echo "✅ ESLint passed"
+
+# Run TypeScript compiler (type check only)
+echo ""
+echo "🔷 Running TypeScript type check..."
+npx tsc --noEmit || {
+  echo "❌ TypeScript type check failed"
+  exit 1
+}
+
+echo "✅ TypeScript type check passed"
+
+echo ""
+echo "✅ Pre-commit hook passed! Ready to commit."
+exit 0

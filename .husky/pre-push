@@ -1,0 +1,34 @@
+#!/bin/sh
+. "$(cd -- "$(dirname -- "$0")" && pwd)/_/husky.sh"
+
+echo "🧪 Pre-push hook: Running tests before push..."
+
+# Change to compliance-system directory
+cd compliance-system 2>/dev/null || cd "$(dirname -- "$0")/../../compliance-system" || {
+  echo "❌ Could not find compliance-system directory"
+  exit 1
+}
+
+# Detect if we're pushing to main branch (stricter checks)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "📤 Pushing to branch: $BRANCH"
+
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
+  echo "🔴 Pushing to main branch - Running full test suite..."
+  npm run test:ci || {
+    echo "❌ Tests failed - Push blocked"
+    echo "💡 Tip: Run 'npm run test:coverage' locally to debug"
+    exit 1
+  }
+else
+  echo "🟡 Pushing to feature branch - Running quick tests..."
+  npm run test:unit || {
+    echo "⚠️ Unit tests failed"
+    echo "💡 Tip: Fix tests locally before pushing"
+    exit 1
+  }
+fi
+
+echo ""
+echo "✅ Pre-push hook passed! Proceeding with push."
+exit 0
