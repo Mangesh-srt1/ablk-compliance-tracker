@@ -47,6 +47,9 @@
     "db:migrate": "npm run migrate --workspace=src/api",
     "db:migrate:latest": "npm run migrate:latest --workspace=src/api",
     "db:seed": "npm run seed --workspace=src/api",
+    "sonar": "npm run test:coverage && npx sonarqube-scanner",
+    "sonar:check": "curl -s http://localhost:9000/api/projects/search?keys=ablk-compliance-system | jq .components[0].key || echo '❌ Project not found'",
+    "sonar:install": "npm install --save-dev sonarqube-scanner",
     "clean": "rm -rf dist build .turbo node_modules && npm install",
     "clean:deep": "rm -rf dist build .turbo .cache node_modules src/*/dist src/*/node_modules && npm install"
   },
@@ -61,6 +64,7 @@
     "husky": "^9.0.11",
     "jest": "^29.7.0",
     "prettier": "^3.1.1",
+    "sonarqube-scanner": "^3.2.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3"
   }

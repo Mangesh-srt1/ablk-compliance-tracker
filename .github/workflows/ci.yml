@@ -118,6 +118,16 @@ jobs:
           fi
           echo "✅ Coverage check passed"
 
+  sonarqube:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [test]
+    if: false  # Disabled - use local SonarQube server for analysis
+
+    steps:
+      - name: Skipped - Run locally instead
+        run: echo "SonarQube analysis runs locally. See SONARQUBE_SETUP.md for instructions"
+
   security-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -241,6 +251,7 @@ jobs:
           fi
           
           echo "✅ All critical checks passed"
+          echo "💡 Tip: Run SonarQube analysis locally with: npm run sonar"
 
   notify:
     runs-on: ubuntu-latest
