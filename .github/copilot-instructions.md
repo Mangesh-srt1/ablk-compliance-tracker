@@ -284,6 +284,72 @@ docker-compose -f docker-compose.yml up -d  # Start with production config
 # Ableka Lumina does NOT set up blockchain infrastructure
 ```
 
+### Git Hooks & Pre-commit Validation (Husky)
+
+**Automatic Code Quality Enforcement:**
+Git hooks prevent bad code before committing. All hooks are configured and committed to version control.
+
+**Installation** (Run once after cloning):
+```bash
+cd compliance-system
+npm run bootstrap  # Automatically installs and sets up Husky
+
+# Or manually:
+npm install husky --save-dev
+npx husky install
+```
+
+**Hooks Installed:**
+
+1. **`commit-msg` Hook** - Validates commit message format
+   - **Format**: Enforces Conventional Commits (type(scope): message)
+   - **Valid Examples**:
+     - `feat(api): add new KYC endpoint`
+     - `fix(db): resolve connection issue`
+     - `docs(readme): update installation`
+     - `test(agents): add supervisor agent tests`
+   - **Invalid Examples** (will be rejected):
+     - `update code` ❌ (missing type)
+     - `API changes` ❌ (incorrect format)
+   - **Bypass** (if absolutely necessary): `git commit --no-verify -m "message"`
+
+2. **`pre-commit` Hook** - Code quality validation before commit
+   - **Checks**: ESLint (style) + TypeScript (type safety)
+   - **Scope**: Only staged TypeScript/JavaScript files
+   - **Execution**: Automatic on `git commit`
+   - **Output**: Shows errors and helpful fixes
+   - **Fixes available**: Run `npm run lint:fix` before committing
+   - **Bypass**: `HUSKY=0 git commit -m "message"` (use carefully)
+
+3. **`pre-push` Hook** - Test validation before pushing to remote
+   - **Behavior**:
+     - **Main/Master branch**: Runs full test suite (`npm run test:ci`)
+     - **Feature branches**: Runs quick unit tests only (`npm run test:unit`)
+   - **Purpose**: Prevent pushing broken code to shared branches
+   - **Bypass**: `git push --no-verify` (not recommended)
+
+**Troubleshooting Husky:**
+```bash
+# Verify hooks are executable
+ls -la .husky/
+
+# Re-install hooks (if they break)
+npx husky install
+
+# Manually test pre-commit hook
+sh .husky/pre-commit
+
+# Disable hooks temporarily
+export HUSKY=0
+git commit -m "bypassing hooks"
+unset HUSKY
+```
+
+**For CI/CD:**
+- Husky hooks run locally on developer machines
+- GitHub Actions CI pipeline (`ci.yml`) provides secondary validation
+- Both layers work together: local fast feedback + remote enforcement
+
 ### Service Entry Points (Port Mappings for Development)
 - **API Service:** 
   - External: http://localhost:4000 (dev mode)
