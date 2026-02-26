@@ -12,6 +12,37 @@ A 100% **AI-driven RegTech SaaS platform** using LangChain.js agents for automat
 - **Compliance:** Multi-jurisdiction rules engine (YAML-based), jurisdiction-specific flow routing
 - **Integrations:** Ballerine (KYC), Marble (AML), Chainalysis (blockchain sanctions), The Graph (subgraph queries)
 
+## 📚 System Architecture Documentation References
+
+**All comprehensive system architecture documentation is located in:**
+```
+Planning docs/System Architecture/
+├── ComplianceShield_RWA_Enterprise_Implementation.md (CORE - 700+ lines)
+│   └─ Complete system design, ERD, API specs, workflows, K8s manifests, AWS CDK
+├── ComplianceShield_Enterprise_Architecture_Diagram.md
+│   └─ 10-layer system architecture, all components & data flows
+├── ComplianceShield_Open_Source_Tech_Stack.md
+│   └─ 100% open source stack, global platform (multi-region, i18n, currencies)
+├── ComplianceShield_Option_B_Architecture.md
+│   └─ Real-time monitoring architecture, AI/LLM integration
+└── architecture-overview.md
+    └─ High-level architecture overview
+```
+
+**Every Agent Task Should Reference:**
+1. **ComplianceShield_RWA_Enterprise_Implementation.md** - For system design & data models
+2. **ComplianceShield_Enterprise_Architecture_Diagram.md** - For component relationships
+3. **ComplianceShield_Open_Source_Tech_Stack.md** - For technology choices & global platform details
+4. **MASTER_IMPLEMENTATION_PLAN.md** - For project phases & timelines
+
+**Before implementing any feature:**
+- Review relevant section in ComplianceShield_RWA_Enterprise_Implementation.md
+- Verify alignment with architecture diagrams
+- Check open source tech stack for approved libraries
+- Ensure compliance requirements met (see SEBI checklist in implementation guide)
+
+---
+
 ## Critical Architecture Knowledge
 
 ### AI Agent Architecture (LangChain.js ReAct Pattern)
@@ -244,6 +275,440 @@ npm run test:watch
 
 # Coverage target: 80%+ for agent logic
 npm run test:coverage
+```
+
+---
+
+## 🎯 UNIT TESTING: CRITICAL PRIORITY
+
+**Unit Testing is a FIRST-CLASS REQUIREMENT** for all compliance code. Do NOT commit code without comprehensive unit test coverage.
+
+### Testing Strategy (Test-Driven Development)
+
+1. **Write Tests FIRST** (before implementing features)
+2. **Test-Driven Development Flow:**
+   - Write failing test
+   - Implement minimum code to pass test
+   - Refactor for clarity
+   - Commit with tests
+
+### Unit Test Coverage Requirements
+
+**Mandatory (80%+ coverage):**
+- ✅ All compliance decision logic (KYC, AML, risk scoring)
+- ✅ All API endpoint handlers
+- ✅ All data transformations
+- ✅ All error handling paths
+- ✅ All validation logic
+- ✅ All agent orchestration flows
+
+**Critical Business Logic Tests:**
+```typescript
+// Example: Transfer Compliance Service (MUST test all paths)
+
+describe('TransferComplianceService', () => {
+  // 1. Happy path: Approved transfer
+  it('should APPROVE low-risk KYC-verified transfer', async () => {
+    const input = { from: user1, to: user2, amount: 10000 };
+    const result = await service.checkTransferCompliance(input);
+    expect(result.status).toBe('APPROVED');
+    expect(result.riskScore).toBeLessThan(30);
+  });
+
+  // 2. Edge case: Escalated transfer (medium risk)
+  it('should ESCALATE medium-risk transfer pending review', async () => {
+    const input = { from: user2, to: user3, amount: 500000 }; // Large amount
+    const result = await service.checkTransferCompliance(input);
+    expect(result.status).toBe('ESCALATED');
+    expect(result.riskScore).toBeGreaterThanOrEqual(30);
+    expect(result.riskScore).toBeLessThan(70);
+  });
+
+  // 3. Rejection case: Sanctions match
+  it('should REJECT transfer from sanctioned wallet', async () => {
+    const input = { from: sanctionedUser, to: user2, amount: 100000 };
+    const result = await service.checkTransferCompliance(input);
+    expect(result.status).toBe('REJECTED');
+    expect(result.riskScore).toBeGreaterThanOrEqual(70);
+    expect(result.reasoning).toContain('Sanctions');
+  });
+
+  // 4. Idempotency: Same request twice returns same result
+  it('should return cached result for idempotent request', async () => {
+    const input = { from: user1, to: user2, amount: 10000 };
+    const result1 = await service.checkTransferCompliance(input);
+    const result2 = await service.checkTransferCompliance(input);
+    expect(result1).toEqual(result2);
+    expect(service.getCacheHits()).toBeGreaterThan(0);
+  });
+
+  // 5. Parallel processing: Multiple checks run simultaneously
+  it('should run KYC, AML, sanctions in parallel', async () => {
+    const input = { from: user1, to: user2, amount: 10000 };
+    const startTime = Date.now();
+    const result = await service.checkTransferCompliance(input);
+    const duration = Date.now() - startTime;
+    expect(duration).toBeLessThan(100); // Should complete in <100ms (parallel)
+    expect(result).toBeDefined();
+  });
+
+  // 6. Error handling: Gracefully handle external API failures
+  it('should handle Ballerine API timeout with degradation', async () => {
+    // Mock Ballerine to timeout
+    mockBallerine.verify.mockRejectedValue(new TimeoutError());
+    
+    const input = { from: user1, to: user2, amount: 10000 };
+    const result = await service.checkTransferCompliance(input);
+    
+    // Should still return decision based on available data
+    expect(result).toBeDefined();
+    expect(result.status).toBeTruthy();
+    expect(result.reasoning).toContain('KYC unavailable');
+  });
+});
+```
+
+### Test Classification
+
+**Unit Tests (Mocked):**
+- Pure function tests (risk calculation, decision logic)
+- Service methods (with mocked databases, APIs, external services)
+- No I/O, no network calls, <100ms execution
+- Run hundreds per test suite
+
+**Integration Tests (Real DB, Mocked APIs):**
+- API endpoint tests (with real PostgreSQL, Redis)
+- Database transaction tests
+- Workflow orchestration tests
+- Can take 1-10 seconds per test
+
+**E2E Tests (Optional, full stack):**
+- Real external APIs (Ballerine, Marble) - only with test credentials
+- Real blockchain interactions (testnet)
+- Full user journeys
+- Run nightly, not on every commit
+
+### Testing Tools & Frameworks
+
+**Test Framework:**
+- **Jest** (Apache 2.0) - Fast, parallel test execution, great TypeScript support
+  ```bash
+  npm install --save-dev jest @types/jest ts-jest @jest/globals
+  npm install --save-dev jest-extended  # Additional matchers
+  ```
+
+**Mocking Libraries:**
+- **jest.mock()** - Built-in mocking
+- **sinon** (BSD) - Advanced mocking/stubbing
+- **nock** (MIT) - HTTP mocking
+  ```bash
+  npm install --save-dev nock
+  ```
+
+**Coverage Tools:**
+- **nyc** (ISC) - Code coverage reports
+  ```bash
+  npm install --save-dev nyc
+  npm run test:coverage  # Generate HTML coverage report in coverage/
+  ```
+
+### Jest Configuration Example
+
+```javascript
+// jest.config.js
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src'],
+  testMatch: ['**/__tests__/**/*.test.ts', '**/?(*.)+(spec|test).ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/**/index.ts',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+  ],
+};
+```
+
+### Package.json Test Scripts
+
+```json
+{
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
+  }
+}
+```
+
+### Test File Organization
+
+```
+src/
+├── services/
+│   ├── transferComplianceService.ts
+│   └── __tests__/
+│       ├── transferComplianceService.test.ts
+│       ├── transferComplianceService.integration.test.ts
+│       └── fixtures/
+│           ├── mockUsers.ts
+│           └── mockTransactions.ts
+│
+├── agents/
+│   ├── supervisorAgent.ts
+│   └── __tests__/
+│       ├── supervisorAgent.test.ts
+│       └── fixtures/
+│           └── mockTools.ts
+│
+└── routes/
+    ├── complianceRoutes.ts
+    └── __tests__/
+        └── complianceRoutes.test.ts
+```
+
+### Testing Compliance Logic (Real Examples)
+
+**Example 1: Risk Score Calculation**
+```typescript
+// services/__tests__/riskScoringEngine.test.ts
+describe('RiskScoringEngine', () => {
+  const engine = new RiskScoringEngine();
+
+  // Test that weights sum to 100%
+  it('should have weights that sum to 100', () => {
+    const weights = engine.getWeights();
+    const sum = Object.values(weights).reduce((a, b) => a + b, 0);
+    expect(sum).toBe(100);
+  });
+
+  // Test specific scenarios
+  it('should calculate KYC-verified user as low risk', () => {
+    const score = engine.calculateRiskScore({
+      kyc_verified: true,
+      kyc_risk: 10,
+      aml_score: 20,
+      sanctions_match: false,
+      velocity_normal: true,
+      pep_match: false,
+    });
+    expect(score).toBeLessThan(30); // APPROVED threshold
+  });
+
+  // Test failure modes
+  it('should calculate maximum risk for unverified + sanctions match', () => {
+    const score = engine.calculateRiskScore({
+      kyc_verified: false,
+      kyc_risk: 100,
+      aml_score: 100,
+      sanctions_match: true,
+      velocity_normal: false,
+      pep_match: true,
+    });
+    expect(score).toBeGreaterThanOrEqual(90);
+  });
+});
+```
+
+**Example 2: API Error Handling**
+```typescript
+// routes/__tests__/complianceRoutes.test.ts
+describe('POST /v1/compliance/transfer-check', () => {
+  // Test successful flow
+  it('should return APPROVED decision for valid request', async () => {
+    const response = await request(app)
+      .post('/v1/compliance/transfer-check')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({
+        from_address: validUser.wallet,
+        to_address: validUser2.wallet,
+        amount: 10000,
+        currency: 'USD'
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('status');
+    expect(response.body).toHaveProperty('riskScore');
+  });
+
+  // Test input validation
+  it('should return 400 for missing required fields', async () => {
+    const response = await request(app)
+      .post('/v1/compliance/transfer-check')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ from_address: validUser.wallet }); // Missing to_address, amount
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBeDefined();
+  });
+
+  // Test authentication
+  it('should return 401 for missing JWT token', async () => {
+    const response = await request(app)
+      .post('/v1/compliance/transfer-check')
+      .send({
+        from_address: validUser.wallet,
+        to_address: validUser2.wallet,
+        amount: 10000
+      });
+
+    expect(response.status).toBe(401);
+  });
+
+  // Test external API failure recovery
+  it('should handle Ballerine API failure gracefully', async () => {
+    // Mock Ballerine to return error
+    jest.spyOn(ballerineService, 'verify').mockRejectedValue(
+      new Error('Ballerine API timeout')
+    );
+
+    const response = await request(app)
+      .post('/v1/compliance/transfer-check')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({
+        from_address: validUser.wallet,
+        to_address: validUser2.wallet,
+        amount: 10000
+      });
+
+    expect(response.status).toBe(200); // Should still respond
+    expect(response.body.status).toBeTruthy();
+  });
+});
+```
+
+### Continuous Integration (CI) Requirements
+
+**Before Merge to Main:**
+```bash
+✅ npm run lint        # ESLint check
+✅ npm run typecheck   # TypeScript compilation
+✅ npm run test:ci     # All tests with coverage
+✅ Coverage ≥ 80%      # Enforcement
+✅ No type errors      # Strict mode
+```
+
+**GitHub Actions Example:**
+```yaml
+name: CI Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:ci
+      - name: Coverage Check
+        run: |
+          if [ $(cat coverage/coverage-summary.json | jq '.total.lines.pct') -lt 80 ]; then
+            echo "Coverage below 80%"
+            exit 1
+          fi
+```
+
+### Unit Testing Compliance Agents
+
+**Critical: Agent Test Must Verify:**
+1. ✅ Tool selection (right tools for the job)
+2. ✅ Tool orchestration (correct order, parallel vs sequential)
+3. ✅ Decision logic (risk scoring unchanged)
+4. ✅ Reasoning explanation (LLM output is coherent)
+5. ✅ Error resilience (handles tool failures)
+
+```typescript
+// agents/__tests__/supervisorAgent.test.ts
+describe('SupervisorAgent', () => {
+  let agent: SupervisorAgent;
+  let mockTools: any;
+
+  beforeEach(() => {
+    mockTools = {
+      kycTool: {
+        call: jest.fn().mockResolvedValue({ status: 'VERIFIED', confidence: 0.98 })
+      },
+      amlTool: {
+        call: jest.fn().mockResolvedValue({ riskScore: 20 })
+      },
+      sanctionsTool: {
+        call: jest.fn().mockResolvedValue({ flags: [] })
+      },
+      jurisdictionRulesTool: {
+        call: jest.fn().mockResolvedValue({ maxTransfer: 1000000 })
+      }
+    };
+    agent = new SupervisorAgent(mockTools);
+  });
+
+  // Test 1: All tools called
+  it('should call all compliance tools', async () => {
+    await agent.runKYCCheck({
+      name: 'John Doe',
+      jurisdiction: 'AE'
+    });
+
+    expect(mockTools.kycTool.call).toHaveBeenCalled();
+    expect(mockTools.amlTool.call).toHaveBeenCalled();
+    expect(mockTools.sanctionsTool.call).toHaveBeenCalled();
+    expect(mockTools.jurisdictionRulesTool.call).toHaveBeenCalled();
+  });
+
+  // Test 2: Correct decision made
+  it('should APPROVE when all checks pass', async () => {
+    const result = await agent.runKYCCheck({
+      name: 'John Doe',
+      jurisdiction: 'AE'
+    });
+
+    expect(result.status).toBe('APPROVED');
+    expect(result.riskScore).toBeLessThan(30);
+  });
+
+  // Test 3: Tool failure handling
+  it('should ESCALATE when KYC tool unavailable', async () => {
+    mockTools.kycTool.call.mockRejectedValue(new Error('Service timeout'));
+
+    const result = await agent.runKYCCheck({
+      name: 'John Doe',
+      jurisdiction: 'AE'
+    });
+
+    expect(result.status).toBe('ESCALATED');
+    expect(result.reasoning).toContain('KYC unavailable');
+  });
+
+  // Test 4: Explainability
+  it('should provide human-readable reasoning', async () => {
+    const result = await agent.runKYCCheck({
+      name: 'John Doe',
+      jurisdiction: 'AE'
+    });
+
+    expect(result.reasoning).toMatch(/\w+/); // Has text explanation
+    expect(result.reasoning.length).toBeGreaterThan(10);
+  });
+});
 ```
 
 ## Code Patterns & Conventions
@@ -773,6 +1238,178 @@ This ensures:
 - ✅ Blockchain monitoring is optional (core API works without it)
 - ✅ Client can enable/disable monitoring anytime
 
+---
+
+## 🚀 CRITICAL CHECKLIST: Before Implementing Any Feature
+
+### Step 1: Architecture Review
+- [ ] Read relevant section in `Planning docs/System Architecture/ComplianceShield_RWA_Enterprise_Implementation.md`
+- [ ] Review system diagram in `ComplianceShield_Enterprise_Architecture_Diagram.md`
+- [ ] Check open source tech stack in `ComplianceShield_Open_Source_Tech_Stack.md`
+- [ ] Verify deployment approach in `ComplianceShield_Deployment_Operations.md`
+- [ ] Understand data model from ERD (12 tables, relationships, indices)
+- [ ] Confirm API endpoint specification and latency SLOs
+- [ ] Verify jurisdiction-specific compliance rules apply
+
+### Step 2: Unit Testing Plan
+- [ ] Design unit tests BEFORE writing code
+- [ ] Plan test cases for:
+  - Happy path (everything succeeds)
+  - Edge cases (boundary conditions)
+  - Error cases (failures, timeouts, missing data)
+  - Idempotency (same request = same result)
+  - Parallel processing (concurrent executions)
+  - Graceful degradation (external API failures)
+- [ ] Target 80%+ code coverage minimum
+- [ ] Use Jest + mocking for isolated tests
+- [ ] Create test fixtures in `__tests__/fixtures/`
+
+### Step 3: Implementation with TDD
+1. **Write failing test** (red)
+   ```bash
+   npm run test:watch  # Watch for changes
+   ```
+   - Test should be specific and testable
+   - Mock all external dependencies
+   - Include assertions for all logic paths
+
+2. **Implement minimum code to pass** (green)
+   - Write just enough code to make test pass
+   - Don't optimize prematurely
+   - Focus on correctness first
+
+3. **Refactor for clarity** (blue)
+   - Improve code readability
+   - Remove duplication
+   - Optimize performance if needed
+   - Re-run tests to ensure no breakage
+
+4. **Commit with tests**
+   ```bash
+   git commit -m "feature: implement X with comprehensive unit tests"
+   ```
+   - Always commit tests alongside code
+   - Never commit code without tests
+
+### Step 4: Before Merge to Main
+```bash
+✅ npm run lint              # ESLint check
+✅ npm run typecheck        # TypeScript strict mode
+✅ npm run test:ci          # All tests + coverage
+✅ Coverage ≥ 80%           # Explicit check
+✅ No type errors           # Zero tolerance
+✅ Architecture alignment   # Reviewed by architect
+```
+
+---
+
+## 📋 Reference Architecture Documents
+
+When implementing features, always reference the appropriate architecture document:
+
+| Feature Type | Primary Reference | Secondary References |
+|---|---|---|
+| **KYC/AML Logic** | RWA Enterprise Implementation (Identity & Access Layer) | Open Source Tech Stack (KYC integration), SEBI checklist |
+| **Transfer Compliance** | RWA Enterprise Implementation (Compliance Engine) + API Specs | Architecture Diagram (Compliance layer), Option B (Real-time) |
+| **Blockchain Integration** | Option B Architecture (Real-time monitoring) | RWA Implementation (Blockchain Integration), Open Source (blockchain-agnostic) |
+| **Database Schema** | RWA Enterprise Implementation (ERD + DDL) | Deployment Operations (migration strategy) |
+| **API Endpoints** | RWA Enterprise Implementation (API Specifications) | Enterprise Architecture Diagram (API Gateway) |
+| **Deployment** | Deployment Operations guide | CDK code in RWA Implementation |
+| **Global Support** | Open Source Tech Stack (Global platform) | RWA Implementation (Data residency) |
+| **Compliance** | SEBI Checklist in RWA Implementation | MASTER_IMPLEMENTATION_PLAN (roadmap) |
+
+---
+
+## 🎓 Learning Path for New Developers
+
+1. **Week 1: Foundation**
+   - Read: `Planning docs/System Architecture/architecture-overview.md`
+   - Read: `Planning docs/System Architecture/ComplianceShield_Enterprise_Architecture_Diagram.md`
+   - Understanding: System layers, component relationships, data flows
+
+2. **Week 2: Technical Depth**
+   - Read: `Planning docs/System Architecture/ComplianceShield_RWA_Enterprise_Implementation.md`
+   - Focus: Database schema, API specifications, integration flows
+   - Task: Map existing code to architecture components
+
+3. **Week 3: Technology Stack**
+   - Read: `Planning docs/System Architecture/ComplianceShield_Open_Source_Tech_Stack.md`
+   - Understanding: Open source components, global platform features, deployment options
+
+4. **Week 4: Advanced Patterns**
+   - Read: `Planning docs/System Architecture/ComplianceShield_Option_B_Architecture.md`
+   - Understanding: Real-time monitoring, AI/ML patterns, LangChain agent orchestration
+
+5. **Week 5+: Implementation**
+   - Start with small features
+   - Follow TDD pattern (test first)
+   - Reference architecture docs continuously
+   - Maintain 80%+ test coverage
+
+---
+
+## ⚡ Quick Reference: Architecture vs Code
+
+When you need to implement something:
+
+**1. What to build?**
+→ Check: `ComplianceShield_RWA_Enterprise_Implementation.md` (ERD section)
+
+**2. How does it fit in the system?**
+→ Check: `ComplianceShield_Enterprise_Architecture_Diagram.md` (10 layers)
+
+**3. What are the API specs?**
+→ Check: `ComplianceShield_RWA_Enterprise_Implementation.md` (API Specifications section)
+
+**4. How to test it?**
+→ Check: This document (Unit Testing section)
+
+**5. How to deploy it?**
+→ Check: `Planning docs/Deployment_Operations.md` (Kubernetes/AWS CDK)
+
+**6. What tech should I use?**
+→ Check: `ComplianceShield_Open_Source_Tech_Stack.md` (approved libraries)
+
+**7. What about global/compliance?**
+→ Check: `ComplianceShield_Open_Source_Tech_Stack.md` (global platform & SEBI checklist in RWA Implementation)
+
+---
+
+## Summary: Architecture + Testing = Quality
+
+```
+Every Feature Implementation = Architecture Understanding + TDD + CI/CD
+
+Architecture Documentation
+  ↓
+Understand system design requirements
+  ↓
+Write failing unit tests
+  ↓
+Implement with green tests
+  ↓
+Refactor for clarity
+  ↓
+Achieve 80%+ coverage
+  ↓
+Pass CI/CD (lint, typecheck, tests)
+  ↓
+Merge to main with confidence
+```
+
+**Golden Rule:** Never implement features without:
+1. ✅ Reading relevant architecture documentation
+2. ✅ Writing unit tests first (TDD)
+3. ✅ Achieving 80%+ code coverage
+4. ✅ Passing all CI/CD checks
+5. ✅ Getting architecture review approval
+
+---
+
+**Last Updated**: February 26, 2026  
+**Document Version**: 3.0  
+**Architecture Docs Location**: `Planning docs/System Architecture/`  
+**Unit Testing Priority**: MANDATORY (80%+ coverage, test-first development)  
 ### Database and SQL Queries
 
 **SqlQueryLoader Pattern (prevents SQL injection):**

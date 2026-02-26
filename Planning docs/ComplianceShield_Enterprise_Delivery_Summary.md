@@ -482,31 +482,31 @@ Planning docs/
 ├── 📋 ComplianceShield_Enterprise_Delivery_Summary.md
 │   └─ Quick reference guide (this file)
 │
-├── ⭐ ComplianceShield_RWA_Enterprise_Implementation.md (START HERE)
-│   └─ Full system design (700+ lines) - ERD, APIs, K8s, CDK, SEBI checklist
+├── 📂 System Architecture/ ⭐ START HERE
+│   ├── ComplianceShield_RWA_Enterprise_Implementation.md (700+ lines)
+│   │   └─ Full system design (ERD, APIs, K8s, CDK, SEBI checklist)
+│   ├── ComplianceShield_Enterprise_Architecture_Diagram.md (300+ lines)
+│   │   └─ 10-layer architecture with 30+ components
+│   ├── ComplianceShield_Open_Source_Tech_Stack.md (1,500+ lines)
+│   │   └─ 100% open source, global platform, cost analysis
+│   ├── ComplianceShield_Option_B_Architecture.md (3,000+ lines)
+│   │   └─ Real-time monitoring with AI/LLM integration
+│   └── architecture-overview.md
+│       └─ High-level architecture overview
 │
-├── 🟢 ComplianceShield_Open_Source_Tech_Stack.md (NEW)
-│   └─ 100% open source technology (PostgreSQL, Kafka, Kubernetes, etc.)
-│   └─ Global platform architecture (multi-region, multi-currency, i18n)
-│   └─ Cost savings analysis (75-90% vs proprietary)
+├── 💻 ComplianceShield_API_Boilerplate_Code.md (400+ lines)
+│   └─ Production-ready Node.js code (TypeScript)
 │
-├── 💻 ComplianceShield_API_Boilerplate_Code.md
-│   └─ Production-ready Node.js code (400+ lines, TypeScript)
-│
-├── 🚀 ComplianceShield_Deployment_Operations.md
-│   └─ Deployment & runbooks (500+ lines, step-by-step procedures)
-│
-├── 📐 ComplianceShield_Enterprise_Architecture_Diagram.md
-│   └─ Architecture visualization (10 layers, 30+ components)
+├── 🚀 ComplianceShield_Deployment_Operations.md (500+ lines)
+│   └─ Deployment & runbooks (K8s, AWS CDK, proceduresI)
 │
 ├── 📅 MASTER_IMPLEMENTATION_PLAN.md
 │   └─ 40-week implementation roadmap (6 phases)
 │
-├── ⛓️ ComplianceShield_Option_B_Architecture.md
-│   └─ Real-time monitoring architecture (3,000+ lines)
-│
 └── [Other supporting documents from Phases 1-11...]
 ```
+
+**Key Note**: All system architecture documentation is now organized in `Planning docs/System Architecture/` folder for easy reference and discovery. Update the `.github/copilot-instructions.md` file for agent references.
 
 ---
 
