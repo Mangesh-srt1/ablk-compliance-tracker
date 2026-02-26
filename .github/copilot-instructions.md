@@ -1534,6 +1534,8 @@ Merge to main with confidence
 **Document Version**: 3.0  
 **Architecture Docs Location**: `Planning docs/System Architecture/`  
 **Unit Testing Priority**: MANDATORY (80%+ coverage, test-first development)  
+**SonarQube Guide**: See `.github/SONARQUBE_GUIDE.md` for comprehensive troubleshooting
+
 ### Database and SQL Queries
 
 **SqlQueryLoader Pattern (prevents SQL injection):**
@@ -1716,6 +1718,11 @@ logger.warn('High-risk entity detected', {
 });
 
 logger.error('Chainalysis API failed', {
+  error: error.message,
+  wallet,
+  timestamp: new Date()
+});
+```
   error: error.message,
   wallet,
   timestamp: new Date()
