@@ -1728,3 +1728,68 @@ logger.error('Chainalysis API failed', {
   timestamp: new Date()
 });
 ```
+
+## SonarQube Integration & Code Quality
+
+**Comprehensive Guide:** See .github/SONARQUBE_GUIDE.md
+
+### Critical Issues & Automatic Fixes
+
+**Issue 1: Authentication Error**
+- Error: "Not authorized"
+- Fix: Add to sonar-project.properties: sonar.token=YOUR_TOKEN
+- Get token: http://localhost:9000/admin/credentials
+
+**Issue 2: Language Pattern Conflict**
+- Error: "Language cannot be decided for file"
+- Fix: Add SEPARATE patterns to sonar-project.properties:
+  - sonar.lang.patterns.ts=**/*.ts,**/*.tsx
+  - sonar.lang.patterns.js=**/*.js,**/*.jsx,**/*.mjs
+
+**Issue 3: Deprecated Credentials**
+- Warning: "sonar.login and sonar.password are deprecated"
+- Fix: Use sonar.token instead
+
+**Issue 4: TypeScript verbatimModuleSyntax Errors**
+- Error: "ECMAScript imports cannot be written in CommonJS"
+- Fix: Set "verbatimModuleSyntax": false in tsconfig.json
+
+### SonarQube Configuration Template
+
+Create sonar-project.properties in compliance-system root:
+
+sonar.projectKey=ablk-compliance-system
+sonar.projectName=Ableka Lumina - Compliance System
+sonar.host.url=http://localhost:9000
+sonar.token=YOUR_TOKEN_HERE
+sonar.sources=src
+sonar.tests=src
+sonar.lang.patterns.ts=**/*.ts,**/*.tsx
+sonar.lang.patterns.js=**/*.js,**/*.jsx,**/*.mjs
+sonar.test.inclusions=**/__tests__/**/*.test.ts,**/*.spec.ts
+sonar.exclusions=**/node_modules/**,**/dist/**,**/coverage/**
+
+### Running Analysis
+
+From compliance-system root:
+- npm run sonar (tests + coverage + analysis)
+- npx sonarqube-scanner (direct)
+
+View: http://localhost:9000/projects/ablk-compliance-system
+
+### Copilot Automatic Checklist
+
+Before running SonarQube:
+- SonarQube server running (localhost:9000)
+- sonar-project.properties exists in root
+- sonar.token set and valid
+- sonar.lang.patterns.ts and js separated
+- tsconfig.json has verbatimModuleSyntax: false
+- Coverage report: coverage/lcov-report/ exists
+
+### Full Documentation
+
+For detailed troubleshooting, decision trees, and GitHub Actions integration:
+See .github/SONARQUBE_GUIDE.md
+
+``
