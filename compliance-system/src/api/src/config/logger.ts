@@ -15,7 +15,7 @@ if (!fs.existsSync(logsDir)) {
 
 const logFormat = winston.format.combine(
   winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
+    format: 'YYYY-MM-DD HH:mm:ss',
   }),
   winston.format.errors({ stack: true }),
   winston.format.json()
@@ -28,17 +28,14 @@ const logger = winston.createLogger({
   transports: [
     // Console transport for development
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
     }),
 
     // File transport for all logs
     new winston.transports.File({
       filename: path.join(logsDir, 'app.log'),
       maxsize: 10 * 1024 * 1024, // 10MB
-      maxFiles: 5
+      maxFiles: 5,
     }),
 
     // Separate file for errors
@@ -46,31 +43,30 @@ const logger = winston.createLogger({
       filename: path.join(logsDir, 'error.log'),
       level: 'error',
       maxsize: 10 * 1024 * 1024, // 10MB
-      maxFiles: 5
-    })
+      maxFiles: 5,
+    }),
   ],
 
   // Handle exceptions and rejections
   exceptionHandlers: [
     new winston.transports.File({
-      filename: path.join(logsDir, 'exceptions.log')
-    })
+      filename: path.join(logsDir, 'exceptions.log'),
+    }),
   ],
   rejectionHandlers: [
     new winston.transports.File({
-      filename: path.join(logsDir, 'rejections.log')
-    })
-  ]
+      filename: path.join(logsDir, 'rejections.log'),
+    }),
+  ],
 });
 
 // If we're not in production, log to the console with a simpler format
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+    })
+  );
 }
 
 export default logger;

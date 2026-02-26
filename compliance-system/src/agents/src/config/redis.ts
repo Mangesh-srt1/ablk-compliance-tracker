@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/redis.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/redis.log' }),
+  ],
 });
 
 let redisClient: RedisClientType;
@@ -34,7 +31,7 @@ export async function configureRedis(): Promise<void> {
     logger.info('Configuring Redis client', {
       host: redisHost,
       port: redisPort,
-      db: redisDb
+      db: redisDb,
     });
 
     // Create Redis client with proper v4+ API
@@ -48,18 +45,19 @@ export async function configureRedis(): Promise<void> {
             return new Error('Max retries exceeded');
           }
           return retries * 100; // Exponential backoff
-        }
-      },
+        },
+      } as any,
       password: redisPassword,
-      db: redisDb,
-      legacyMode: false
+      // Database selection (redis client v4+ doesn't have direct db parameter)
+      // db is handled after connection for redis-client v4+
+      legacyMode: false,
     });
 
     // Set up event handlers
     redisClient.on('error', (err) => {
       logger.error('Redis client error', {
         error: err.message,
-        code: err.code
+        code: err.code,
       });
     });
 
@@ -71,7 +69,7 @@ export async function configureRedis(): Promise<void> {
       logger.info('Redis client ready', {
         host: redisHost,
         port: redisPort,
-        db: redisDb
+        db: redisDb,
       });
     });
 
@@ -82,11 +80,23 @@ export async function configureRedis(): Promise<void> {
     // Connect to Redis
     await redisClient.connect();
 
-    logger.info('Redis configuration completed successfully');
+    // Select database (if not default 0)
+    if (redisDb && redisDb !== 0) {
+      try {
+        await (redisClient as any).select(redisDb);
+        logger.info('Redis database selected', { db: redisDb });
+      } catch (err) {
+        logger.warn('Failed to select Redis database', {
+          error: err instanceof Error ? err.message : String(err),
+          db: redisDb,
+        });
+      }
+    }
 
+    logger.info('Redis configuration completed successfully');
   } catch (error) {
     logger.error('Failed to configure Redis', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
@@ -105,11 +115,7 @@ export function getRedisClient(): RedisClientType {
 /**
  * Set a key-value pair with optional TTL
  */
-export async function setCache(
-  key: string,
-  value: any,
-  ttlSeconds?: number
-): Promise<void> {
+export async function setCache(key: string, value: any, ttlSeconds?: number): Promise<void> {
   try {
     const serializedValue = JSON.stringify(value);
     const fullKey = `${process.env.REDIS_KEY_PREFIX || 'compliance:'}${key}`;
@@ -121,11 +127,10 @@ export async function setCache(
     }
 
     logger.debug('Cache set', { key: fullKey, ttl: ttlSeconds });
-
   } catch (error) {
     logger.error('Failed to set cache', {
       key,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
@@ -147,11 +152,10 @@ export async function getCache<T = any>(key: string): Promise<T | null> {
     logger.debug('Cache hit', { key: fullKey });
 
     return parsedValue;
-
   } catch (error) {
     logger.error('Failed to get cache', {
       key,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
@@ -168,11 +172,10 @@ export async function deleteCache(key: string): Promise<boolean> {
     logger.debug('Cache deleted', { key: fullKey, deleted: result > 0 });
 
     return result > 0;
-
   } catch (error) {
     logger.error('Failed to delete cache', {
       key,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     return false;
   }
@@ -187,11 +190,10 @@ export async function existsCache(key: string): Promise<boolean> {
     const result = await redisClient.exists(fullKey);
 
     return result > 0;
-
   } catch (error) {
     logger.error('Failed to check cache existence', {
       key,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     return false;
   }
@@ -222,13 +224,12 @@ export async function setMultipleCache(
 
     logger.debug('Multiple cache entries set', {
       count: Object.keys(keyValuePairs).length,
-      ttl: ttlSeconds
+      ttl: ttlSeconds,
     });
-
   } catch (error) {
     logger.error('Failed to set multiple cache entries', {
       count: Object.keys(keyValuePairs).length,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
@@ -237,31 +238,24 @@ export async function setMultipleCache(
 /**
  * Get multiple values from cache
  */
-export async function getMultipleCache<T = any>(
-  keys: string[]
-): Promise<(T | null)[]> {
+export async function getMultipleCache<T = any>(keys: string[]): Promise<(T | null)[]> {
   try {
-    const fullKeys = keys.map(key =>
-      `${process.env.REDIS_KEY_PREFIX || 'compliance:'}${key}`
-    );
+    const fullKeys = keys.map((key) => `${process.env.REDIS_KEY_PREFIX || 'compliance:'}${key}`);
 
     const values = await redisClient.mGet(fullKeys);
 
-    const parsedValues = values.map(value =>
-      value ? JSON.parse(value) : null
-    );
+    const parsedValues = values.map((value) => (value ? JSON.parse(value) : null));
 
     logger.debug('Multiple cache entries retrieved', {
       requested: keys.length,
-      found: parsedValues.filter(v => v !== null).length
+      found: parsedValues.filter((v) => v !== null).length,
     });
 
     return parsedValues;
-
   } catch (error) {
     logger.error('Failed to get multiple cache entries', {
       count: keys.length,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
@@ -281,10 +275,9 @@ export async function clearCache(): Promise<void> {
     } else {
       logger.debug('No cache keys to clear');
     }
-
   } catch (error) {
     logger.error('Failed to clear cache', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
@@ -308,16 +301,15 @@ export async function getCacheStats(): Promise<{
     return {
       totalKeys: keys.length,
       memoryUsage: parseInt(info.match(/used_memory:(\d+)/)?.[1] || '0'),
-      connectedClients: parseInt(clients.match(/connected_clients:(\d+)/)?.[1] || '0')
+      connectedClients: parseInt(clients.match(/connected_clients:(\d+)/)?.[1] || '0'),
     };
-
   } catch (error) {
     logger.error('Failed to get cache stats', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
 
     return {
-      totalKeys: 0
+      totalKeys: 0,
     };
   }
 }
@@ -338,13 +330,12 @@ export async function checkRedisHealth(): Promise<{
     return {
       healthy: true,
       latency,
-      message: 'Redis connection healthy'
+      message: 'Redis connection healthy',
     };
-
   } catch (error) {
     return {
       healthy: false,
-      message: `Redis health check failed: ${error instanceof Error ? error.message : String(error)}`
+      message: `Redis health check failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

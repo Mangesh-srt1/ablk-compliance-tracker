@@ -11,7 +11,13 @@ export interface KycProviderConfig {
 }
 
 export interface KycDocument {
-  type: 'aadhaar' | 'passport' | 'drivers_license' | 'national_id' | 'utility_bill' | 'bank_statement';
+  type:
+    | 'aadhaar'
+    | 'passport'
+    | 'drivers_license'
+    | 'national_id'
+    | 'utility_bill'
+    | 'bank_statement';
   data: string; // base64 encoded
   filename: string;
   contentType: string;
@@ -46,7 +52,13 @@ export interface KycVerificationResult {
 }
 
 export interface KycFlag {
-  type: 'DOCUMENT_INVALID' | 'NAME_MISMATCH' | 'AGE_UNDERAGE' | 'ADDRESS_MISMATCH' | 'DOCUMENT_EXPIRED' | 'FACE_NOT_MATCHED';
+  type:
+    | 'DOCUMENT_INVALID'
+    | 'NAME_MISMATCH'
+    | 'AGE_UNDERAGE'
+    | 'ADDRESS_MISMATCH'
+    | 'DOCUMENT_EXPIRED'
+    | 'FACE_NOT_MATCHED';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   message: string;
   details?: any;

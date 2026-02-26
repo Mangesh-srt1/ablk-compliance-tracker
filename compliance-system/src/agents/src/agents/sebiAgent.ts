@@ -11,14 +11,11 @@ import { NSEClient } from '../tools/nseClient';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/sebi-agent.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/sebi-agent.log' }),
+  ],
 });
 
 export interface SEBIResult {
@@ -63,7 +60,7 @@ export class SEBIAgent extends BaseAgent {
       transactionId: transaction.id,
       type: transaction.type,
       assetType: transaction.assetType,
-      amount: transaction.amount
+      amount: transaction.amount,
     });
 
     try {
@@ -138,7 +135,7 @@ export class SEBIAgent extends BaseAgent {
         transactionId: transaction.id,
         status,
         riskScore: Math.min(riskScore, 1.0),
-        processingTime
+        processingTime,
       });
 
       return {
@@ -152,14 +149,13 @@ export class SEBIAgent extends BaseAgent {
           tradingLimits: limitsResult.limits,
           insiderTrading: insiderResult.detected,
           marketManipulation: manipulationResult.detected,
-          complianceScore: this.calculateComplianceScore(findings)
-        }
+          complianceScore: this.calculateComplianceScore(findings),
+        },
       };
-
     } catch (error) {
       logger.error('SEBI compliance check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return this.createEscalatedResult(
@@ -173,12 +169,14 @@ export class SEBIAgent extends BaseAgent {
    * Check if transaction involves securities
    */
   private isSecuritiesTransaction(transaction: any): boolean {
-    return transaction.type === 'security' ||
-           transaction.assetType === 'equity' ||
-           transaction.assetType === 'bond' ||
-           transaction.assetType === 'derivative' ||
-           transaction.assetType === 'mutual_fund' ||
-           transaction.symbol?.match(/^[A-Z]{2,}\.NS$|^[A-Z]{2,}\.BO$/); // NSE/BSE symbols
+    return (
+      transaction.type === 'security' ||
+      transaction.assetType === 'equity' ||
+      transaction.assetType === 'bond' ||
+      transaction.assetType === 'derivative' ||
+      transaction.assetType === 'mutual_fund' ||
+      transaction.symbol?.match(/^[A-Z]{2,}\.NS$|^[A-Z]{2,}\.BO$/)
+    ); // NSE/BSE symbols
   }
 
   /**
@@ -205,7 +203,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'sebi_registration',
           severity: 'critical',
           message: 'User/intermediary not registered with SEBI',
-          details: registrationStatus.details
+          details: registrationStatus.details,
         });
         riskIncrease += 1.0;
         recommendations.push('Complete SEBI registration process');
@@ -218,7 +216,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'sebi_disciplinary',
           severity: 'high',
           message: 'SEBI disciplinary actions found',
-          details: registrationStatus.disciplinaryActions
+          details: registrationStatus.disciplinaryActions,
         });
         riskIncrease += 0.8;
         recommendations.push('Review disciplinary history');
@@ -230,16 +228,15 @@ export class SEBIAgent extends BaseAgent {
           type: 'capital_adequacy',
           severity: 'medium',
           message: `Capital adequacy below threshold: ${(registrationStatus.capitalAdequacy * 100).toFixed(1)}%`,
-          details: { capitalAdequacy: registrationStatus.capitalAdequacy }
+          details: { capitalAdequacy: registrationStatus.capitalAdequacy },
         });
         riskIncrease += 0.3;
         recommendations.push('Improve capital adequacy');
       }
-
     } catch (error) {
       logger.error('SEBI registration check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       compliant = false;
@@ -247,7 +244,7 @@ export class SEBIAgent extends BaseAgent {
         type: 'registration_check_error',
         severity: 'high',
         message: 'SEBI registration verification failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error instanceof Error ? error.message : String(error) },
       });
       riskIncrease += 0.4;
       recommendations.push('Manual SEBI registration verification required');
@@ -271,7 +268,9 @@ export class SEBIAgent extends BaseAgent {
     let valid = true;
 
     try {
-      const dematStatus = await this.sebiClient.checkDematAccount(transaction.dematAccountId || transaction.userId);
+      const dematStatus = await this.sebiClient.checkDematAccount(
+        transaction.dematAccountId || transaction.userId
+      );
 
       if (!dematStatus.active) {
         valid = false;
@@ -279,7 +278,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'demat_account',
           severity: 'critical',
           message: 'Demat account inactive or suspended',
-          details: dematStatus.details
+          details: dematStatus.details,
         });
         riskIncrease += 1.0;
         recommendations.push('Activate demat account');
@@ -292,7 +291,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'demat_freeze',
           severity: 'high',
           message: 'Demat account under transaction freeze',
-          details: dematStatus.freezeDetails
+          details: dematStatus.freezeDetails,
         });
         riskIncrease += 0.9;
         recommendations.push('Resolve account freeze');
@@ -304,16 +303,15 @@ export class SEBIAgent extends BaseAgent {
           type: 'demat_kyc',
           severity: 'medium',
           message: 'Demat account KYC not compliant',
-          details: dematStatus.kycDetails
+          details: dematStatus.kycDetails,
         });
         riskIncrease += 0.4;
         recommendations.push('Complete demat KYC requirements');
       }
-
     } catch (error) {
       logger.error('Demat account check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       valid = false;
@@ -321,7 +319,7 @@ export class SEBIAgent extends BaseAgent {
         type: 'demat_check_error',
         severity: 'high',
         message: 'Demat account verification failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error instanceof Error ? error.message : String(error) },
       });
       riskIncrease += 0.3;
       recommendations.push('Manual demat account verification required');
@@ -344,9 +342,10 @@ export class SEBIAgent extends BaseAgent {
     let riskIncrease = 0;
     const recommendations = [];
     let withinLimits = true;
+    let limits: any = null;
 
     try {
-      const limits = await this.sebiClient.getTradingLimits(transaction.userId);
+      limits = await this.sebiClient.getTradingLimits(transaction.userId);
 
       // Check position limits
       if (transaction.quantity > limits.maxPosition) {
@@ -355,7 +354,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'position_limit',
           severity: 'high',
           message: `Position exceeds limit: ${transaction.quantity} > ${limits.maxPosition}`,
-          details: { quantity: transaction.quantity, limit: limits.maxPosition }
+          details: { quantity: transaction.quantity, limit: limits.maxPosition },
         });
         riskIncrease += 0.6;
         recommendations.push('Reduce position size');
@@ -372,30 +371,32 @@ export class SEBIAgent extends BaseAgent {
           details: {
             currentTurnover: dailyTurnover,
             transactionAmount: transaction.amount,
-            limit: limits.dailyTurnoverLimit
-          }
+            limit: limits.dailyTurnoverLimit,
+          },
         });
         riskIncrease += 0.4;
         recommendations.push('Monitor daily turnover limits');
       }
 
       // Check concentration limits (single stock exposure)
-      const concentration = await this.getStockConcentration(transaction.userId, transaction.symbol);
+      const concentration = await this.getStockConcentration(
+        transaction.userId,
+        transaction.symbol
+      );
       if (concentration > limits.maxConcentration) {
         findings.push({
           type: 'concentration_limit',
           severity: 'medium',
           message: `Stock concentration exceeds limit: ${(concentration * 100).toFixed(1)}%`,
-          details: { concentration, limit: limits.maxConcentration, symbol: transaction.symbol }
+          details: { concentration, limit: limits.maxConcentration, symbol: transaction.symbol },
         });
         riskIncrease += 0.3;
         recommendations.push('Diversify portfolio');
       }
-
     } catch (error) {
       logger.error('Trading limits check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       withinLimits = false;
@@ -403,14 +404,13 @@ export class SEBIAgent extends BaseAgent {
         type: 'limits_check_error',
         severity: 'medium',
         message: 'Trading limits verification failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error instanceof Error ? error.message : String(error) },
       });
       riskIncrease += 0.2;
       recommendations.push('Manual limits verification required');
     }
 
     return { withinLimits, findings, riskIncrease, recommendations, limits };
-
   }
 
   /**
@@ -437,7 +437,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'insider_trading',
           severity: 'critical',
           message: 'Insider trading detected - user is designated as insider',
-          details: insiderStatus.details
+          details: insiderStatus.details,
         });
         riskIncrease += 1.0;
         recommendations.push('Immediate regulatory reporting required');
@@ -451,7 +451,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'insider_timing',
           severity: 'high',
           message: 'Transaction timing close to corporate event',
-          details: eventProximity.details
+          details: eventProximity.details,
         });
         riskIncrease += 0.7;
         recommendations.push('Investigate transaction timing');
@@ -465,16 +465,15 @@ export class SEBIAgent extends BaseAgent {
           type: 'price_pattern',
           severity: 'medium',
           message: 'Trading pattern suggests potential insider activity',
-          details: pricePattern.details
+          details: pricePattern.details,
         });
         riskIncrease += 0.5;
         recommendations.push('Monitor for price manipulation');
       }
-
     } catch (error) {
       logger.error('Insider trading check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
@@ -504,7 +503,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'market_manipulation',
           severity: 'critical',
           message: 'Wash trading pattern detected',
-          details: washTrade.details
+          details: washTrade.details,
         });
         riskIncrease += 1.0;
         recommendations.push('Investigate for market manipulation');
@@ -518,7 +517,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'market_manipulation',
           severity: 'high',
           message: 'Spoofing pattern detected',
-          details: spoofing.details
+          details: spoofing.details,
         });
         riskIncrease += 0.8;
         recommendations.push('Monitor order book manipulation');
@@ -532,16 +531,15 @@ export class SEBIAgent extends BaseAgent {
           type: 'market_manipulation',
           severity: 'high',
           message: 'Layering pattern detected',
-          details: layering.details
+          details: layering.details,
         });
         riskIncrease += 0.7;
         recommendations.push('Investigate order layering');
       }
-
     } catch (error) {
       logger.error('Market manipulation check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
@@ -572,7 +570,7 @@ export class SEBIAgent extends BaseAgent {
           type: 'regulatory_filings',
           severity: 'high',
           message: 'Required regulatory disclosures missing',
-          details: { missing: disclosures.missing }
+          details: { missing: disclosures.missing },
         });
         riskIncrease += 0.6;
         recommendations.push('Complete required disclosures');
@@ -585,16 +583,15 @@ export class SEBIAgent extends BaseAgent {
           type: 'filing_timeliness',
           severity: 'medium',
           message: 'Regulatory filings overdue',
-          details: { overdue: disclosures.overdue }
+          details: { overdue: disclosures.overdue },
         });
         riskIncrease += 0.4;
         recommendations.push('Submit overdue filings immediately');
       }
-
     } catch (error) {
       logger.error('Regulatory filings check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       compliant = false;
@@ -602,7 +599,7 @@ export class SEBIAgent extends BaseAgent {
         type: 'filings_check_error',
         severity: 'medium',
         message: 'Regulatory filings verification failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error instanceof Error ? error.message : String(error) },
       });
       riskIncrease += 0.2;
       recommendations.push('Manual filings verification required');
@@ -624,12 +621,16 @@ export class SEBIAgent extends BaseAgent {
     return 0.15; // Mock value
   }
 
-  private async checkCorporateEventProximity(transaction: any): Promise<{ close: boolean; details: any }> {
+  private async checkCorporateEventProximity(
+    transaction: any
+  ): Promise<{ close: boolean; details: any }> {
     // Check proximity to earnings, dividends, etc.
     return { close: false, details: {} };
   }
 
-  private async checkPriceMovementPattern(transaction: any): Promise<{ suspicious: boolean; details: any }> {
+  private async checkPriceMovementPattern(
+    transaction: any
+  ): Promise<{ suspicious: boolean; details: any }> {
     // Analyze price movements before/after transactions
     return { suspicious: false, details: {} };
   }
@@ -653,19 +654,23 @@ export class SEBIAgent extends BaseAgent {
    * Calculate overall compliance score
    */
   private calculateComplianceScore(findings: any[]): number {
-    if (findings.length === 0) {return 1.0;}
+    if (findings.length === 0) {
+      return 1.0;
+    }
 
     const severityWeights = {
       low: 0.1,
       medium: 0.3,
       high: 0.6,
-      critical: 1.0
+      critical: 1.0,
     };
 
-    const totalWeight = findings.reduce((sum, finding) =>
-      sum + severityWeights[finding.severity], 0);
+    const totalWeight = findings.reduce(
+      (sum, finding) => sum + severityWeights[finding.severity],
+      0
+    );
 
-    return Math.max(0, 1.0 - (totalWeight / findings.length));
+    return Math.max(0, 1.0 - totalWeight / findings.length);
   }
 
   /**
@@ -675,13 +680,15 @@ export class SEBIAgent extends BaseAgent {
     return {
       status: 'approved',
       riskScore: 0.0,
-      findings: [{
-        type: 'sebi_check',
-        severity: 'low',
-        message
-      }],
+      findings: [
+        {
+          type: 'sebi_check',
+          severity: 'low',
+          message,
+        },
+      ],
       recommendations: [],
-      metadata: {}
+      metadata: {},
     };
   }
 
@@ -692,13 +699,15 @@ export class SEBIAgent extends BaseAgent {
     return {
       status: 'escalated',
       riskScore,
-      findings: [{
-        type: 'sebi_check',
-        severity: 'high',
-        message
-      }],
+      findings: [
+        {
+          type: 'sebi_check',
+          severity: 'high',
+          message,
+        },
+      ],
       recommendations: ['Manual SEBI compliance review required'],
-      metadata: {}
+      metadata: {},
     };
   }
 }

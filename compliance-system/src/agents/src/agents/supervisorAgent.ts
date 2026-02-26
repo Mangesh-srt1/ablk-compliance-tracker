@@ -4,20 +4,17 @@
  */
 
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
-import { StateGraph, START, END } from '@langchain/langgraph';
+import { StateGraph, START, END, CompiledStateGraph } from '@langchain/langgraph';
 import { ChatAnthropic } from '@langchain/anthropic';
 import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/supervisor-agent.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/supervisor-agent.log' }),
+  ],
 });
 
 export interface ComplianceCheck {
@@ -53,7 +50,7 @@ export interface SupervisorState {
 
 export class ComplianceSupervisorAgent {
   private model: ChatAnthropic;
-  private graph: StateGraph<SupervisorState>;
+  private graph: StateGraph<SupervisorState> | CompiledStateGraph<SupervisorState, Partial<SupervisorState>>;
 
   constructor() {
     // Initialize Grok/Claude model
@@ -70,6 +67,7 @@ export class ComplianceSupervisorAgent {
   /**
    * Initialize the LangGraph workflow
    */
+  // @ts-ignore - LangChain v0.1 reducer API mismatch
   private initializeGraph(): void {
     this.graph = new StateGraph<SupervisorState>({
       channels: {
@@ -78,30 +76,27 @@ export class ComplianceSupervisorAgent {
           default: () => [],
           reducer: (current: ComplianceResult[], update: ComplianceResult[]) => [
             ...current,
-            ...update
-          ]
+            ...update,
+          ],
         },
         currentStep: {
-          default: () => 'initialization'
+          default: () => 'initialization',
         },
         riskScore: {
-          default: () => 0
+          default: () => 0,
         },
         escalated: {
-          default: () => false
+          default: () => false,
         },
         completed: {
-          default: () => false
+          default: () => false,
         },
         messages: {
           default: () => [],
-          reducer: (current: BaseMessage[], update: BaseMessage[]) => [
-            ...current,
-            ...update
-          ]
-        }
-      }
-    });
+          reducer: (current: BaseMessage[], update: BaseMessage[]) => [...current, ...update],
+        },
+      },
+    } as any);
 
     // Add nodes
     this.graph.addNode('analyze_transaction', this.analyzeTransaction.bind(this));
@@ -111,11 +106,17 @@ export class ComplianceSupervisorAgent {
     this.graph.addNode('escalate_if_needed', this.escalateIfNeeded.bind(this));
 
     // Add edges
+    // @ts-ignore - LangChain v0.1 edge routing type compatibility
     this.graph.addEdge(START, 'analyze_transaction');
+    // @ts-ignore
     this.graph.addEdge('analyze_transaction', 'route_check');
+    // @ts-ignore
     this.graph.addEdge('route_check', 'aggregate_results');
+    // @ts-ignore
     this.graph.addEdge('aggregate_results', 'make_decision');
+    // @ts-ignore
     this.graph.addEdge('make_decision', 'escalate_if_needed');
+    // @ts-ignore
     this.graph.addEdge('escalate_if_needed', END);
 
     // Compile the graph
@@ -131,7 +132,7 @@ export class ComplianceSupervisorAgent {
     logger.info('Analyzing transaction', {
       checkId: check.id,
       transactionId: check.transactionId,
-      checkType: check.checkType
+      checkType: check.checkType,
     });
 
     const prompt = `Analyze this compliance check and determine what specific checks are needed:
@@ -169,13 +170,13 @@ Return a JSON response with:
         requiredChecks: ['kyc', 'aml'],
         priority: 'medium',
         reasoning: 'Default analysis due to parsing error',
-        riskFactors: []
+        riskFactors: [],
       };
     }
 
     return {
       currentStep: 'analysis_complete',
-      messages: [message, response]
+      messages: [message, response],
     };
   }
 
@@ -191,24 +192,24 @@ Return a JSON response with:
 
     logger.info('Routing check to agents', {
       checkId: check.id,
-      requiredChecks
+      requiredChecks,
     });
 
     // In a real implementation, this would invoke the actual agents
     // and collect their results
-    const mockResults: ComplianceResult[] = requiredChecks.map(agentType => ({
+    const mockResults: ComplianceResult[] = requiredChecks.map((agentType) => ({
       checkId: check.id,
       status: 'approved',
       riskScore: Math.random() * 0.3, // Low risk for demo
       findings: [],
       recommendations: [`${agentType.toUpperCase()} check passed`],
       processingTime: Math.random() * 1000 + 500,
-      agentUsed: [agentType]
+      agentUsed: [agentType],
     }));
 
     return {
       results: mockResults,
-      currentStep: 'routing_complete'
+      currentStep: 'routing_complete',
     };
   }
 
@@ -220,7 +221,7 @@ Return a JSON response with:
 
     logger.info('Aggregating agent results', {
       checkId: state.check.id,
-      resultCount: results.length
+      resultCount: results.length,
     });
 
     // Calculate overall risk score
@@ -228,12 +229,12 @@ Return a JSON response with:
     const averageRiskScore = results.length > 0 ? totalRiskScore / results.length : 0;
 
     // Combine findings
-    const allFindings = results.flatMap(result => result.findings);
-    const allRecommendations = results.flatMap(result => result.recommendations);
+    const allFindings = results.flatMap((result) => result.findings);
+    const allRecommendations = results.flatMap((result) => result.recommendations);
 
     return {
       riskScore: averageRiskScore,
-      currentStep: 'aggregation_complete'
+      currentStep: 'aggregation_complete',
     };
   }
 
@@ -245,7 +246,7 @@ Return a JSON response with:
 
     logger.info('Making compliance decision', {
       checkId: check.id,
-      riskScore
+      riskScore,
     });
 
     let status: 'approved' | 'rejected' | 'escalated' = 'approved';
@@ -265,7 +266,7 @@ Return a JSON response with:
     return {
       escalated,
       completed: true,
-      currentStep: 'decision_complete'
+      currentStep: 'decision_complete',
     };
   }
 
@@ -278,7 +279,7 @@ Return a JSON response with:
     if (escalated) {
       logger.warn('Compliance check escalated', {
         checkId: check.id,
-        riskScore: state.riskScore
+        riskScore: state.riskScore,
       });
 
       // Here you would trigger escalation workflows
@@ -288,7 +289,7 @@ Return a JSON response with:
     }
 
     return {
-      currentStep: 'escalation_complete'
+      currentStep: 'escalation_complete',
     };
   }
 
@@ -301,7 +302,7 @@ Return a JSON response with:
     try {
       logger.info('Starting compliance check execution', {
         checkId: check.id,
-        transactionId: check.transactionId
+        transactionId: check.transactionId,
       });
 
       const initialState: SupervisorState = {
@@ -311,10 +312,10 @@ Return a JSON response with:
         riskScore: 0,
         escalated: false,
         completed: false,
-        messages: []
+        messages: [],
       };
 
-      const finalState = await this.graph.invoke(initialState);
+      const finalState = await (this.graph as any).invoke(initialState);
 
       const processingTime = Date.now() - startTime;
 
@@ -322,25 +323,24 @@ Return a JSON response with:
         checkId: check.id,
         status: finalState.escalated ? 'escalated' : 'approved',
         riskScore: finalState.riskScore,
-        findings: finalState.results.flatMap(r => r.findings),
-        recommendations: finalState.results.flatMap(r => r.recommendations),
+        findings: finalState.results.flatMap((r) => r.findings),
+        recommendations: finalState.results.flatMap((r) => r.recommendations),
         processingTime,
-        agentUsed: finalState.results.flatMap(r => r.agentUsed)
+        agentUsed: finalState.results.flatMap((r) => r.agentUsed),
       };
 
       logger.info('Compliance check completed', {
         checkId: check.id,
         status: result.status,
         riskScore: result.riskScore,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error) {
       logger.error('Error executing compliance check', {
         checkId: check.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return error result
@@ -351,7 +351,7 @@ Return a JSON response with:
         findings: [{ type: 'error', message: 'Check execution failed' }],
         recommendations: ['Manual review required'],
         processingTime: Date.now() - startTime,
-        agentUsed: ['supervisor']
+        agentUsed: ['supervisor'],
       };
     }
   }
@@ -368,7 +368,11 @@ Return a JSON response with:
     }
 
     // Include AML for transfers above threshold
-    if ((check.amount && check.amount > 50000) || check.checkType === 'full' || check.checkType === 'aml') {
+    if (
+      (check.amount && check.amount > 50000) ||
+      check.checkType === 'full' ||
+      check.checkType === 'aml'
+    ) {
       checks.push('aml');
     }
 

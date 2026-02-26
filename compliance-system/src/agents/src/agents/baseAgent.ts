@@ -13,14 +13,11 @@ export abstract class BaseAgent {
     this.name = name;
     this.logger = winston.createLogger({
       level: process.env.LOG_LEVEL || 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
       transports: [
         new winston.transports.Console(),
-        new winston.transports.File({ filename: `logs/${name}.log` })
-      ]
+        new winston.transports.File({ filename: `logs/${name}.log` }),
+      ],
     });
   }
 
@@ -79,20 +76,22 @@ export abstract class BaseAgent {
   protected handleError(error: Error, context: string): any {
     this.logger.error(`Error in ${context}`, {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
 
     return {
       status: 'escalated',
       riskScore: 0.9,
-      findings: [{
-        type: 'system_error',
-        severity: 'high',
-        message: `System error in ${context}: ${error.message}`,
-        details: { error: error.message }
-      }],
+      findings: [
+        {
+          type: 'system_error',
+          severity: 'high',
+          message: `System error in ${context}: ${error.message}`,
+          details: { error: error.message },
+        },
+      ],
       recommendations: ['Manual review required due to system error'],
-      metadata: {}
+      metadata: {},
     };
   }
 
@@ -109,7 +108,7 @@ export abstract class BaseAgent {
       type,
       severity,
       message,
-      details
+      details,
     };
   }
 
@@ -117,17 +116,21 @@ export abstract class BaseAgent {
    * Calculate risk score based on findings
    */
   protected calculateRiskScore(findings: any[]): number {
-    if (findings.length === 0) {return 0;}
+    if (findings.length === 0) {
+      return 0;
+    }
 
     const severityWeights = {
       low: 0.1,
       medium: 0.3,
       high: 0.6,
-      critical: 1.0
+      critical: 1.0,
     };
 
-    const totalScore = findings.reduce((sum, finding) =>
-      sum + severityWeights[finding.severity], 0);
+    const totalScore = findings.reduce(
+      (sum, finding) => sum + severityWeights[finding.severity],
+      0
+    );
 
     return Math.min(1.0, totalScore / findings.length);
   }
@@ -136,8 +139,12 @@ export abstract class BaseAgent {
    * Determine status based on risk score
    */
   protected determineStatus(riskScore: number): 'approved' | 'escalated' | 'rejected' {
-    if (riskScore >= 0.8) {return 'rejected';}
-    if (riskScore >= 0.4) {return 'escalated';}
+    if (riskScore >= 0.8) {
+      return 'rejected';
+    }
+    if (riskScore >= 0.4) {
+      return 'escalated';
+    }
     return 'approved';
   }
 }

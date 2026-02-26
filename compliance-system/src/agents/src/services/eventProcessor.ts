@@ -9,14 +9,11 @@ import { Transaction, EventMessage } from '../types';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/event-processor.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/event-processor.log' }),
+  ],
 });
 
 export class EventProcessor {
@@ -53,7 +50,7 @@ export class EventProcessor {
       logger.info('Processing compliance event', {
         eventId: event.id,
         type: event.type,
-        source: event.source
+        source: event.source,
       });
 
       switch (event.type) {
@@ -72,15 +69,14 @@ export class EventProcessor {
         default:
           logger.warn('Unknown event type', {
             eventId: event.id,
-            type: event.type
+            type: event.type,
           });
       }
-
     } catch (error) {
       logger.error('Failed to process event', {
         eventId: event.id,
         type: event.type,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Could implement retry logic here
@@ -96,7 +92,7 @@ export class EventProcessor {
     logger.info('Processing transaction event', {
       transactionId: transaction.id,
       type: transaction.type,
-      amount: transaction.amount
+      amount: transaction.amount,
     });
 
     // Execute compliance check
@@ -111,8 +107,8 @@ export class EventProcessor {
       data: result,
       metadata: {
         originalEventId: event.id,
-        processingTime: result.processingTime
-      }
+        processingTime: result.processingTime,
+      },
     });
 
     // If escalated, publish alert
@@ -122,7 +118,7 @@ export class EventProcessor {
         status: result.status,
         riskScore: result.riskScore,
         findings: result.findings,
-        recommendations: result.recommendations
+        recommendations: result.recommendations,
       });
     }
   }
@@ -135,7 +131,7 @@ export class EventProcessor {
 
     logger.info('Processing user event', {
       userId: userData.id,
-      action: event.type
+      action: event.type,
     });
 
     // Could trigger re-evaluation of user's transactions
@@ -151,7 +147,7 @@ export class EventProcessor {
 
     logger.info('Processing compliance check request', {
       checkId: checkData.id,
-      transactionId: checkData.transactionId
+      transactionId: checkData.transactionId,
     });
 
     // Execute the requested check
@@ -165,8 +161,8 @@ export class EventProcessor {
       timestamp: new Date().toISOString(),
       data: {
         checkId: checkData.id,
-        result
-      }
+        result,
+      },
     });
   }
 
@@ -174,7 +170,9 @@ export class EventProcessor {
    * Start processing events from queue
    */
   private startProcessing(): void {
-    if (this.isRunning) {return;}
+    if (this.isRunning) {
+      return;
+    }
 
     this.isRunning = true;
     logger.info('Starting event processing loop');
@@ -194,7 +192,9 @@ export class EventProcessor {
    * Stop processing events
    */
   private stopProcessing(): void {
-    if (!this.isRunning) {return;}
+    if (!this.isRunning) {
+      return;
+    }
 
     this.isRunning = false;
     if (this.processingInterval) {
@@ -212,7 +212,7 @@ export class EventProcessor {
     this.eventQueue.push(event);
     logger.debug('Event enqueued', {
       eventId: event.id,
-      queueLength: this.eventQueue.length
+      queueLength: this.eventQueue.length,
     });
   }
 
@@ -224,16 +224,15 @@ export class EventProcessor {
       // This would publish to Redis/EventBridge/etc.
       logger.info('Publishing event', {
         eventId: event.id,
-        type: event.type
+        type: event.type,
       });
 
       // For now, just log the event
       // In production, this would send to message queue
-
     } catch (error) {
       logger.error('Failed to publish event', {
         eventId: event.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -246,7 +245,7 @@ export class EventProcessor {
       logger.warn('Publishing compliance alert', {
         transactionId: alertData.transactionId,
         status: alertData.status,
-        riskScore: alertData.riskScore
+        riskScore: alertData.riskScore,
       });
 
       await this.publishEvent({
@@ -256,14 +255,13 @@ export class EventProcessor {
         timestamp: new Date().toISOString(),
         data: alertData,
         metadata: {
-          severity: alertData.status === 'rejected' ? 'high' : 'medium'
-        }
+          severity: alertData.status === 'rejected' ? 'high' : 'medium',
+        },
       });
-
     } catch (error) {
       logger.error('Failed to publish alert', {
         transactionId: alertData.transactionId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -285,7 +283,7 @@ export class EventProcessor {
         } catch (error) {
           logger.error('Error processing event during shutdown', {
             eventId: event.id,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
@@ -305,7 +303,7 @@ export class EventProcessor {
     return {
       isRunning: this.isRunning,
       queueLength: this.eventQueue.length,
-      uptime: process.uptime()
+      uptime: process.uptime(),
     };
   }
 }

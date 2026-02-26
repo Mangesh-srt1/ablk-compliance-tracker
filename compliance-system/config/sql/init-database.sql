@@ -178,8 +178,72 @@ CREATE INDEX idx_audit_created_at ON audit_logs(created_at DESC);
 -- Insert sample jurisdiction rules
 INSERT INTO compliance_rules (jurisdiction, rule_name, rule_category, rule_content, active) VALUES
     ('AE', 'Dubai Fund Minimum Size', 'fund_requirements', '{"minSize": 150000, "currency": "AED"}', true),
-    ('IN', 'SEBI Accredited Investor', 'kyc_requirements', '{"minNetWorth": 100000, "currency": "INR"}', true),
-    ('US', 'Reg D 506c', 'fund_requirements', '{"maxInvestors": 2000, "allowedStates": ["CA", "NY", "TX"]}', true)
+    ('AE', 'UAE Enhanced Due Diligence', 'kyc_requirements', '{"docRequirements": ["PASSPORT", "PROOF_ADDRESS", "UAE_ID"], "verificationRequired": true}', true),
+    ('IN', 'SEBI Accredited Investor', 'kyc_requirements', '{"minNetWorth": 100000, "currency": "INR", "documentRequired": "PAN_CARD"}', true),
+    ('IN', 'RBI Remittance Rules', 'aml_requirements', '{"maxTransferAmount": 250000, "requiresApproval": true}', true),
+    ('US', 'Reg D 506c', 'fund_requirements', '{"maxInvestors": 2000, "allowedStates": ["CA", "NY", "TX"]}', true),
+    ('US', 'FinCEN AML Requirements', 'aml_requirements', '{"suspeciousActivityReportingRequired": true, "ofacScreeningRequired": true}', true)
+    ON CONFLICT DO NOTHING;
+
+-- Insert test users for different jurisdictions
+INSERT INTO users (email, full_name, role, jurisdiction, active) VALUES
+    ('officer.ae@ableka.io', 'Ahmed Al Maktoum', 'compliance_officer', 'AE', true),
+    ('officer.in@ableka.io', 'Rajesh Kumar', 'compliance_officer', 'IN', true),
+    ('officer.us@ableka.io', 'John Smith', 'compliance_officer', 'US', true),
+    ('analyst@ableka.io', 'Sarah Johnson', 'analyst', NULL, true)
+    ON CONFLICT (email) DO NOTHING;
+
+-- Insert test KYC checks (3 records per jurisdiction)
+INSERT INTO kyc_checks (entity_id, entity_type, jurisdiction, status, score, flags, recommendations, entity_data) VALUES
+    ('entity-ae-001', 'individual', 'AE', 'approved', 95.0, '[]'::jsonb, 'Approved for low-risk investments', '{"name": "Mohammad Al Mazrouei", "nationality": "AE", "accountType": "Individual"}'),
+    ('entity-ae-002', 'company', 'AE', 'pending', NULL, '["PENDING_DOCS"]'::jsonb, 'Awaiting proof of address', '{"name": "Dubai Investment Ltd", "registrationNumber": "12345", "jurisdiction": "AE"}'),
+    ('entity-ae-003', 'individual', 'AE', 'approved', 88.0, '[]'::jsonb, 'Approved with standard monitoring', '{"name": "Fatima Mohammed', "nationality": "AE", "accountType": "Individual"}'),
+    
+    ('entity-in-001', 'individual', 'IN', 'approved', 92.0, '[]'::jsonb, 'SEBI accredited investor', '{"name": "Rajesh Sharma", "nationality": "IN", "panCard": "AAAPA1234K"}'),
+    ('entity-in-002', 'company', 'IN', 'escalated', 65.0, '["PEP_RISK", "HIGH_VELOCITY"]'::jsonb, 'Requires enhanced due diligence', '{"name": "Bombay Dev Ltd", "cin": "U12345MH2020PTC123456", "jurisdiction": "IN"}'),
+    ('entity-in-003', 'individual', 'IN', 'rejected', 45.0, '["SANCTIONS_MATCH", "HIGH_RISK"]'::jsonb, 'Entity flagged in internal watchlist', '{"name": "Unknown Person", "nationality": "IN", "riskLevel": "HIGH"}'),
+    
+    ('entity-us-001', 'company', 'US', 'approved', 90.0, '[]'::jsonb, 'Accredited entity under Reg D', '{"name": "Silicon Valley Capital LLC", "state": "CA", "registrationNumber": "C12345"}'),
+    ('entity-us-002', 'individual', 'US', 'approved', 87.0, '[]'::jsonb, 'Standard KYC verification passed', '{"name": "Jane Doe", "state": "New York", "accountType": "Premium"}'),
+    ('entity-us-003', 'fund', 'US', 'pending', NULL, '["DOCS_INCOMPLETE"]'::jsonb, 'Awaiting legal structure documentation', '{"name": "Tech Innovation Fund", "fundType": "Venture Capital", "state": "CA"}')
+    ON CONFLICT DO NOTHING;
+
+-- Insert test AML checks (3 records per jurisdiction)
+INSERT INTO aml_checks (entity_id, wallet_address, jurisdiction, status, risk_score, risk_level, pep_match, sanctions_match, flags, transaction_history) VALUES
+    ('entity-ae-001', '0x1234567890abcdef', 'AE', 'approved', 15.0, 'LOW', false, false, '[]'::jsonb, '{"totalTransactions": 45, "volumeUSD": 250000, "velocity": "normal"}'),
+    ('entity-ae-002', '0xabcdef1234567890', 'AE', 'pending', NULL, NULL, false, false, '["PENDING_VERIFICATION"]'::jsonb, '{"totalTransactions": 0, "volumeUSD": 0}'),
+    ('entity-ae-003', '0x9876543210fedcba', 'AE', 'approved', 22.0, 'LOW', false, false, '[]'::jsonb, '{"totalTransactions": 120, "volumeUSD": 850000, "velocity": "normal"}'),
+    
+    ('entity-in-001', '0x1111222233334444', 'IN', 'approved', 18.0, 'LOW', false, false, '[]'::jsonb, '{"totalTransactions": 78, "volumeUSD": 450000, "velocity": "normal"}'),
+    ('entity-in-002', '0x5555666677778888', 'IN', 'escalated', 68.0, 'MEDIUM', true, false, '["PEP_MATCH", "VELOCITY_ALERT"]'::jsonb, '{"totalTransactions": 234, "volumeUSD": 2500000, "velocity": "high"}'),
+    ('entity-in-003', '0x9999aaaabbbbcccc', 'IN', 'rejected', 92.0, 'CRITICAL', true, true, '["SANCTIONS_MATCH", "PEP_MATCH", "HIGH_RISK_JURISDICTION"]'::jsonb, '{"totalTransactions": 0, "volumeUSD": 0, "flaggedDate": "2026-02-15"}'),
+    
+    ('entity-us-001', '0xddddeeeeffff0000', 'US', 'approved', 12.0, 'LOW', false, false, '[]'::jsonb, '{"totalTransactions": 156, "volumeUSD": 5600000, "velocity": "normal"}'),
+    ('entity-us-002', '0x1111aaaabbbbcccc', 'US', 'approved', 25.0, 'LOW', false, false, '[]'::jsonb, '{"totalTransactions": 89, "volumeUSD": 750000, "velocity": "normal"}'),
+    ('entity-us-003', '0x2222ddddeeeeeffff', 'US', 'pending', NULL, NULL, false, false, '["PENDING_CHAINALYSIS"]'::jsonb, '{"totalTransactions": 0, "volumeUSD": 0}')
+    ON CONFLICT DO NOTHING;
+
+-- Insert compliance checks (aggregate)
+INSERT INTO compliance_checks (entity_id, jurisdiction, overall_status, risk_score, kyc_check_id, aml_check_id, flags, reasoning) VALUES
+    ('entity-ae-001', 'AE', 'approved', 15.0, 
+     (SELECT id FROM kyc_checks WHERE entity_id = 'entity-ae-001' LIMIT 1),
+     (SELECT id FROM aml_checks WHERE entity_id = 'entity-ae-001' LIMIT 1),
+     '[]'::jsonb, 'KYC verified and AML clean. Eligible for investment.'),
+    
+    ('entity-in-002', 'IN', 'escalated', 68.0,
+     (SELECT id FROM kyc_checks WHERE entity_id = 'entity-in-002' LIMIT 1),
+     (SELECT id FROM aml_checks WHERE entity_id = 'entity-in-002' LIMIT 1),
+     '["PEP_MATCH", "HIGH_VELOCITY"]'::jsonb, 'PEP match detected. Enhanced due diligence required.'),
+    
+    ('entity-in-003', 'IN', 'rejected', 92.0,
+     (SELECT id FROM kyc_checks WHERE entity_id = 'entity-in-003' LIMIT 1),
+     (SELECT id FROM aml_checks WHERE entity_id = 'entity-in-003' LIMIT 1),
+     '["SANCTIONS_MATCH", "PEP_MATCH"]'::jsonb, 'Entity matches OFAC sanctions list. Application rejected.'),
+    
+    ('entity-us-001', 'US', 'approved', 12.0,
+     (SELECT id FROM kyc_checks WHERE entity_id = 'entity-us-001' LIMIT 1),
+     (SELECT id FROM aml_checks WHERE entity_id = 'entity-us-001' LIMIT 1),
+     '[]'::jsonb, 'Accredited investor. AML screening clear. Ready for fund participation.')
     ON CONFLICT DO NOTHING;
 
 -- ============================================================================

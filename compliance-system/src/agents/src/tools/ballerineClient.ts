@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/ballerine-client.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/ballerine-client.log' }),
+  ],
 });
 
 export interface BallerineWorkflowData {
@@ -66,10 +63,10 @@ export class BallerineClient {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
-      timeout: 30000
+      timeout: 30000,
     });
 
     // Add response interceptor for error handling
@@ -79,7 +76,7 @@ export class BallerineClient {
         logger.error('Ballerine API error', {
           status: error.response?.status,
           data: error.response?.data,
-          message: error.message
+          message: error.message,
         });
         throw error;
       }
@@ -93,7 +90,7 @@ export class BallerineClient {
     try {
       logger.info('Creating Ballerine workflow', {
         customerId: workflowData.customer.id,
-        workflowType: workflowData.workflowType
+        workflowType: workflowData.workflowType,
       });
 
       const response = await this.client.post('/workflows', {
@@ -105,23 +102,22 @@ export class BallerineClient {
           enableBiometricVerification: true,
           enableAddressVerification: true,
           enableSanctionsCheck: true,
-          enablePepCheck: true
-        }
+          enablePepCheck: true,
+        },
       });
 
       const workflow = response.data;
 
       logger.info('Ballerine workflow created', {
         workflowId: workflow.id,
-        customerId: workflowData.customer.id
+        customerId: workflowData.customer.id,
       });
 
       return this.mapWorkflowResponse(workflow);
-
     } catch (error) {
       logger.error('Failed to create Ballerine workflow', {
         customerId: workflowData.customer.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -140,15 +136,14 @@ export class BallerineClient {
 
       logger.info('Ballerine workflow status retrieved', {
         workflowId,
-        status: workflow.status
+        status: workflow.status,
       });
 
       return this.mapWorkflowResponse(workflow);
-
     } catch (error) {
       logger.error('Failed to get Ballerine workflow status', {
         workflowId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -161,19 +156,18 @@ export class BallerineClient {
     try {
       logger.info('Updating Ballerine workflow', {
         workflowId,
-        documentCount: documents.length
+        documentCount: documents.length,
       });
 
       await this.client.patch(`/workflows/${workflowId}`, {
-        documents
+        documents,
       });
 
       logger.info('Ballerine workflow updated', { workflowId });
-
     } catch (error) {
       logger.error('Failed to update Ballerine workflow', {
         workflowId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -186,24 +180,23 @@ export class BallerineClient {
     try {
       logger.info('Submitting document to Ballerine', {
         workflowId,
-        documentType
+        documentType,
       });
 
       await this.client.post(`/workflows/${workflowId}/documents`, {
         type: documentType,
-        data: documentData
+        data: documentData,
       });
 
       logger.info('Document submitted to Ballerine', {
         workflowId,
-        documentType
+        documentType,
       });
-
     } catch (error) {
       logger.error('Failed to submit document to Ballerine', {
         workflowId,
         documentType,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -220,7 +213,7 @@ export class BallerineClient {
       'utility_bill',
       'bank_statement',
       'proof_of_address',
-      'selfie'
+      'selfie',
     ];
   }
 
@@ -231,26 +224,36 @@ export class BallerineClient {
     return {
       id: apiResponse.id,
       status: apiResponse.status,
-      documentVerification: apiResponse.verifications?.document ? {
-        status: apiResponse.verifications.document.status,
-        reasons: apiResponse.verifications.document.reasons
-      } : undefined,
-      biometricVerification: apiResponse.verifications?.biometric ? {
-        status: apiResponse.verifications.biometric.status,
-        reasons: apiResponse.verifications.biometric.reasons
-      } : undefined,
-      addressVerification: apiResponse.verifications?.address ? {
-        status: apiResponse.verifications.address.status,
-        reasons: apiResponse.verifications.address.reasons
-      } : undefined,
-      sanctionsCheck: apiResponse.checks?.sanctions ? {
-        hit: apiResponse.checks.sanctions.hit,
-        matches: apiResponse.checks.sanctions.matches
-      } : undefined,
-      pepCheck: apiResponse.checks?.pep ? {
-        hit: apiResponse.checks.pep.hit,
-        matches: apiResponse.checks.pep.matches
-      } : undefined
+      documentVerification: apiResponse.verifications?.document
+        ? {
+            status: apiResponse.verifications.document.status,
+            reasons: apiResponse.verifications.document.reasons,
+          }
+        : undefined,
+      biometricVerification: apiResponse.verifications?.biometric
+        ? {
+            status: apiResponse.verifications.biometric.status,
+            reasons: apiResponse.verifications.biometric.reasons,
+          }
+        : undefined,
+      addressVerification: apiResponse.verifications?.address
+        ? {
+            status: apiResponse.verifications.address.status,
+            reasons: apiResponse.verifications.address.reasons,
+          }
+        : undefined,
+      sanctionsCheck: apiResponse.checks?.sanctions
+        ? {
+            hit: apiResponse.checks.sanctions.hit,
+            matches: apiResponse.checks.sanctions.matches,
+          }
+        : undefined,
+      pepCheck: apiResponse.checks?.pep
+        ? {
+            hit: apiResponse.checks.pep.hit,
+            matches: apiResponse.checks.pep.matches,
+          }
+        : undefined,
     };
   }
 
@@ -271,10 +274,9 @@ export class BallerineClient {
       const latency = Date.now() - startTime;
 
       return { healthy: true, latency };
-
     } catch (error) {
       logger.error('Ballerine health check failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { healthy: false };

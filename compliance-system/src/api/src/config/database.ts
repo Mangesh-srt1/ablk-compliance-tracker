@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/database.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/database.log' }),
+  ],
 });
 
 class DatabaseConnection {
@@ -49,7 +46,7 @@ class DatabaseConnection {
         logger.info(`Database connection attempt ${attempt}/${maxRetries}`, {
           host: dbHost,
           port: dbPort,
-          database: dbName
+          database: dbName,
         });
 
         // Create connection pool
@@ -66,11 +63,11 @@ class DatabaseConnection {
         });
 
         // Handle pool events
-        this.pool.on('connect', (client: PoolClient) => {
+        this.pool.on('connect', (_client: PoolClient) => {
           logger.debug('New client connected to database');
         });
 
-        this.pool.on('error', (err: Error, client: PoolClient) => {
+        this.pool.on('error', (err: Error, _client: PoolClient) => {
           logger.error('Unexpected error on idle client', err);
         });
 
@@ -81,20 +78,19 @@ class DatabaseConnection {
 
         this.isConnected = true;
         return; // Success
-
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
         logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries})`, {
           error: lastError.message,
-          nextRetryIn: attempt < maxRetries ? `${retryDelayMs}ms` : 'no retry'
+          nextRetryIn: attempt < maxRetries ? `${retryDelayMs}ms` : 'no retry',
         });
 
         // Reset pool for next attempt
         this.pool = null;
 
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
         }
       }
     }
@@ -102,7 +98,7 @@ class DatabaseConnection {
     // All retries exhausted
     logger.error('Failed to connect to database after all retry attempts', {
       maxRetries,
-      lastError: lastError?.message
+      lastError: lastError?.message,
     });
 
     // In development, allow operation without database
@@ -138,7 +134,7 @@ class DatabaseConnection {
       logger.error('Database query error:', {
         query: text,
         params,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -147,9 +143,7 @@ class DatabaseConnection {
   /**
    * Execute a transaction with multiple queries
    */
-  async transaction<T>(
-    callback: (client: PoolClient) => Promise<T>
-  ): Promise<T> {
+  async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     if (!this.pool) {
       throw new Error('Database not connected. Call connect() first.');
     }

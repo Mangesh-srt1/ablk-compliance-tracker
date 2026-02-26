@@ -10,14 +10,11 @@ import { OFACClient } from '../tools/ofacClient';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/aml-agent.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/aml-agent.log' }),
+  ],
 });
 
 export interface AMLResult {
@@ -58,7 +55,7 @@ export class AMLAgent extends BaseAgent {
       transactionId: transaction.id,
       amount: transaction.amount,
       fromAddress: transaction.fromAddress,
-      toAddress: transaction.toAddress
+      toAddress: transaction.toAddress,
     });
 
     try {
@@ -119,7 +116,7 @@ export class AMLAgent extends BaseAgent {
         transactionId: transaction.id,
         status,
         riskScore: Math.min(riskScore, 1.0),
-        processingTime
+        processingTime,
       });
 
       return {
@@ -131,14 +128,13 @@ export class AMLAgent extends BaseAgent {
           chainalysisScore: chainalysisResult.score,
           ofacHits: ofacResult.hits,
           transactionPattern: patternResult.pattern,
-          riskFactors: this.identifyRiskFactors(findings)
-        }
+          riskFactors: this.identifyRiskFactors(findings),
+        },
       };
-
     } catch (error) {
       logger.error('AML check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return this.createEscalatedResult(
@@ -164,8 +160,8 @@ export class AMLAgent extends BaseAgent {
           type: 'amount_threshold',
           severity: 'medium',
           message: `Transaction amount $${amount} exceeds $10,000 threshold`,
-          details: { amount, threshold: 10000 }
-        }
+          details: { amount, threshold: 10000 },
+        },
       };
     }
 
@@ -196,7 +192,7 @@ export class AMLAgent extends BaseAgent {
             type: 'ofac_sanctions',
             severity: 'critical',
             message: 'Sender address matches OFAC sanctions list',
-            details: fromResult.details
+            details: fromResult.details,
           });
           riskIncrease += 1.0;
           recommendations.push('Block transaction immediately');
@@ -212,7 +208,7 @@ export class AMLAgent extends BaseAgent {
             type: 'ofac_sanctions',
             severity: 'critical',
             message: 'Receiver address matches OFAC sanctions list',
-            details: toResult.details
+            details: toResult.details,
           });
           riskIncrease += 1.0;
           recommendations.push('Block transaction immediately');
@@ -230,25 +226,24 @@ export class AMLAgent extends BaseAgent {
               type: 'ofac_sanctions',
               severity: 'critical',
               message: 'User matches OFAC sanctions list',
-              details: userResult.details
+              details: userResult.details,
             });
             riskIncrease += 1.0;
             recommendations.push('Block transaction and freeze account');
           }
         }
       }
-
     } catch (error) {
       logger.error('OFAC check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       findings.push({
         type: 'ofac_check_error',
         severity: 'high',
         message: 'OFAC sanctions check failed',
-        details: { error: error instanceof Error ? error.message : String(error) }
+        details: { error: error instanceof Error ? error.message : String(error) },
       });
       riskIncrease += 0.2;
       recommendations.push('Manual OFAC verification required');
@@ -267,7 +262,9 @@ export class AMLAgent extends BaseAgent {
     recommendations: string[];
   }> {
     try {
-      const score = await this.chainalysisClient.getAddressRiskScore(transaction.fromAddress || transaction.toAddress);
+      const score = await this.chainalysisClient.getAddressRiskScore(
+        transaction.fromAddress || transaction.toAddress
+      );
 
       if (score > 0.7) {
         return {
@@ -276,10 +273,10 @@ export class AMLAgent extends BaseAgent {
             type: 'chainalysis_risk',
             severity: 'high',
             message: `High Chainalysis risk score: ${(score * 100).toFixed(1)}%`,
-            details: { score, address: transaction.fromAddress || transaction.toAddress }
+            details: { score, address: transaction.fromAddress || transaction.toAddress },
           },
           riskIncrease: 0.6,
-          recommendations: ['Enhanced due diligence required', 'Monitor transaction closely']
+          recommendations: ['Enhanced due diligence required', 'Monitor transaction closely'],
         };
       } else if (score > 0.3) {
         return {
@@ -288,19 +285,18 @@ export class AMLAgent extends BaseAgent {
             type: 'chainalysis_risk',
             severity: 'medium',
             message: `Medium Chainalysis risk score: ${(score * 100).toFixed(1)}%`,
-            details: { score, address: transaction.fromAddress || transaction.toAddress }
+            details: { score, address: transaction.fromAddress || transaction.toAddress },
           },
           riskIncrease: 0.2,
-          recommendations: ['Additional verification recommended']
+          recommendations: ['Additional verification recommended'],
         };
       }
 
       return { score, riskIncrease: 0, recommendations: [] };
-
     } catch (error) {
       logger.error('Chainalysis check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
@@ -309,10 +305,10 @@ export class AMLAgent extends BaseAgent {
           type: 'chainalysis_error',
           severity: 'medium',
           message: 'Chainalysis risk assessment failed',
-          details: { error: error instanceof Error ? error.message : String(error) }
+          details: { error: error instanceof Error ? error.message : String(error) },
         },
         riskIncrease: 0.1,
-        recommendations: ['Manual risk assessment required']
+        recommendations: ['Manual risk assessment required'],
       };
     }
   }
@@ -341,7 +337,7 @@ export class AMLAgent extends BaseAgent {
           type: 'transaction_pattern',
           severity: 'medium',
           message: `High transaction frequency: ${recentTransactions.length} transactions in 24 hours`,
-          details: { transactionCount: recentTransactions.length, timeWindow: '24h' }
+          details: { transactionCount: recentTransactions.length, timeWindow: '24h' },
         });
         riskScore += 0.3;
         recommendations.push('Review transaction frequency patterns');
@@ -354,7 +350,7 @@ export class AMLAgent extends BaseAgent {
           type: 'transaction_pattern',
           severity: 'low',
           message: 'Transaction uses round number amount',
-          details: { amount: transaction.amount }
+          details: { amount: transaction.amount },
         });
         riskScore += 0.1;
       }
@@ -366,15 +362,14 @@ export class AMLAgent extends BaseAgent {
           type: 'transaction_pattern',
           severity: 'low',
           message: 'Transaction occurred at unusual time',
-          details: { timestamp: transaction.timestamp }
+          details: { timestamp: transaction.timestamp },
         });
         riskScore += 0.1;
       }
-
     } catch (error) {
       logger.error('Pattern analysis failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
@@ -404,7 +399,7 @@ export class AMLAgent extends BaseAgent {
           type: 'unusual_activity',
           severity: 'medium',
           message: `Transaction amount $${transaction.amount} is 5x higher than user's average`,
-          details: { amount: transaction.amount, averageAmount: avgAmount }
+          details: { amount: transaction.amount, averageAmount: avgAmount },
         });
         riskIncrease += 0.3;
         recommendations.push('Verify transaction purpose');
@@ -418,17 +413,16 @@ export class AMLAgent extends BaseAgent {
             type: 'unusual_activity',
             severity: 'low',
             message: 'Transaction from unusual geographic location',
-            details: { location: transaction.location, usualLocations }
+            details: { location: transaction.location, usualLocations },
           });
           riskIncrease += 0.1;
           recommendations.push('Verify location authenticity');
         }
       }
-
     } catch (error) {
       logger.error('Unusual activity check failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
@@ -436,7 +430,7 @@ export class AMLAgent extends BaseAgent {
       detected: findings.length > 0,
       findings,
       riskIncrease,
-      recommendations
+      recommendations,
     };
   }
 
@@ -448,7 +442,7 @@ export class AMLAgent extends BaseAgent {
     return {
       id: userId,
       name: 'John Doe',
-      country: 'US'
+      country: 'US',
     };
   }
 
@@ -497,7 +491,9 @@ export class AMLAgent extends BaseAgent {
    * Calculate average transaction amount
    */
   private calculateAverageAmount(transactions: any[]): number {
-    if (transactions.length === 0) {return 0;}
+    if (transactions.length === 0) {
+      return 0;
+    }
     const sum = transactions.reduce((acc, tx) => acc + (tx.amount || 0), 0);
     return sum / transactions.length;
   }
@@ -508,7 +504,7 @@ export class AMLAgent extends BaseAgent {
   private identifyRiskFactors(findings: any[]): string[] {
     const riskFactors = [];
 
-    findings.forEach(finding => {
+    findings.forEach((finding) => {
       switch (finding.type) {
         case 'ofac_sanctions':
           riskFactors.push('sanctions');
@@ -538,13 +534,15 @@ export class AMLAgent extends BaseAgent {
     return {
       status: 'escalated',
       riskScore,
-      findings: [{
-        type: 'aml_check',
-        severity: 'high',
-        message
-      }],
+      findings: [
+        {
+          type: 'aml_check',
+          severity: 'high',
+          message,
+        },
+      ],
       recommendations: ['Manual AML review required'],
-      metadata: {}
+      metadata: {},
     };
   }
 }

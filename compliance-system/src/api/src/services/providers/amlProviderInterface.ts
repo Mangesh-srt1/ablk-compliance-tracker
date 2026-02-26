@@ -74,7 +74,12 @@ export interface AmlMatch {
 }
 
 export interface AmlRiskIndicator {
-  type: 'UNUSUAL_AMOUNT' | 'FREQUENT_TRANSACTIONS' | 'HIGH_RISK_COUNTERPARTY' | 'SANCTIONS_MATCH' | 'PEP_ASSOCIATION';
+  type:
+    | 'UNUSUAL_AMOUNT'
+    | 'FREQUENT_TRANSACTIONS'
+    | 'HIGH_RISK_COUNTERPARTY'
+    | 'SANCTIONS_MATCH'
+    | 'PEP_ASSOCIATION';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   description: string;
   evidence: any;
@@ -92,7 +97,9 @@ export interface IAmlProvider {
   supportedJurisdictions: string[];
 
   screenEntity(request: AmlScreeningRequest): Promise<AmlScreeningResult>;
-  analyzeTransactions(request: AmlTransactionAnalysisRequest): Promise<AmlTransactionAnalysisResult>;
+  analyzeTransactions(
+    request: AmlTransactionAnalysisRequest
+  ): Promise<AmlTransactionAnalysisResult>;
   isHealthy(): Promise<boolean>;
   getCapabilities(): Promise<{
     supportedLists: string[];

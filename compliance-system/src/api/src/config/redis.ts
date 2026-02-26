@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/redis.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/redis.log' }),
+  ],
 });
 
 let redisClient: Redis | null = null;
@@ -37,7 +34,7 @@ export function configureRedis(): Redis {
     maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES || '3'),
     lazyConnect: true,
     keepAlive: parseInt(process.env.REDIS_TIMEOUT || '5000'),
-    enableReadyCheck: false
+    enableReadyCheck: false,
   };
 
   redisClient = new Redis(redisConfig);

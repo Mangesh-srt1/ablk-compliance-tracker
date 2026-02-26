@@ -9,25 +9,18 @@ import { v4 as uuidv4 } from 'uuid';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/request.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/request.log' }),
+  ],
 });
 
 /**
  * Request logging middleware
  */
-export const requestLogger = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const requestId = req.headers['x-request-id'] as string || uuidv4();
+export const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
+  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
 
   // Add request ID to response headers
   res.setHeader('x-request-id', requestId);
@@ -46,11 +39,11 @@ export const requestLogger = (
     userAgent: req.get('User-Agent'),
     headers: {
       'content-type': req.get('Content-Type'),
-      'authorization': req.get('Authorization') ? '[REDACTED]' : undefined,
-      'x-api-key': req.get('x-api-key') ? '[REDACTED]' : undefined
+      authorization: req.get('Authorization') ? '[REDACTED]' : undefined,
+      'x-api-key': req.get('x-api-key') ? '[REDACTED]' : undefined,
     },
     query: req.query,
-    body: req.method !== 'GET' && req.body ? JSON.stringify(req.body).substring(0, 500) : undefined
+    body: req.method !== 'GET' && req.body ? JSON.stringify(req.body).substring(0, 500) : undefined,
   });
 
   // Log response
@@ -64,7 +57,7 @@ export const requestLogger = (
       url: req.url,
       statusCode,
       duration: `${duration}ms`,
-      ip: req.ip
+      ip: req.ip,
     });
   });
 
@@ -75,7 +68,7 @@ export const requestLogger = (
       method: req.method,
       url: req.url,
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
   });
 

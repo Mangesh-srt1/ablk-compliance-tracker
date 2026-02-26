@@ -2,7 +2,7 @@
  * Oracle Verified Ownership Guard - Implementation Service
  * Real-time verification of off-chain asset ownership against public registries
  * Integrates Chainlink Proof of Reserve + custom land registry oracles
- * 
+ *
  * File: src/agents/src/services/oracleOwnershipGuard.ts
  */
 
@@ -58,7 +58,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
 
   constructor(
     config: OracleConfig,
-    private dbClient: any, // PostgreSQL client (pool)
+    private dbClient: any // PostgreSQL client (pool)
   ) {
     super();
 
@@ -71,8 +71,8 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
       timeout: 15000,
       headers: {
         'User-Agent': 'OracleOwnershipGuard/1.0',
-        'X-API-Version': '1.0'
-      }
+        'X-API-Version': '1.0',
+      },
     });
 
     this.logger = winston.createLogger({
@@ -87,18 +87,18 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
         new winston.transports.Console(),
         new winston.transports.File({
           filename: 'logs/oracle-ownership-guard-error.log',
-          level: 'error'
+          level: 'error',
         }),
         new winston.transports.File({
-          filename: 'logs/oracle-ownership-guard.log'
-        })
-      ]
+          filename: 'logs/oracle-ownership-guard.log',
+        }),
+      ],
     });
 
     this.logger.info('OracleVerifiedOwnershipGuard initialized', {
       besuRpcUrl: config.besuRpcUrl,
       chainlinkOraclesCount: this.chainlinkOracleAddresses.size,
-      landRegistriesCount: this.landRegistryConfigs.size
+      landRegistriesCount: this.landRegistryConfigs.size,
     });
   }
 
@@ -114,20 +114,19 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
       landRegistryCheck: false,
       proofOfReserveCheck: false,
       spvControlCheck: false,
-      anomalyCheck: false
+      anomalyCheck: false,
     };
 
     try {
       this.logger.info('Starting ownership verification', {
         assetId,
-        spvAddress
+        spvAddress,
       });
 
       // Retrieve asset metadata from database
-      const assetResult = await this.dbClient.query(
-        'SELECT * FROM rwa_assets WHERE id = $1',
-        [assetId]
-      );
+      const assetResult = await this.dbClient.query('SELECT * FROM rwa_assets WHERE id = $1', [
+        assetId,
+      ]);
 
       if (!assetResult.rows.length) {
         this.logger.warn('Asset not found in registry', { assetId });
@@ -139,7 +138,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           riskFlags: ['Asset not registered in compliance system'],
           oracleScore: 0,
           recommendedAction: 'escalate',
-          verificationDetails
+          verificationDetails,
         };
       }
 
@@ -159,7 +158,9 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           const lastModified = new Date(registryResult.details.lastModified);
           const daysSinceModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60 * 24);
           if (daysSinceModified < 7) {
-            riskFlags.push(`Land registry recently modified (${daysSinceModified.toFixed(1)} days ago)`);
+            riskFlags.push(
+              `Land registry recently modified (${daysSinceModified.toFixed(1)} days ago)`
+            );
             oracleScore -= 0.2; // Minor deduction for recent changes
           }
         }
@@ -175,7 +176,9 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
         verificationDetails.proofOfReserveCheck = true;
 
         if (!porResult.isVerified) {
-          riskFlags.push('Proof of Reserve verification failed: token supply exceeds documented reserves');
+          riskFlags.push(
+            'Proof of Reserve verification failed: token supply exceeds documented reserves'
+          );
           oracleScore -= 0.3;
         }
       } catch (error) {
@@ -216,9 +219,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
 
       // 5. Determine Ownership Status
       const ownershipStatus =
-        oracleScore >= 0.7 ? 'valid' :
-        oracleScore >= 0.3 ? 'disputed' :
-        'transferred';
+        oracleScore >= 0.7 ? 'valid' : oracleScore >= 0.3 ? 'disputed' : 'transferred';
 
       const recommendedAction = this.recommendAction(oracleScore, assetData);
 
@@ -230,7 +231,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
         riskFlags,
         oracleScore: Math.max(0, Math.min(1, oracleScore)), // Clamp 0-1
         recommendedAction,
-        verificationDetails
+        verificationDetails,
       };
 
       // 6. Store verification result in audit trail
@@ -242,7 +243,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           assetId,
           action: recommendedAction,
           riskScore: verificationResult.oracleScore,
-          flags: riskFlags
+          flags: riskFlags,
         });
       }
 
@@ -252,11 +253,10 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
         status: ownershipStatus,
         oracleScore: verificationResult.oracleScore,
         elapsedMs,
-        flagCount: riskFlags.length
+        flagCount: riskFlags.length,
       });
 
       return verificationResult;
-
     } catch (error) {
       this.logger.error('Ownership verification failed with exception', { assetId, error });
       return {
@@ -267,7 +267,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
         riskFlags: ['Verification service error: please escalate manually'],
         oracleScore: 0.5,
         recommendedAction: 'escalate',
-        verificationDetails
+        verificationDetails,
       };
     }
   }
@@ -282,7 +282,10 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
       return;
     }
 
-    this.logger.info('Starting continuous ownership polling', { assetId, interval: this.pollingIntervalSeconds });
+    this.logger.info('Starting continuous ownership polling', {
+      assetId,
+      interval: this.pollingIntervalSeconds,
+    });
 
     const pollTask = async () => {
       try {
@@ -326,7 +329,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
     if (!registryConfig) {
       this.logger.warn('No land registry configured for jurisdiction', {
         jurisdiction,
-        assetId: assetData.id
+        assetId: assetData.id,
       });
       return { isOwned: true }; // Default to trusting if not configured
     }
@@ -336,8 +339,8 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
 
       const response = await this.httpClient.get(url, {
         headers: {
-          'Authorization': `Bearer ${registryConfig.apiKey}`
-        }
+          Authorization: `Bearer ${registryConfig.apiKey}`,
+        },
       });
 
       const registryData = response.data;
@@ -352,7 +355,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           assetId: assetData.id,
           registryOwner: registryData.current_owner_name,
           spvEntity: assetData.spv_legal_entity_id,
-          jurisdiction
+          jurisdiction,
         });
       }
 
@@ -362,16 +365,15 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           registryOwner: registryData.current_owner_name,
           lastModified: registryData.last_modified_date,
           registryStatus: registryData.status,
-          jurisdiction
-        }
+          jurisdiction,
+        },
       };
-
     } catch (error) {
       if (axios.isAxiosError(error)) {
         this.logger.error('Land registry API error', {
           jurisdiction,
           statusCode: error.response?.status,
-          message: error.message
+          message: error.message,
         });
       }
       throw error;
@@ -395,7 +397,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
 
       // ABI for Chainlink Proof of Reserve feed
       const abi = [
-        'function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)'
+        'function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
       ];
 
       const oracle = new Contract(chainlinkAddress, abi, this.besuProvider);
@@ -415,21 +417,19 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
             assetId: assetData.id,
             reserves: reserveAmount.toString(),
             supply: tokenSupply.toString(),
-            coverageRatio: (Number(reserveAmount) / tokenSupply).toFixed(2)
+            coverageRatio: (Number(reserveAmount) / tokenSupply).toFixed(2),
           });
         }
 
         return {
           isVerified: isFullyReserved,
           reserves: Number(reserveAmount),
-          supply: tokenSupply
+          supply: tokenSupply,
         };
-
       } catch (error) {
         this.logger.error('Chainlink latestRoundData call failed', { error });
         throw error;
       }
-
     } catch (error) {
       this.logger.error('Proof of Reserve check failed', { error });
       return { isVerified: false };
@@ -456,7 +456,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
       const abi = [
         'function assetOwner() external view returns (address)',
         'function assetControlStatus() external view returns (bool)',
-        'function lastControlTransfer() external view returns (uint256)'
+        'function lastControlTransfer() external view returns (uint256)',
       ];
 
       const spvContract = new Contract(spvAddress, abi, this.besuProvider);
@@ -475,17 +475,15 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           this.logger.warn('Recent SPV control transfer detected', {
             assetId: assetData.id,
             daysSinceTransfer: daysSinceTransfer.toFixed(2),
-            blockNumber: lastTransferBlock
+            blockNumber: lastTransferBlock,
           });
         }
 
         return { hasControl, recentTransfer };
-
       } catch (error) {
         this.logger.error('SPV contract method call failed', { spvAddress, error });
         return { hasControl: true }; // Default to trusting if call fails
       }
-
     } catch (error) {
       this.logger.error('SPV control verification failed', { error });
       return { hasControl: true }; // Default to trusting if unable to verify
@@ -519,7 +517,7 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
         tx_count: 0,
         total_volume: 0,
         avg_price: 0,
-        max_single_tx: 0
+        max_single_tx: 0,
       };
 
       const flags: string[] = [];
@@ -532,7 +530,9 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
       // 2. Total volume spike (5x normal)
       const avgHistoricalVolume = await this.getHistoricalAverageVolume(assetData.id, 30);
       if (avgHistoricalVolume > 0 && txData.total_volume > avgHistoricalVolume * 5) {
-        flags.push(`Total trading volume spike: ${txData.total_volume} vs ${avgHistoricalVolume} 30-day avg`);
+        flags.push(
+          `Total trading volume spike: ${txData.total_volume} vs ${avgHistoricalVolume} 30-day avg`
+        );
       }
 
       // 3. Price anomaly: >30% deviation from historical
@@ -551,9 +551,8 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
 
       return {
         detected: flags.length > 0,
-        flags
+        flags,
       };
-
     } catch (error) {
       this.logger.error('Anomaly detection failed', { error });
       return { detected: false, flags: [] };
@@ -600,8 +599,8 @@ export class OracleVerifiedOwnershipGuard extends EventEmitter {
           JSON.stringify({
             flags: result.riskFlags,
             verificationDetails: result.verificationDetails,
-            recommendedAction: result.recommendedAction
-          })
+            recommendedAction: result.recommendedAction,
+          }),
         ]
       );
     } catch (error) {

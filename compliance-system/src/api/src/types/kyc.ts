@@ -6,14 +6,14 @@
 export enum Jurisdiction {
   INDIA = 'IN',
   EUROPEAN_UNION = 'EU',
-  UNITED_STATES = 'US'
+  UNITED_STATES = 'US',
 }
 
 export enum KycStatus {
   PASS = 'PASS',
   FAIL = 'FAIL',
   PENDING = 'PENDING',
-  REQUIRES_REVIEW = 'REQUIRES_REVIEW'
+  REQUIRES_REVIEW = 'REQUIRES_REVIEW',
 }
 
 export enum KycFlagType {
@@ -24,18 +24,24 @@ export enum KycFlagType {
   ADDRESS_MISMATCH = 'ADDRESS_MISMATCH',
   DUPLICATE_ENTITY = 'DUPLICATE_ENTITY',
   SANCTIONS_MATCH = 'SANCTIONS_MATCH',
-  PEP_MATCH = 'PEP_MATCH'
+  PEP_MATCH = 'PEP_MATCH',
 }
 
 export enum FlagSeverity {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
+  CRITICAL = 'CRITICAL',
 }
 
 export interface KycDocument {
-  type: 'aadhaar' | 'passport' | 'drivers_license' | 'national_id' | 'utility_bill' | 'bank_statement';
+  type:
+    | 'aadhaar'
+    | 'passport'
+    | 'drivers_license'
+    | 'national_id'
+    | 'utility_bill'
+    | 'bank_statement';
   data: string; // base64 encoded
   metadata: {
     filename: string;

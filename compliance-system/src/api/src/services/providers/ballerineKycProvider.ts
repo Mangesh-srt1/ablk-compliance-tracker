@@ -10,19 +10,16 @@ import {
   KycProviderConfig,
   KycVerificationRequest,
   KycVerificationResult,
-  KycFlag
+  KycFlag,
 } from './kycProviderInterface';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/ballerine-kyc.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/ballerine-kyc.log' }),
+  ],
 });
 
 export class BallerineKycProvider implements IKycProvider {
@@ -38,10 +35,10 @@ export class BallerineKycProvider implements IKycProvider {
       baseURL: config.baseUrl,
       timeout: config.timeout,
       headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
-        'X-API-Key': config.apiKey
-      }
+        'X-API-Key': config.apiKey,
+      },
     });
 
     // Add request/response interceptors for logging
@@ -50,7 +47,7 @@ export class BallerineKycProvider implements IKycProvider {
         logger.debug('Ballerine API Request', {
           url: config.url,
           method: config.method,
-          entityId: config.data?.entityId
+          entityId: config.data?.entityId,
         });
         return config;
       },
@@ -64,7 +61,7 @@ export class BallerineKycProvider implements IKycProvider {
       (response) => {
         logger.debug('Ballerine API Response', {
           status: response.status,
-          url: response.config.url
+          url: response.config.url,
         });
         return response;
       },
@@ -72,7 +69,7 @@ export class BallerineKycProvider implements IKycProvider {
         logger.error('Ballerine API Response Error', {
           status: error.response?.status,
           url: error.config?.url,
-          message: error.message
+          message: error.message,
         });
         return Promise.reject(error);
       }
@@ -86,7 +83,7 @@ export class BallerineKycProvider implements IKycProvider {
       logger.info('Starting Ballerine KYC verification', {
         entityId: request.entityId,
         jurisdiction: request.jurisdiction,
-        documentCount: request.documents.length
+        documentCount: request.documents.length,
       });
 
       // Prepare the verification payload
@@ -94,12 +91,12 @@ export class BallerineKycProvider implements IKycProvider {
         entityId: request.entityId,
         jurisdiction: request.jurisdiction,
         entityData: request.entityData,
-        documents: request.documents.map(doc => ({
+        documents: request.documents.map((doc) => ({
           type: doc.type,
           data: doc.data,
           filename: doc.filename,
-          contentType: doc.contentType
-        }))
+          contentType: doc.contentType,
+        })),
       };
 
       // Make the API call with retry logic
@@ -116,9 +113,9 @@ export class BallerineKycProvider implements IKycProvider {
           }
           logger.warn(`Ballerine API call failed, retrying (${attempt}/${this.config.retries})`, {
             error: error.message,
-            entityId: request.entityId
+            entityId: request.entityId,
           });
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
         }
       }
 
@@ -126,7 +123,8 @@ export class BallerineKycProvider implements IKycProvider {
 
       // Parse the response and create flags
       const flags = this.parseFlags(response.data);
-      const verified = response.data.verified && flags.filter(f => f.severity === 'CRITICAL').length === 0;
+      const verified =
+        response.data.verified && flags.filter((f) => f.severity === 'CRITICAL').length === 0;
 
       const result: KycVerificationResult = {
         provider: this.name,
@@ -135,7 +133,7 @@ export class BallerineKycProvider implements IKycProvider {
         flags,
         extractedData: response.data.extractedData,
         processingTime,
-        rawResponse: response.data
+        rawResponse: response.data,
       };
 
       logger.info('Ballerine KYC verification completed', {
@@ -143,17 +141,16 @@ export class BallerineKycProvider implements IKycProvider {
         verified: result.verified,
         confidence: result.confidence,
         flagCount: flags.length,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       logger.error('Ballerine KYC verification failed', {
         entityId: request.entityId,
         error: error.message,
-        processingTime
+        processingTime,
       });
 
       // Return failed result with critical flag
@@ -161,14 +158,16 @@ export class BallerineKycProvider implements IKycProvider {
         provider: this.name,
         verified: false,
         confidence: 0,
-        flags: [{
-          type: 'DOCUMENT_INVALID',
-          severity: 'CRITICAL',
-          message: `Verification failed: ${error.message}`,
-          details: { error: error.message }
-        }],
+        flags: [
+          {
+            type: 'DOCUMENT_INVALID',
+            severity: 'CRITICAL',
+            message: `Verification failed: ${error.message}`,
+            details: { error: error.message },
+          },
+        ],
         processingTime,
-        rawResponse: error.response?.data
+        rawResponse: error.response?.data,
       };
     }
   }
@@ -191,16 +190,27 @@ export class BallerineKycProvider implements IKycProvider {
     try {
       const response = await this.client.get('/api/v1/capabilities');
       return {
-        supportedDocuments: response.data.supportedDocuments || ['aadhaar', 'passport', 'drivers_license', 'national_id'],
+        supportedDocuments: response.data.supportedDocuments || [
+          'aadhaar',
+          'passport',
+          'drivers_license',
+          'national_id',
+        ],
         supportedJurisdictions: response.data.supportedJurisdictions || this.supportedJurisdictions,
-        features: response.data.features || ['document_verification', 'biometric_check', 'liveness_detection']
+        features: response.data.features || [
+          'document_verification',
+          'biometric_check',
+          'liveness_detection',
+        ],
       };
     } catch (error) {
-      logger.warn('Failed to get Ballerine capabilities, using defaults', { error: (error as Error).message });
+      logger.warn('Failed to get Ballerine capabilities, using defaults', {
+        error: (error as Error).message,
+      });
       return {
         supportedDocuments: ['aadhaar', 'passport', 'drivers_license', 'national_id'],
         supportedJurisdictions: this.supportedJurisdictions,
-        features: ['document_verification', 'biometric_check', 'liveness_detection']
+        features: ['document_verification', 'biometric_check', 'liveness_detection'],
       };
     }
   }
@@ -208,7 +218,9 @@ export class BallerineKycProvider implements IKycProvider {
   private parseFlags(responseData: any): KycFlag[] {
     const flags: KycFlag[] = [];
 
-    if (!responseData) {return flags;}
+    if (!responseData) {
+      return flags;
+    }
 
     // Parse document validation flags
     if (responseData.documentValidation) {
@@ -219,7 +231,7 @@ export class BallerineKycProvider implements IKycProvider {
           type: 'DOCUMENT_INVALID',
           severity: 'CRITICAL',
           message: 'Document validation failed',
-          details: docValidation.errors
+          details: docValidation.errors,
         });
       }
 
@@ -228,7 +240,7 @@ export class BallerineKycProvider implements IKycProvider {
           type: 'DOCUMENT_EXPIRED',
           severity: 'HIGH',
           message: 'Document has expired',
-          details: { expiryDate: docValidation.expiryDate }
+          details: { expiryDate: docValidation.expiryDate },
         });
       }
     }
@@ -242,7 +254,7 @@ export class BallerineKycProvider implements IKycProvider {
           type: 'FACE_NOT_MATCHED',
           severity: 'HIGH',
           message: 'Face does not match document photo',
-          details: { confidence: biometric.confidence }
+          details: { confidence: biometric.confidence },
         });
       }
     }
@@ -256,7 +268,7 @@ export class BallerineKycProvider implements IKycProvider {
           type: 'NAME_MISMATCH',
           severity: 'MEDIUM',
           message: 'Name does not match between documents',
-          details: consistency.nameDifferences
+          details: consistency.nameDifferences,
         });
       }
 
@@ -265,7 +277,7 @@ export class BallerineKycProvider implements IKycProvider {
           type: 'ADDRESS_MISMATCH',
           severity: 'LOW',
           message: 'Address inconsistencies detected',
-          details: consistency.addressDifferences
+          details: consistency.addressDifferences,
         });
       }
 
@@ -274,7 +286,7 @@ export class BallerineKycProvider implements IKycProvider {
           type: 'AGE_UNDERAGE',
           severity: 'CRITICAL',
           message: 'Entity appears to be underage',
-          details: { age: consistency.calculatedAge }
+          details: { age: consistency.calculatedAge },
         });
       }
     }

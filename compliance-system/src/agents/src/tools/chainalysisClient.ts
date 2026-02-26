@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/chainalysis-client.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/chainalysis-client.log' }),
+  ],
 });
 
 export interface ChainalysisRiskScore {
@@ -39,10 +36,10 @@ export class ChainalysisClient {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
-      timeout: 30000
+      timeout: 30000,
     });
 
     // Add response interceptor for error handling
@@ -52,7 +49,7 @@ export class ChainalysisClient {
         logger.error('Chainalysis API error', {
           status: error.response?.status,
           data: error.response?.data,
-          message: error.message
+          message: error.message,
         });
         throw error;
       }
@@ -74,15 +71,14 @@ export class ChainalysisClient {
       logger.info('Chainalysis risk score retrieved', {
         address,
         riskScore,
-        riskLevel: riskData.riskLevel
+        riskLevel: riskData.riskLevel,
       });
 
       return riskScore;
-
     } catch (error) {
       logger.error('Failed to get Chainalysis risk score', {
         address,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return medium risk on error to be conservative
@@ -107,22 +103,21 @@ export class ChainalysisClient {
         riskLevel: riskData.riskLevel,
         categories: riskData.categories || [],
         exposureDetails: riskData.exposureDetails,
-        lastUpdated: riskData.lastUpdated || new Date().toISOString()
+        lastUpdated: riskData.lastUpdated || new Date().toISOString(),
       };
 
       logger.info('Chainalysis risk assessment retrieved', {
         address,
         riskScore: assessment.riskScore,
         riskLevel: assessment.riskLevel,
-        categories: assessment.categories
+        categories: assessment.categories,
       });
 
       return assessment;
-
     } catch (error) {
       logger.error('Failed to get Chainalysis risk assessment', {
         address,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return conservative assessment on error
@@ -131,7 +126,7 @@ export class ChainalysisClient {
         riskScore: 0.5,
         riskLevel: 'medium',
         categories: ['unknown'],
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       };
     }
   }
@@ -152,18 +147,17 @@ export class ChainalysisClient {
 
       logger.info('Chainalysis sanctions check completed', {
         address,
-        sanctioned: sanctionsData.sanctioned
+        sanctioned: sanctionsData.sanctioned,
       });
 
       return {
         sanctioned: sanctionsData.sanctioned || false,
-        sanctionsDetails: sanctionsData.details
+        sanctionsDetails: sanctionsData.details,
       };
-
     } catch (error) {
       logger.error('Failed to check Chainalysis sanctions', {
         address,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { sanctioned: false };
@@ -188,13 +182,13 @@ export class ChainalysisClient {
         fromAddress: transaction.fromAddress,
         toAddress: transaction.toAddress,
         amount: transaction.amount,
-        asset: transaction.asset
+        asset: transaction.asset,
       });
 
       // Get risk scores for both addresses
       const [fromRisk, toRisk] = await Promise.all([
         this.getAddressRiskAssessment(transaction.fromAddress),
-        this.getAddressRiskAssessment(transaction.toAddress)
+        this.getAddressRiskAssessment(transaction.toAddress),
       ]);
 
       // Calculate combined risk score
@@ -228,26 +222,25 @@ export class ChainalysisClient {
         fromAddress: transaction.fromAddress,
         toAddress: transaction.toAddress,
         combinedRisk,
-        riskFactors
+        riskFactors,
       });
 
       return {
         riskScore: combinedRisk,
         riskFactors,
-        recommendations
+        recommendations,
       };
-
     } catch (error) {
       logger.error('Failed to assess transaction risk', {
         fromAddress: transaction.fromAddress,
         toAddress: transaction.toAddress,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         riskScore: 0.5,
         riskFactors: ['assessment_failed'],
-        recommendations: ['Manual risk assessment required']
+        recommendations: ['Manual risk assessment required'],
       };
     }
   }
@@ -270,25 +263,24 @@ export class ChainalysisClient {
       logger.info('Chainalysis address exposure retrieved', {
         address,
         directExposure: exposureData.directExposure,
-        indirectExposure: exposureData.indirectExposure
+        indirectExposure: exposureData.indirectExposure,
       });
 
       return {
         directExposure: exposureData.directExposure || 0,
         indirectExposure: exposureData.indirectExposure || 0,
-        exposureBreakdown: exposureData.breakdown || {}
+        exposureBreakdown: exposureData.breakdown || {},
       };
-
     } catch (error) {
       logger.error('Failed to get Chainalysis address exposure', {
         address,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         directExposure: 0,
         indirectExposure: 0,
-        exposureBreakdown: {}
+        exposureBreakdown: {},
       };
     }
   }
@@ -328,10 +320,9 @@ export class ChainalysisClient {
       const latency = Date.now() - startTime;
 
       return { healthy: true, latency };
-
     } catch (error) {
       logger.error('Chainalysis health check failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { healthy: false };

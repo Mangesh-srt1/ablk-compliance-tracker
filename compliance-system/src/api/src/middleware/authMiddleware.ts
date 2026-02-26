@@ -9,14 +9,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/auth.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/auth.log' }),
+  ],
 });
 
 // Extend Express Request interface
@@ -47,11 +44,7 @@ export interface JWTPayload {
 /**
  * JWT token validation middleware
  */
-export const authenticateToken = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1]; // Bearer TOKEN
@@ -60,12 +53,12 @@ export const authenticateToken = (
       logger.warn('No token provided', {
         ip: req.ip,
         path: req.path,
-        method: req.method
+        method: req.method,
       });
       res.status(401).json({
         error: 'Access token required',
         code: 'TOKEN_MISSING',
-        message: 'Authorization header with Bearer token is required'
+        message: 'Authorization header with Bearer token is required',
       });
       return;
     }
@@ -75,7 +68,7 @@ export const authenticateToken = (
       logger.error('JWT_SECRET not configured');
       res.status(500).json({
         error: 'Server configuration error',
-        code: 'CONFIG_ERROR'
+        code: 'CONFIG_ERROR',
       });
       return;
     }
@@ -87,12 +80,12 @@ export const authenticateToken = (
     if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
       logger.warn('Expired token used', {
         userId: decoded.id,
-        ip: req.ip
+        ip: req.ip,
       });
       res.status(401).json({
         error: 'Token expired',
         code: 'TOKEN_EXPIRED',
-        message: 'Please refresh your token'
+        message: 'Please refresh your token',
       });
       return;
     }
@@ -103,7 +96,7 @@ export const authenticateToken = (
     logger.debug('Token authenticated successfully', {
       userId: decoded.id,
       role: decoded.role,
-      path: req.path
+      path: req.path,
     });
 
     next();
@@ -111,30 +104,30 @@ export const authenticateToken = (
     if (error instanceof jwt.JsonWebTokenError) {
       logger.warn('Invalid token', {
         error: error.message,
-        ip: req.ip
+        ip: req.ip,
       });
       res.status(401).json({
         error: 'Invalid token',
         code: 'TOKEN_INVALID',
-        message: 'The provided token is not valid'
+        message: 'The provided token is not valid',
       });
     } else if (error instanceof jwt.TokenExpiredError) {
       logger.warn('Token expired', {
-        ip: req.ip
+        ip: req.ip,
       });
       res.status(401).json({
         error: 'Token expired',
         code: 'TOKEN_EXPIRED',
-        message: 'Please refresh your token'
+        message: 'Please refresh your token',
       });
     } else {
       logger.error('Token verification error', {
         error: error instanceof Error ? error.message : String(error),
-        ip: req.ip
+        ip: req.ip,
       });
       res.status(500).json({
         error: 'Authentication error',
-        code: 'AUTH_ERROR'
+        code: 'AUTH_ERROR',
       });
     }
   }
@@ -148,7 +141,7 @@ export const requireRole = (requiredRole: string) => {
     if (!req.user) {
       res.status(401).json({
         error: 'Authentication required',
-        code: 'AUTH_REQUIRED'
+        code: 'AUTH_REQUIRED',
       });
       return;
     }
@@ -158,12 +151,12 @@ export const requireRole = (requiredRole: string) => {
         userId: req.user.id,
         userRole: req.user.role,
         requiredRole,
-        path: req.path
+        path: req.path,
       });
       res.status(403).json({
         error: 'Insufficient permissions',
         code: 'INSUFFICIENT_ROLE',
-        message: `Required role: ${requiredRole}, your role: ${req.user.role}`
+        message: `Required role: ${requiredRole}, your role: ${req.user.role}`,
       });
       return;
     }
@@ -180,7 +173,7 @@ export const requirePermission = (requiredPermission: string) => {
     if (!req.user) {
       res.status(401).json({
         error: 'Authentication required',
-        code: 'AUTH_REQUIRED'
+        code: 'AUTH_REQUIRED',
       });
       return;
     }
@@ -190,12 +183,12 @@ export const requirePermission = (requiredPermission: string) => {
         userId: req.user.id,
         userPermissions: req.user.permissions,
         requiredPermission,
-        path: req.path
+        path: req.path,
       });
       res.status(403).json({
         error: 'Insufficient permissions',
         code: 'INSUFFICIENT_PERMISSION',
-        message: `Required permission: ${requiredPermission}`
+        message: `Required permission: ${requiredPermission}`,
       });
       return;
     }
@@ -216,7 +209,7 @@ export const requireComplianceOfficer = (req: Request, res: Response, next: Next
   if (!req.user) {
     res.status(401).json({
       error: 'Authentication required',
-      code: 'AUTH_REQUIRED'
+      code: 'AUTH_REQUIRED',
     });
     return;
   }
@@ -226,11 +219,11 @@ export const requireComplianceOfficer = (req: Request, res: Response, next: Next
     logger.warn('Access denied for compliance operations', {
       userId: req.user.id,
       userRole: req.user.role,
-      path: req.path
+      path: req.path,
     });
     res.status(403).json({
       error: 'Compliance officer access required',
-      code: 'COMPLIANCE_ACCESS_REQUIRED'
+      code: 'COMPLIANCE_ACCESS_REQUIRED',
     });
     return;
   }

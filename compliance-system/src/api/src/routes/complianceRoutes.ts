@@ -12,14 +12,11 @@ import { ComplianceService } from '../services/complianceService';
 const router = Router();
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/compliance.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/compliance.log' }),
+  ],
 });
 
 const complianceService = new ComplianceService();
@@ -28,48 +25,39 @@ const complianceService = new ComplianceService();
  * GET /api/compliance/checks
  * Get compliance check history
  */
-router.get('/checks',
-  requirePermission('compliance:read'),
-  async (req: Request, res: Response) => {
-    try {
-      const {
-        page = 1,
-        limit = 20,
-        status,
-        agentType,
-        riskLevel
-      } = req.query;
+router.get('/checks', requirePermission('compliance:read'), async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 20, status, agentType, riskLevel } = req.query;
 
-      const result = await complianceService.getComplianceChecks({
-        page: Number(page),
-        limit: Number(limit),
-        status: status as string,
-        agentType: agentType as string,
-        riskLevel: riskLevel as string,
-        userId: req.user?.id
-      });
+    const result = await complianceService.getComplianceChecks({
+      page: Number(page),
+      limit: Number(limit),
+      status: status as string,
+      agentType: agentType as string,
+      riskLevel: riskLevel as string,
+      userId: req.user?.id,
+    });
 
-      res.json({
-        success: true,
-        data: result.checks,
-        pagination: result.pagination
-      });
-
-    } catch (error) {
-      logger.error('Error fetching compliance checks:', error);
-      res.status(500).json({
-        error: 'Failed to fetch compliance checks',
-        code: 'FETCH_CHECKS_ERROR'
-      });
-    }
+    res.json({
+      success: true,
+      data: result.checks,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    logger.error('Error fetching compliance checks:', error);
+    res.status(500).json({
+      error: 'Failed to fetch compliance checks',
+      code: 'FETCH_CHECKS_ERROR',
+    });
   }
-);
+});
 
 /**
  * GET /api/compliance/checks/:id
  * Get specific compliance check details
  */
-router.get('/checks/:id',
+router.get(
+  '/checks/:id',
   requirePermission('compliance:read'),
   param('id').isUUID(),
   async (req: Request, res: Response) => {
@@ -79,7 +67,7 @@ router.get('/checks/:id',
         return res.status(400).json({
           error: 'Invalid request parameters',
           code: 'VALIDATION_ERROR',
-          details: errors.array()
+          details: errors.array(),
         });
       }
 
@@ -88,20 +76,19 @@ router.get('/checks/:id',
       if (!check) {
         return res.status(404).json({
           error: 'Compliance check not found',
-          code: 'CHECK_NOT_FOUND'
+          code: 'CHECK_NOT_FOUND',
         });
       }
 
       res.json({
         success: true,
-        data: check
+        data: check,
       });
-
     } catch (error) {
       logger.error('Error fetching compliance check:', error);
       res.status(500).json({
         error: 'Failed to fetch compliance check',
-        code: 'FETCH_CHECK_ERROR'
+        code: 'FETCH_CHECK_ERROR',
       });
     }
   }
@@ -111,7 +98,8 @@ router.get('/checks/:id',
  * POST /api/compliance/checks
  * Trigger manual compliance check
  */
-router.post('/checks',
+router.post(
+  '/checks',
   requirePermission('compliance:create'),
   body('transactionId').isString().notEmpty(),
   body('checkType').isIn(['kyc', 'aml', 'sebi', 'full']),
@@ -122,7 +110,7 @@ router.post('/checks',
         return res.status(400).json({
           error: 'Invalid request parameters',
           code: 'VALIDATION_ERROR',
-          details: errors.array()
+          details: errors.array(),
         });
       }
 
@@ -132,20 +120,19 @@ router.post('/checks',
         transactionId,
         checkType,
         priority,
-        requestedBy: req.user!.id
+        requestedBy: req.user!.id,
       });
 
       res.status(201).json({
         success: true,
         data: check,
-        message: 'Compliance check initiated successfully'
+        message: 'Compliance check initiated successfully',
       });
-
     } catch (error) {
       logger.error('Error creating compliance check:', error);
       res.status(500).json({
         error: 'Failed to create compliance check',
-        code: 'CREATE_CHECK_ERROR'
+        code: 'CREATE_CHECK_ERROR',
       });
     }
   }
@@ -155,7 +142,8 @@ router.post('/checks',
  * PUT /api/compliance/checks/:id/approve
  * Approve compliance check (compliance officer only)
  */
-router.put('/checks/:id/approve',
+router.put(
+  '/checks/:id/approve',
   requireComplianceOfficer,
   param('id').isUUID(),
   body('notes').optional().isString().isLength({ max: 1000 }),
@@ -166,7 +154,7 @@ router.put('/checks/:id/approve',
         return res.status(400).json({
           error: 'Invalid request parameters',
           code: 'VALIDATION_ERROR',
-          details: errors.array()
+          details: errors.array(),
         });
       }
 
@@ -181,20 +169,19 @@ router.put('/checks/:id/approve',
       if (!result) {
         return res.status(404).json({
           error: 'Compliance check not found or cannot be approved',
-          code: 'CHECK_NOT_APPROVABLE'
+          code: 'CHECK_NOT_APPROVABLE',
         });
       }
 
       res.json({
         success: true,
-        message: 'Compliance check approved successfully'
+        message: 'Compliance check approved successfully',
       });
-
     } catch (error) {
       logger.error('Error approving compliance check:', error);
       res.status(500).json({
         error: 'Failed to approve compliance check',
-        code: 'APPROVE_CHECK_ERROR'
+        code: 'APPROVE_CHECK_ERROR',
       });
     }
   }
@@ -204,7 +191,8 @@ router.put('/checks/:id/approve',
  * PUT /api/compliance/checks/:id/reject
  * Reject compliance check (compliance officer only)
  */
-router.put('/checks/:id/reject',
+router.put(
+  '/checks/:id/reject',
   requireComplianceOfficer,
   param('id').isUUID(),
   body('reason').isString().notEmpty().isLength({ max: 500 }),
@@ -216,7 +204,7 @@ router.put('/checks/:id/reject',
         return res.status(400).json({
           error: 'Invalid request parameters',
           code: 'VALIDATION_ERROR',
-          details: errors.array()
+          details: errors.array(),
         });
       }
 
@@ -232,20 +220,19 @@ router.put('/checks/:id/reject',
       if (!result) {
         return res.status(404).json({
           error: 'Compliance check not found or cannot be rejected',
-          code: 'CHECK_NOT_REJECTABLE'
+          code: 'CHECK_NOT_REJECTABLE',
         });
       }
 
       res.json({
         success: true,
-        message: 'Compliance check rejected successfully'
+        message: 'Compliance check rejected successfully',
       });
-
     } catch (error) {
       logger.error('Error rejecting compliance check:', error);
       res.status(500).json({
         error: 'Failed to reject compliance check',
-        code: 'REJECT_CHECK_ERROR'
+        code: 'REJECT_CHECK_ERROR',
       });
     }
   }
@@ -255,34 +242,31 @@ router.put('/checks/:id/reject',
  * GET /api/compliance/rules
  * Get compliance rules
  */
-router.get('/rules',
-  requirePermission('compliance:read'),
-  async (req: Request, res: Response) => {
-    try {
-      const { active = true } = req.query;
+router.get('/rules', requirePermission('compliance:read'), async (req: Request, res: Response) => {
+  try {
+    const { active = true } = req.query;
 
-      const rules = await complianceService.getComplianceRules(Boolean(active));
+    const rules = await complianceService.getComplianceRules(Boolean(active));
 
-      res.json({
-        success: true,
-        data: rules
-      });
-
-    } catch (error) {
-      logger.error('Error fetching compliance rules:', error);
-      res.status(500).json({
-        error: 'Failed to fetch compliance rules',
-        code: 'FETCH_RULES_ERROR'
-      });
-    }
+    res.json({
+      success: true,
+      data: rules,
+    });
+  } catch (error) {
+    logger.error('Error fetching compliance rules:', error);
+    res.status(500).json({
+      error: 'Failed to fetch compliance rules',
+      code: 'FETCH_RULES_ERROR',
+    });
   }
-);
+});
 
 /**
  * POST /api/compliance/rules
  * Create compliance rule (admin only)
  */
-router.post('/rules',
+router.post(
+  '/rules',
   requirePermission('compliance:admin'),
   body('ruleName').isString().notEmpty().isLength({ max: 100 }),
   body('ruleType').isIn(['aml', 'kyc', 'regulatory', 'risk']),
@@ -296,26 +280,25 @@ router.post('/rules',
         return res.status(400).json({
           error: 'Invalid request parameters',
           code: 'VALIDATION_ERROR',
-          details: errors.array()
+          details: errors.array(),
         });
       }
 
       const rule = await complianceService.createComplianceRule({
         ...req.body,
-        createdBy: req.user!.id
+        createdBy: req.user!.id,
       });
 
       res.status(201).json({
         success: true,
         data: rule,
-        message: 'Compliance rule created successfully'
+        message: 'Compliance rule created successfully',
       });
-
     } catch (error) {
       logger.error('Error creating compliance rule:', error);
       res.status(500).json({
         error: 'Failed to create compliance rule',
-        code: 'CREATE_RULE_ERROR'
+        code: 'CREATE_RULE_ERROR',
       });
     }
   }
@@ -325,7 +308,8 @@ router.post('/rules',
  * GET /api/compliance/dashboard
  * Get compliance dashboard metrics
  */
-router.get('/dashboard',
+router.get(
+  '/dashboard',
   requirePermission('compliance:read'),
   async (req: Request, res: Response) => {
     try {
@@ -333,14 +317,13 @@ router.get('/dashboard',
 
       res.json({
         success: true,
-        data: metrics
+        data: metrics,
       });
-
     } catch (error) {
       logger.error('Error fetching dashboard metrics:', error);
       res.status(500).json({
         error: 'Failed to fetch dashboard metrics',
-        code: 'FETCH_METRICS_ERROR'
+        code: 'FETCH_METRICS_ERROR',
       });
     }
   }

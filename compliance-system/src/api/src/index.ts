@@ -34,7 +34,7 @@ dotenv.config();
 console.log('Environment variables loaded:', {
   DB_HOST: process.env.DB_HOST,
   DB_NAME: process.env.DB_NAME,
-  NODE_ENV: process.env.NODE_ENV
+  NODE_ENV: process.env.NODE_ENV,
 });
 
 const app: Express = express();
@@ -51,7 +51,10 @@ async function initializeApp(): Promise<void> {
       await db.connect();
       logger.info('Database connected successfully');
     } catch (dbError) {
-      logger.warn('Database connection failed, continuing without database:', dbError instanceof Error ? dbError.message : String(dbError));
+      logger.warn(
+        'Database connection failed, continuing without database:',
+        dbError instanceof Error ? dbError.message : String(dbError)
+      );
     }
 
     // Configure Redis
@@ -60,28 +63,35 @@ async function initializeApp(): Promise<void> {
       configureRedis();
       logger.info('Redis configured successfully');
     } catch (redisError) {
-      logger.warn('Redis configuration failed, continuing without Redis:', redisError instanceof Error ? redisError.message : String(redisError));
+      logger.warn(
+        'Redis configuration failed, continuing without Redis:',
+        redisError instanceof Error ? redisError.message : String(redisError)
+      );
     }
 
     // Security middleware
-    app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
         },
-      },
-    }));
+      })
+    );
 
     // CORS configuration
-    app.use(cors({
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-    }));
+    app.use(
+      cors({
+        origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      })
+    );
 
     // Request logging
     app.use(requestLogger);
@@ -97,8 +107,8 @@ async function initializeApp(): Promise<void> {
           message: 'Too many requests from this IP, please try again later.',
           httpStatus: 429,
           timestamp: new Date().toISOString(),
-          requestId: 'rate-limited'
-        }
+          requestId: 'rate-limited',
+        },
       },
       standardHeaders: true,
       legacyHeaders: false,
@@ -133,7 +143,6 @@ async function initializeApp(): Promise<void> {
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`Health check: http://localhost:${PORT}/health`);
     });
-
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     process.exit(1);

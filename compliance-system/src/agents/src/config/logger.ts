@@ -44,10 +44,7 @@ const format = winston.format.combine(
 const transports = [
   // Console transport for development
   new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
+    format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
   }),
 
   // Error log file
@@ -58,7 +55,7 @@ const transports = [
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
       winston.format.json()
-    )
+    ),
   }),
 
   // Combined log file
@@ -68,58 +65,53 @@ const transports = [
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
       winston.format.json()
-    )
+    ),
   }),
 
   // Agent-specific log file
   new winston.transports.File({
     filename: path.join(logsDir, 'agents.log'),
     level: 'info',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
-  })
+    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  }),
 ];
 
-// Create the logger
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   levels,
   format,
   transports,
   exitOnError: false,
+  exceptionHandlers: [
+    new winston.transports.File({
+      filename: path.join(logsDir, 'exceptions.log'),
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.json()
+      ),
+    }),
+  ],
+  rejectionHandlers: [
+    new winston.transports.File({
+      filename: path.join(logsDir, 'rejections.log'),
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.json()
+      ),
+    }),
+  ],
 });
 
-// Handle uncaught exceptions and unhandled rejections
-logger.exceptions.handle(
-  new winston.transports.File({
-    filename: path.join(logsDir, 'exceptions.log'),
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.errors({ stack: true }),
-      winston.format.json()
-    )
-  })
-);
-
-logger.rejections.handle(
-  new winston.transports.File({
-    filename: path.join(logsDir, 'rejections.log'),
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.errors({ stack: true }),
-      winston.format.json()
-    )
-  })
-);
-
-// Add request logging method
-logger.stream = {
+// Add request logging method for morgan HTTP logger
+const streamLoggerInterface = {
   write: (message: string) => {
     logger.info('HTTP Request', { message: message.trim() });
   },
 };
+
+logger.stream = streamLoggerInterface as any;
 
 export default logger;
 

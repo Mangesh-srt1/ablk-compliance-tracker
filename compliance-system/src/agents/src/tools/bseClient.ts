@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/bse-client.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/bse-client.log' }),
+  ],
 });
 
 export class BSEClient {
@@ -30,10 +27,10 @@ export class BSEClient {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
-      timeout: 30000
+      timeout: 30000,
     });
 
     // Add response interceptor for error handling
@@ -43,7 +40,7 @@ export class BSEClient {
         logger.error('BSE API error', {
           status: error.response?.status,
           data: error.response?.data,
-          message: error.message
+          message: error.message,
         });
         throw error;
       }
@@ -63,15 +60,14 @@ export class BSEClient {
 
       logger.info('BSE quote retrieved', {
         symbol,
-        price: quote.lastPrice
+        price: quote.lastPrice,
       });
 
       return quote;
-
     } catch (error) {
       logger.error('Failed to get BSE quote', {
         symbol,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -91,15 +87,14 @@ export class BSEClient {
       logger.info('BSE market depth retrieved', {
         symbol,
         bids: depth.bids?.length || 0,
-        asks: depth.asks?.length || 0
+        asks: depth.asks?.length || 0,
       });
 
       return depth;
-
     } catch (error) {
       logger.error('Failed to get BSE market depth', {
         symbol,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -113,23 +108,22 @@ export class BSEClient {
       logger.info('Getting BSE trade history', { symbol, days });
 
       const response = await this.client.get(`/trades/${symbol}`, {
-        params: { days }
+        params: { days },
       });
 
       const trades = response.data.trades || [];
 
       logger.info('BSE trade history retrieved', {
         symbol,
-        tradeCount: trades.length
+        tradeCount: trades.length,
       });
 
       return trades;
-
     } catch (error) {
       logger.error('Failed to get BSE trade history', {
         symbol,
         days,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return [];
     }
@@ -152,10 +146,9 @@ export class BSEClient {
       const latency = Date.now() - startTime;
 
       return { healthy: true, latency };
-
     } catch (error) {
       logger.error('BSE health check failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { healthy: false };

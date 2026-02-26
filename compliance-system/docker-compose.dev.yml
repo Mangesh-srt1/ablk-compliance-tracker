@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 # Development environment: Fast iteration, hot-reload, live debugging
 # Run: docker-compose -f docker-compose.dev.yml up
@@ -24,7 +24,7 @@ services:
     networks:
       - lumina-network-dev
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-compliance_db}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-compliance_db}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,14 +35,14 @@ services:
     image: redis:7-alpine
     container_name: lumina-redis-dev
     ports:
-      - "${REDIS_PORT:-6380}:6379"  # Use 6380 to avoid conflicts with default Redis (6379)
+      - '${REDIS_PORT:-6380}:6379' # Use 6380 to avoid conflicts with default Redis (6379)
     command: redis-server --appendonly yes --loglevel notice
     volumes:
       - lumina_redis_data:/data
     networks:
       - lumina-network-dev
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -95,13 +95,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       JWT_EXPIRY: 15m
     ports:
-      - "${API_EXTERNAL_PORT:-4000}:3000"  # External port (default 4000) -> Internal port 3000
-      - "9229:9229"  # Node debugger port
+      - '${API_EXTERNAL_PORT:-4000}:3000' # External port (default 4000) -> Internal port 3000
+      - '9229:9229' # Node debugger port
     volumes:
       - ./src/api/src:/app/src
       - ./src/api/package.json:/app/package.json
       - ./src/api/tsconfig.json:/app/tsconfig.json
-      - /app/node_modules  # Prevent host node_modules from shadowing container
+      - /app/node_modules # Prevent host node_modules from shadowing container
     networks:
       - lumina-network-dev
     depends_on:
@@ -110,7 +110,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]  # Internal port 3000, correct path
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000/api/health || exit 1'] # Internal port 3000, correct path
       interval: 10s
       timeout: 5s
       retries: 3
@@ -136,13 +136,13 @@ services:
       GROK_API_KEY: ${GROK_API_KEY:-sk-placeholder}
       LOG_LEVEL: debug
     ports:
-      - "${AGENTS_EXTERNAL_PORT:-4002}:3002"  # External port (default 4002) -> Internal port 3002
-      - "9230:9229"  # Node debugger port
+      - '${AGENTS_EXTERNAL_PORT:-4002}:3002' # External port (default 4002) -> Internal port 3002
+      - '9230:9229' # Node debugger port
     volumes:
       - ./src/agents/src:/app/src
       - ./src/agents/package.json:/app/package.json
       - ./src/agents/tsconfig.json:/app/tsconfig.json
-      - /app/node_modules  # Prevent host node_modules from shadowing container
+      - /app/node_modules # Prevent host node_modules from shadowing container
     networks:
       - lumina-network-dev
     depends_on:
@@ -151,7 +151,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]  # Internal port 3002
+      test: ['CMD-SHELL', 'curl -f http://localhost:3002/health || exit 1'] # Internal port 3002
       interval: 30s
       timeout: 10s
       retries: 3

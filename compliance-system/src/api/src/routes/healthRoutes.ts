@@ -11,14 +11,11 @@ import { getRedisClient } from '../config/redis';
 const router = Router();
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/health.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/health.log' }),
+  ],
 });
 
 /**
@@ -32,16 +29,18 @@ router.get('/', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
     };
 
     res.json(health);
   } catch (error) {
-    logger.error('Health check error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Health check error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: 'Health check failed'
+      error: 'Health check failed',
     });
   }
 });
@@ -60,13 +59,13 @@ router.get('/detailed', async (req: Request, res: Response) => {
     dependencies: {
       database: 'unknown',
       redis: 'unknown',
-      externalAPIs: 'unknown'
+      externalAPIs: 'unknown',
     },
     memory: {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      external: Math.round(process.memoryUsage().external / 1024 / 1024)
-    }
+      external: Math.round(process.memoryUsage().external / 1024 / 1024),
+    },
   };
 
   try {
@@ -77,7 +76,9 @@ router.get('/detailed', async (req: Request, res: Response) => {
     } catch (dbError) {
       health.dependencies.database = 'unhealthy';
       health.status = 'degraded';
-      logger.error('Database health check failed', { error: dbError instanceof Error ? dbError.message : String(dbError) });
+      logger.error('Database health check failed', {
+        error: dbError instanceof Error ? dbError.message : String(dbError),
+      });
     }
 
     // Check Redis connectivity
@@ -88,7 +89,9 @@ router.get('/detailed', async (req: Request, res: Response) => {
     } catch (redisError) {
       health.dependencies.redis = 'unhealthy';
       health.status = 'degraded';
-      logger.error('Redis health check failed', { error: redisError instanceof Error ? redisError.message : String(redisError) });
+      logger.error('Redis health check failed', {
+        error: redisError instanceof Error ? redisError.message : String(redisError),
+      });
     }
 
     // Check external APIs (mock for now)
@@ -97,14 +100,17 @@ router.get('/detailed', async (req: Request, res: Response) => {
       health.dependencies.externalAPIs = 'healthy';
     } catch (apiError) {
       health.dependencies.externalAPIs = 'degraded';
-      logger.warn('External API health check warning', { error: apiError instanceof Error ? apiError.message : String(apiError) });
+      logger.warn('External API health check warning', {
+        error: apiError instanceof Error ? apiError.message : String(apiError),
+      });
     }
 
     const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 206 : 503;
     res.status(statusCode).json(health);
-
   } catch (error) {
-    logger.error('Detailed health check error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Detailed health check error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     health.status = 'unhealthy';
     res.status(503).json(health);
   }
@@ -124,14 +130,16 @@ router.get('/ready', async (req: Request, res: Response) => {
 
     res.status(200).json({
       status: 'ready',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    logger.error('Readiness check failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Readiness check failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(503).json({
       status: 'not ready',
       timestamp: new Date().toISOString(),
-      error: 'Critical dependencies unavailable'
+      error: 'Critical dependencies unavailable',
     });
   }
 });
@@ -144,7 +152,7 @@ router.get('/live', (req: Request, res: Response) => {
   // Simple liveness check - if the server is responding, it's alive
   res.status(200).json({
     status: 'alive',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 

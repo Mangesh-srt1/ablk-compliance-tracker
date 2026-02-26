@@ -11,7 +11,7 @@ export const mockUsers = {
     role: 'compliance_officer',
     jurisdiction: 'AE',
     created_at: new Date('2026-01-01'),
-    is_active: true
+    is_active: true,
   },
   analyst: {
     id: 'user-2',
@@ -20,8 +20,8 @@ export const mockUsers = {
     role: 'analyst',
     jurisdiction: 'IN',
     created_at: new Date('2026-01-01'),
-    is_active: true
-  }
+    is_active: true,
+  },
 };
 
 export const mockKYCRecords = {
@@ -36,7 +36,7 @@ export const mockKYCRecords = {
     confidence: 0.98,
     approved_at: new Date('2026-02-01'),
     created_at: new Date('2026-02-01'),
-    tags: ['dubai', 'verified']
+    tags: ['dubai', 'verified'],
   },
   pending_us: {
     id: 'kyc-2',
@@ -49,7 +49,7 @@ export const mockKYCRecords = {
     confidence: 0.75,
     approved_at: null,
     created_at: new Date('2026-02-25'),
-    tags: ['us-reg-d']
+    tags: ['us-reg-d'],
   },
   rejected_in: {
     id: 'kyc-3',
@@ -62,8 +62,8 @@ export const mockKYCRecords = {
     confidence: 0.92,
     approved_at: null,
     created_at: new Date('2026-02-20'),
-    tags: ['sanctions_match', 'pep']
-  }
+    tags: ['sanctions_match', 'pep'],
+  },
 };
 
 export const mockAMLRecords = {
@@ -75,7 +75,7 @@ export const mockAMLRecords = {
     flags: [],
     source: 'marble',
     created_at: new Date('2026-02-01'),
-    last_checked: new Date('2026-02-25')
+    last_checked: new Date('2026-02-25'),
   },
   high_risk: {
     id: 'aml-2',
@@ -85,8 +85,8 @@ export const mockAMLRecords = {
     flags: ['PEP_MATCH', 'SANCTIONS_SCREENING'],
     source: 'chainalysis',
     created_at: new Date('2026-02-20'),
-    last_checked: new Date('2026-02-25')
-  }
+    last_checked: new Date('2026-02-25'),
+  },
 };
 
 export const mockComplianceChecks = {
@@ -100,7 +100,7 @@ export const mockComplianceChecks = {
     decision_reason: 'All checks passed. Low risk profile.',
     approved_by: 'user-1',
     created_at: new Date('2026-02-01'),
-    updated_at: new Date('2026-02-01')
+    updated_at: new Date('2026-02-01'),
   },
   escalated: {
     id: 'check-2',
@@ -112,7 +112,7 @@ export const mockComplianceChecks = {
     decision_reason: 'Medium-high risk score. Requires manual review.',
     approved_by: null,
     created_at: new Date('2026-02-25'),
-    updated_at: new Date('2026-02-25')
+    updated_at: new Date('2026-02-25'),
   },
   rejected: {
     id: 'check-3',
@@ -124,8 +124,8 @@ export const mockComplianceChecks = {
     decision_reason: 'Sanctions match detected (OFAC list). Rejected per compliance policy.',
     approved_by: 'user-1',
     created_at: new Date('2026-02-20'),
-    updated_at: new Date('2026-02-20')
-  }
+    updated_at: new Date('2026-02-20'),
+  },
 };
 
 export const mockTransactions = {
@@ -138,7 +138,7 @@ export const mockTransactions = {
     blockchain_tx_hash: '0xaaaa....',
     status: 'APPROVED',
     risk_score: 35,
-    timestamp: new Date('2026-02-01T10:00:00Z')
+    timestamp: new Date('2026-02-01T10:00:00Z'),
   },
   suspicious_transfer: {
     id: 'tx-2',
@@ -149,8 +149,8 @@ export const mockTransactions = {
     blockchain_tx_hash: '0xbbbb....',
     status: 'ESCALATED',
     risk_score: 72,
-    timestamp: new Date('2026-02-25T14:30:00Z')
-  }
+    timestamp: new Date('2026-02-25T14:30:00Z'),
+  },
 };
 
 export const mockJurisdictionRules = {
@@ -163,8 +163,8 @@ export const mockJurisdictionRules = {
     aml_threshold: 50000,
     governance: {
       major_changes_require_vote: true,
-      voting_threshold: 66
-    }
+      voting_threshold: 66,
+    },
   },
   US: {
     code: 'US',
@@ -175,8 +175,8 @@ export const mockJurisdictionRules = {
     aml_threshold: 10000,
     governance: {
       major_changes_require_vote: false,
-      voting_threshold: 0
-    }
+      voting_threshold: 0,
+    },
   },
   IN: {
     code: 'IN',
@@ -187,9 +187,9 @@ export const mockJurisdictionRules = {
     aml_threshold: 20000,
     governance: {
       major_changes_require_vote: true,
-      voting_threshold: 51
-    }
-  }
+      voting_threshold: 51,
+    },
+  },
 };
 
 /**
@@ -198,11 +198,11 @@ export const mockJurisdictionRules = {
 export const createMockDatabasePool = () => ({
   connect: jest.fn().mockResolvedValue({
     query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
-    release: jest.fn()
+    release: jest.fn(),
   }),
   query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
   end: jest.fn().mockResolvedValue(undefined),
-  on: jest.fn()
+  on: jest.fn(),
 });
 
 /**
@@ -218,7 +218,7 @@ export const createMockRedisClient = () => ({
   connect: jest.fn().mockResolvedValue(undefined),
   disconnect: jest.fn().mockResolvedValue(undefined),
   ping: jest.fn().mockResolvedValue('PONG'),
-  on: jest.fn()
+  on: jest.fn(),
 });
 
 /**
@@ -228,9 +228,9 @@ export const createMockBallerineClient = () => ({
   verify: jest.fn().mockResolvedValue({
     status: 'APPROVED',
     confidence: 0.98,
-    document_id: 'doc-123'
+    document_id: 'doc-123',
   }),
-  getStatus: jest.fn().mockResolvedValue('completed')
+  getStatus: jest.fn().mockResolvedValue('completed'),
 });
 
 /**
@@ -240,7 +240,7 @@ export const createMockChainalysisClient = () => ({
   screenWallet: jest.fn().mockResolvedValue({
     risk_score: 20,
     flags: [],
-    match_type: 'none'
+    match_type: 'none',
   }),
-  getHistory: jest.fn().mockResolvedValue([])
+  getHistory: jest.fn().mockResolvedValue([]),
 });

@@ -1,7 +1,7 @@
 /**
  * AML Anomaly Detector Agent
  * Analyzes P2P transfers for suspicious patterns indicative of hawala or other money laundering
- * 
+ *
  * File: src/api/src/agents/amlAnomalyDetectorAgent.ts
  */
 
@@ -64,7 +64,7 @@ export class AMLAnomalyDetectorAgent {
 
   /**
    * Assess risk of hawala (informal money transfer) patterns
-   * 
+   *
    * @param transfer P2P transfer details
    * @returns AML assessment with risk score and flags
    */

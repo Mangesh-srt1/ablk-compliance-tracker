@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   # ===== HYPERLEDGER BESU =====
@@ -21,9 +21,9 @@ services:
       - --permissions-accounts-config-file-enabled=true
       - --permissions-accounts-config-file=/data/permissions_config.toml
     ports:
-      - "8545:8545"
-      - "8546:8546"
-      - "30303:30303"
+      - '8545:8545'
+      - '8546:8546'
+      - '30303:30303'
     volumes:
       - besu-validator-1-data:/data
       - ./backend/besu-config/besu-config.toml:/data/besu-config.toml
@@ -36,13 +36,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
+          cpus: '2'
           memory: 2G
         reservations:
-          cpus: "1"
+          cpus: '1'
           memory: 1G
     healthcheck:
-      test: ["CMD", "test", "-f", "/data/genesis.json"]
+      test: ['CMD', 'test', '-f', '/data/genesis.json']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -57,7 +57,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "${DB_PORT}:5432"
+      - '${DB_PORT}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -65,13 +65,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: '1'
           memory: 1G
         reservations:
-          cpus: "0.5"
+          cpus: '0.5'
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -82,19 +82,19 @@ services:
     image: redis:7-alpine
     container_name: compliance-redis
     ports:
-      - "${REDIS_PORT}:6379"
+      - '${REDIS_PORT}:6379'
     networks:
       - compliance-network
     deploy:
       resources:
         limits:
-          cpus: "0.5"
+          cpus: '0.5'
           memory: 512M
         reservations:
-          cpus: "0.25"
+          cpus: '0.25'
           memory: 256M
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -109,7 +109,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_INSTALL_PLUGINS: grafana-piechart-panel
     ports:
-      - "${GRAFANA_PORT:-3001}:3000"
+      - '${GRAFANA_PORT:-3001}:3000'
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infrastructure/grafana-dashboards:/etc/grafana/provisioning/dashboards
@@ -119,13 +119,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: '1'
           memory: 768M
         reservations:
-          cpus: "0.5"
+          cpus: '0.5'
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      test:
+        ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -145,7 +146,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./src/api/src:/app/src
     networks:
@@ -153,13 +154,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: '1'
           memory: 768M
         reservations:
-          cpus: "0.5"
+          cpus: '0.5'
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5
@@ -187,7 +188,7 @@ services:
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "3002:3002"
+      - '3002:3002'
     volumes:
       - ./src/agents/src:/app/src
     networks:
@@ -195,13 +196,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
+          cpus: '2'
           memory: 2G
         reservations:
-          cpus: "1"
+          cpus: '1'
           memory: 1G
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3002/health || exit 1"]
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3002/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -226,7 +227,7 @@ services:
       REACT_APP_API_URL: http://compliance-gateway:3000
       REACT_APP_WS_URL: ws://compliance-gateway:3000
     ports:
-      - "3001:80"
+      - '3001:80'
     volumes:
       - ./src/dashboard/src:/app/src
       - ./src/dashboard/public:/app/public
@@ -235,13 +236,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: '1'
           memory: 1G
         reservations:
-          cpus: "0.5"
+          cpus: '0.5'
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost || exit 1"]
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost || exit 1']
       interval: 30s
       timeout: 10s
       retries: 5

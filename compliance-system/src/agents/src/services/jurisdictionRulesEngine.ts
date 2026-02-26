@@ -1,10 +1,10 @@
 /**
  * Jurisdiction Rules Engine Service
- * 
+ *
  * Decouples compliance rules from code by loading jurisdiction-specific rules from YAML configs.
  * Enables multi-jurisdiction deployments with a single codebase.
  * Production-ready, fully tested TypeScript implementation.
- * 
+ *
  * Usage:
  *   const engine = new JurisdictionRulesEngine('/config', dbClient);
  *   const rules = await engine.loadJurisdiction('AE'); // Load Dubai
@@ -156,25 +156,23 @@ export class JurisdictionRulesEngine extends EventEmitter {
   private fileWatchers: Map<string, fs.FSWatcher> = new Map();
   private cacheTimeout: NodeJS.Timeout | null = null;
 
-  constructor(
-    configPath: string,
-    dbClient: postgres.Client,
-    loggerInstance?: winston.Logger
-  ) {
+  constructor(configPath: string, dbClient: postgres.Client, loggerInstance?: winston.Logger) {
     super();
     this.configPath = configPath;
     this.dbClient = dbClient;
-    
+
     // Use provided logger or create default
-    this.logger = loggerInstance || winston.createLogger({
-      level: 'info',
-      format: winston.format.json({ space: 2 }),
-      defaultMeta: { service: 'jurisdiction-rules-engine' },
-      transports: [
-        new winston.transports.File({ filename: 'logs/rules-engine-error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'logs/rules-engine-combined.log' })
-      ]
-    });
+    this.logger =
+      loggerInstance ||
+      winston.createLogger({
+        level: 'info',
+        format: winston.format.json({ space: 2 }),
+        defaultMeta: { service: 'jurisdiction-rules-engine' },
+        transports: [
+          new winston.transports.File({ filename: 'logs/rules-engine-error.log', level: 'error' }),
+          new winston.transports.File({ filename: 'logs/rules-engine-combined.log' }),
+        ],
+      });
 
     this.validateConfigDirectory();
   }
@@ -184,17 +182,17 @@ export class JurisdictionRulesEngine extends EventEmitter {
    */
   private validateConfigDirectory(): void {
     const jurisdictionsDir = path.join(this.configPath, 'jurisdictions');
-    
+
     if (!fs.existsSync(jurisdictionsDir)) {
       throw new Error(
         `Jurisdictions config directory not found: ${jurisdictionsDir}. ` +
-        `Create directory and add YAML config files (e.g., ae.yaml, in.yaml, sg.yaml)`
+          `Create directory and add YAML config files (e.g., ae.yaml, in.yaml, sg.yaml)`
       );
     }
 
     this.logger.info('Jurisdiction rules engine initialized', {
       configPath: this.configPath,
-      jurisdictionsDir
+      jurisdictionsDir,
     });
   }
 
@@ -210,11 +208,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
       return this.rulesCache.get(code)!;
     }
 
-    const filePath = path.join(
-      this.configPath,
-      'jurisdictions',
-      `${code.toLowerCase()}.yaml`
-    );
+    const filePath = path.join(this.configPath, 'jurisdictions', `${code.toLowerCase()}.yaml`);
 
     try {
       // Read and parse YAML
@@ -236,24 +230,23 @@ export class JurisdictionRulesEngine extends EventEmitter {
         jurisdictionCode: code,
         name: config.jurisdiction.name,
         region: config.jurisdiction.region,
-        filePath
+        filePath,
       });
 
       // Emit load event
       this.emit('jurisdictionLoaded', {
         code,
         name: config.jurisdiction.name,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       return config;
-
     } catch (error) {
       this.logger.error('Failed to load jurisdiction rules', {
         jurisdictionCode: code,
         filePath,
         errorMessage: (error as Error).message,
-        stack: (error as Error).stack
+        stack: (error as Error).stack,
       });
 
       throw new Error(
@@ -270,25 +263,27 @@ export class JurisdictionRulesEngine extends EventEmitter {
       const watcher = fs.watch(filePath, (eventType) => {
         if (eventType === 'change') {
           this.logger.info('Jurisdiction config file changed, reloading', {
-            jurisdictionCode
+            jurisdictionCode,
           });
-          
+
           // Remove from cache and reload
           this.rulesCache.delete(jurisdictionCode);
-          
+
           // Debounce reload (prevent multiple triggers)
-          if (this.cacheTimeout) {clearTimeout(this.cacheTimeout);}
+          if (this.cacheTimeout) {
+            clearTimeout(this.cacheTimeout);
+          }
           this.cacheTimeout = setTimeout(async () => {
             try {
               await this.loadJurisdiction(jurisdictionCode);
               this.emit('configReloaded', {
                 jurisdictionCode,
-                timestamp: new Date()
+                timestamp: new Date(),
               });
             } catch (error) {
               this.logger.error('Failed to reload jurisdiction config', {
                 jurisdictionCode,
-                error: (error as Error).message
+                error: (error as Error).message,
               });
             }
           }, 1000);
@@ -296,11 +291,10 @@ export class JurisdictionRulesEngine extends EventEmitter {
       });
 
       this.fileWatchers.set(jurisdictionCode, watcher);
-
     } catch (error) {
       this.logger.warn('Could not setup file watcher', {
         jurisdictionCode,
-        reason: (error as Error).message
+        reason: (error as Error).message,
       });
     }
   }
@@ -309,20 +303,14 @@ export class JurisdictionRulesEngine extends EventEmitter {
    * Validate jurisdiction config structure
    */
   private validateConfigStructure(config: JurisdictionConfig, code: string): void {
-    const requiredFields = [
-      'jurisdiction.code',
-      'jurisdiction.name',
-      'jurisdiction.region'
-    ];
+    const requiredFields = ['jurisdiction.code', 'jurisdiction.name', 'jurisdiction.region'];
 
     for (const field of requiredFields) {
       const [section, key] = field.split('.');
       const sectionData = config[section as keyof JurisdictionConfig];
-      
+
       if (!sectionData?.[key]) {
-        throw new Error(
-          `Required field missing: ${field} in ${code}.yaml`
-        );
+        throw new Error(`Required field missing: ${field} in ${code}.yaml`);
       }
     }
 
@@ -330,7 +318,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
     if (config.jurisdiction.code !== code) {
       this.logger.warn('Jurisdiction code mismatch', {
         filename: code,
-        configCode: config.jurisdiction.code
+        configCode: config.jurisdiction.code,
       });
     }
   }
@@ -338,15 +326,13 @@ export class JurisdictionRulesEngine extends EventEmitter {
   /**
    * Validate fund structure against jurisdiction requirements
    */
-  async validateFundStructure(
-    fundData: {
-      jurisdictionCode: string;
-      legalEntityType: string;
-      fundSize: number;
-      investorCount: number;
-      fundTypes: string[];
-    }
-  ): Promise<ValidationResult> {
+  async validateFundStructure(fundData: {
+    jurisdictionCode: string;
+    legalEntityType: string;
+    fundSize: number;
+    investorCount: number;
+    fundTypes: string[];
+  }): Promise<ValidationResult> {
     const rules = await this.loadJurisdiction(fundData.jurisdictionCode);
     const violations: string[] = [];
     const warnings: string[] = [];
@@ -373,13 +359,11 @@ export class JurisdictionRulesEngine extends EventEmitter {
 
     // Check allowed fund types
     if (fs.allowedFundTypes && fs.allowedFundTypes.length > 0) {
-      const hasValidType = fundData.fundTypes.some(type =>
-        fs.allowedFundTypes!.includes(type)
-      );
+      const hasValidType = fundData.fundTypes.some((type) => fs.allowedFundTypes!.includes(type));
       if (!hasValidType) {
         violations.push(
           `Fund types [${fundData.fundTypes.join(', ')}] not allowed. ` +
-          `Allowed: [${fs.allowedFundTypes.join(', ')}]`
+            `Allowed: [${fs.allowedFundTypes.join(', ')}]`
         );
       }
     }
@@ -388,13 +372,13 @@ export class JurisdictionRulesEngine extends EventEmitter {
       jurisdictionCode: fundData.jurisdictionCode,
       isValid: violations.length === 0,
       violationCount: violations.length,
-      warningCount: warnings.length
+      warningCount: warnings.length,
     });
 
     return {
       isValid: violations.length === 0,
       violations,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -420,7 +404,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
       sanctionsLists: kyc.sanctionsList || [],
       livenessCheck: kyc.livenessCheck !== false,
       faceMatch: kyc.faceMatch !== false,
-      refreshIntervalDays: kyc.kycRefreshInterval || 365
+      refreshIntervalDays: kyc.kycRefreshInterval || 365,
     };
   }
 
@@ -444,10 +428,10 @@ export class JurisdictionRulesEngine extends EventEmitter {
       (changeType === 'DISTRIBUTION_CHANGE' && gov.distributionChangesRequireVote);
 
     return {
-      required: (gov.majorChangesRequireVote === true) && changeRequiresVote,
+      required: gov.majorChangesRequireVote === true && changeRequiresVote,
       threshold: gov.votingThreshold || 50,
       deadlineDays: gov.votingDeadlineDays || 14,
-      gpHasVeto: gov.gpHasVeto === true
+      gpHasVeto: gov.gpHasVeto === true,
     };
   }
 
@@ -474,13 +458,19 @@ export class JurisdictionRulesEngine extends EventEmitter {
     const dist = rules.distributions;
 
     // Management fee checks
-    if (dist.maxManagementFeePercentage && waterfall.mgmtFeePercentage > dist.maxManagementFeePercentage) {
+    if (
+      dist.maxManagementFeePercentage &&
+      waterfall.mgmtFeePercentage > dist.maxManagementFeePercentage
+    ) {
       violations.push(
         `Management fee ${waterfall.mgmtFeePercentage}% exceeds max ${dist.maxManagementFeePercentage}%`
       );
     }
 
-    if (dist.minManagementFeePercentage && waterfall.mgmtFeePercentage < dist.minManagementFeePercentage) {
+    if (
+      dist.minManagementFeePercentage &&
+      waterfall.mgmtFeePercentage < dist.minManagementFeePercentage
+    ) {
       violations.push(
         `Management fee ${waterfall.mgmtFeePercentage}% below min ${dist.minManagementFeePercentage}%`
       );
@@ -503,13 +493,13 @@ export class JurisdictionRulesEngine extends EventEmitter {
       jurisdictionCode,
       isValid: violations.length === 0,
       violationCount: violations.length,
-      warningCount: warnings.length
+      warningCount: warnings.length,
     });
 
     return {
       isValid: violations.length === 0,
       violations,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -527,17 +517,17 @@ export class JurisdictionRulesEngine extends EventEmitter {
     const it = rules.insiderTrading || {};
 
     return {
-      blockThreshold: it.escalationThresholds?.block || 0.90,
+      blockThreshold: it.escalationThresholds?.block || 0.9,
       regulatoryReportThreshold: it.escalationThresholds?.regulatoryReport || 0.75,
-      manualReviewThreshold: it.escalationThresholds?.manualReview || 0.60,
-      monitorThreshold: it.escalationThresholds?.monitor || 0.30,
+      manualReviewThreshold: it.escalationThresholds?.manualReview || 0.6,
+      monitorThreshold: it.escalationThresholds?.monitor || 0.3,
       signalWeights: Object.entries(it.signals || {}).reduce(
         (acc, [key, val]: [string, any]) => {
           acc[key] = val.weight || val.threshold || 0;
           return acc;
         },
         {} as { [key: string]: number }
-      )
+      ),
     };
   }
 
@@ -555,7 +545,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
     return {
       strRequired: aml.strFilingRequired === true,
       strFilingDeadlineDays: aml.strFilingDeadline || 10,
-      ctfThreshold: aml.ctfThreshold || 100000
+      ctfThreshold: aml.ctfThreshold || 100000,
     };
   }
 
@@ -577,7 +567,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
       encryption: dp.piiEncryption || 'AES_256',
       minRetentionYears: 7,
       maxRetentionYears: 10,
-      jurisdictionalStorageRequired: dp.jurisdictionalDataStorage === 'REQUIRED'
+      jurisdictionalStorageRequired: dp.jurisdictionalDataStorage === 'REQUIRED',
     };
   }
 
@@ -612,7 +602,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
           JSON.stringify(details),
           decidedBy || 'SYSTEM',
           timestamp,
-          timestamp
+          timestamp,
         ]
       );
 
@@ -622,7 +612,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
         jurisdictionCode,
         decisionType,
         decision,
-        ruleReference
+        ruleReference,
       });
 
       return {
@@ -633,14 +623,13 @@ export class JurisdictionRulesEngine extends EventEmitter {
         decision,
         ruleReference,
         details,
-        timestamp
+        timestamp,
       };
-
     } catch (error) {
       this.logger.error('Failed to log compliance decision', {
         fundId,
         jurisdictionCode,
-        errorMessage: (error as Error).message
+        errorMessage: (error as Error).message,
       });
       throw error;
     }
@@ -649,10 +638,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
   /**
    * Get audit log for fund
    */
-  async getFundAuditLog(
-    fundId: string,
-    limit: number = 50
-  ): Promise<ComplianceDecisionLog[]> {
+  async getFundAuditLog(fundId: string, limit: number = 50): Promise<ComplianceDecisionLog[]> {
     try {
       const result = await this.dbClient.query(
         `SELECT id, fund_id, jurisdiction_code, decision_type, decision, 
@@ -664,7 +650,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
         [fundId, limit]
       );
 
-      return result.rows.map(row => ({
+      return result.rows.map((row) => ({
         id: row.id,
         fundId: row.fund_id,
         jurisdictionCode: row.jurisdiction_code,
@@ -672,13 +658,12 @@ export class JurisdictionRulesEngine extends EventEmitter {
         decision: row.decision,
         ruleReference: row.rule_reference,
         details: row.details,
-        timestamp: row.created_at
+        timestamp: row.created_at,
       }));
-
     } catch (error) {
       this.logger.error('Failed to fetch audit log', {
         fundId,
-        errorMessage: (error as Error).message
+        errorMessage: (error as Error).message,
       });
       throw error;
     }
@@ -697,18 +682,18 @@ export class JurisdictionRulesEngine extends EventEmitter {
     for (const file of files) {
       if (file.endsWith('.yaml') || file.endsWith('.yml')) {
         const jurisdictionCode = file.replace(/\.(yaml|yml)$/, '').toUpperCase();
-        
+
         try {
           const rules = await this.loadJurisdiction(jurisdictionCode);
           jurisdictions.push({
             code: rules.jurisdiction.code,
             name: rules.jurisdiction.name,
-            region: rules.jurisdiction.region
+            region: rules.jurisdiction.region,
           });
         } catch (error) {
           this.logger.warn('Failed to load jurisdiction', {
             code: jurisdictionCode,
-            error: (error as Error).message
+            error: (error as Error).message,
           });
         }
       }
@@ -737,7 +722,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
     return {
       cachedJurisdictions: this.rulesCache.size,
       jurisdictionCodes: Array.from(this.rulesCache.keys()),
-      totalCacheSize: JSON.stringify(Array.from(this.rulesCache.values())).length
+      totalCacheSize: JSON.stringify(Array.from(this.rulesCache.values())).length,
     };
   }
 
@@ -749,7 +734,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
       watcher.close();
       this.logger.info('File watcher closed', { jurisdictionCode: code });
     }
-    
+
     this.fileWatchers.clear();
     this.rulesCache.clear();
 

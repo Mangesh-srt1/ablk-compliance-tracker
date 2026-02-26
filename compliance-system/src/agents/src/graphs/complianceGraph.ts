@@ -3,7 +3,7 @@
  * LangGraph orchestration for multi-agent compliance workflow
  */
 
-import { StateGraph, START, END } from '@langchain/langgraph';
+import { StateGraph, START, END, CompiledStateGraph } from '@langchain/langgraph';
 import winston from 'winston';
 import { ComplianceSupervisorAgent } from '../agents/supervisorAgent';
 import { KYCAgent } from '../agents/kycAgent';
@@ -12,14 +12,11 @@ import { SEBIAgent } from '../agents/sebiAgent';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/compliance-graph.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/compliance-graph.log' }),
+  ],
 });
 
 export interface ComplianceWorkflowState {
@@ -36,7 +33,7 @@ export interface ComplianceWorkflowState {
 }
 
 export class ComplianceGraph {
-  private graph: StateGraph<ComplianceWorkflowState>;
+  private graph: StateGraph<ComplianceWorkflowState> | CompiledStateGraph<ComplianceWorkflowState, Partial<ComplianceWorkflowState>>;
   private supervisorAgent: ComplianceSupervisorAgent;
   private kycAgent: KYCAgent;
   private amlAgent: AMLAgent;
@@ -59,6 +56,7 @@ export class ComplianceGraph {
   /**
    * Initialize the compliance workflow graph
    */
+  // @ts-ignore - LangChain v0.1 reducer API mismatch
   private initializeGraph(): void {
     this.graph = new StateGraph<ComplianceWorkflowState>({
       channels: {
@@ -73,10 +71,10 @@ export class ComplianceGraph {
         processingTime: { default: () => 0 },
         errors: {
           default: () => [],
-          reducer: (current: string[], update: string[]) => [...current, ...update]
-        }
-      }
-    });
+          reducer: (current: string[], update: string[]) => [...current, ...update],
+        },
+      },
+    } as any);
 
     // Add workflow nodes
     this.graph.addNode('validate_transaction', this.validateTransaction.bind(this));
@@ -86,30 +84,28 @@ export class ComplianceGraph {
     this.graph.addNode('handle_errors', this.handleErrors.bind(this));
 
     // Define conditional routing
-    this.graph.addConditionalEdges(
-      'validate_transaction',
-      this.routeAfterValidation.bind(this),
-      {
-        'parallel': 'parallel_checks',
-        'error': 'handle_errors'
-      }
-    );
+    // @ts-ignore - LangChain v0.1 edge routing type compatibility
+    this.graph.addConditionalEdges('validate_transaction', this.routeAfterValidation.bind(this), {
+      parallel: 'parallel_checks',
+      error: 'handle_errors',
+    });
 
-    this.graph.addConditionalEdges(
-      'parallel_checks',
-      this.routeAfterChecks.bind(this),
-      {
-        'supervisor': 'supervisor_review',
-        'escalate': 'generate_report',
-        'error': 'handle_errors'
-      }
-    );
+    // @ts-ignore
+    this.graph.addConditionalEdges('parallel_checks', this.routeAfterChecks.bind(this), {
+      supervisor: 'supervisor_review',
+      escalate: 'generate_report',
+      error: 'handle_errors',
+    });
 
+    // @ts-ignore
     this.graph.addEdge('supervisor_review', 'generate_report');
+    // @ts-ignore
     this.graph.addEdge('generate_report', END);
+    // @ts-ignore
     this.graph.addEdge('handle_errors', END);
 
     // Set entry point
+    // @ts-ignore
     this.graph.addEdge(START, 'validate_transaction');
 
     // Compile the graph
@@ -119,12 +115,14 @@ export class ComplianceGraph {
   /**
    * Validate transaction data
    */
-  private async validateTransaction(state: ComplianceWorkflowState): Promise<Partial<ComplianceWorkflowState>> {
+  private async validateTransaction(
+    state: ComplianceWorkflowState
+  ): Promise<Partial<ComplianceWorkflowState>> {
     const { transaction } = state;
 
     logger.info('Validating transaction', {
       transactionId: transaction.id,
-      type: transaction.type
+      type: transaction.type,
     });
 
     try {
@@ -138,18 +136,17 @@ export class ComplianceGraph {
       }
 
       return {
-        currentStep: 'validation_complete'
+        currentStep: 'validation_complete',
       };
-
     } catch (error) {
       logger.error('Transaction validation failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         errors: [error instanceof Error ? error.message : 'Validation failed'],
-        currentStep: 'validation_failed'
+        currentStep: 'validation_failed',
       };
     }
   }
@@ -167,12 +164,14 @@ export class ComplianceGraph {
   /**
    * Execute parallel compliance checks
    */
-  private async executeParallelChecks(state: ComplianceWorkflowState): Promise<Partial<ComplianceWorkflowState>> {
+  private async executeParallelChecks(
+    state: ComplianceWorkflowState
+  ): Promise<Partial<ComplianceWorkflowState>> {
     const { transaction } = state;
     const startTime = Date.now();
 
     logger.info('Executing parallel compliance checks', {
-      transactionId: transaction.id
+      transactionId: transaction.id,
     });
 
     try {
@@ -226,7 +225,7 @@ export class ComplianceGraph {
         } else if (result.status === 'rejected') {
           logger.error(`Check failed for ${checksToRun[index]}`, {
             transactionId: transaction.id,
-            error: result.reason
+            error: result.reason,
           });
         }
       });
@@ -239,19 +238,18 @@ export class ComplianceGraph {
         sebiResult,
         riskScore: averageRiskScore,
         processingTime,
-        currentStep: 'parallel_checks_complete'
+        currentStep: 'parallel_checks_complete',
       };
-
     } catch (error) {
       logger.error('Parallel checks execution failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         errors: [error instanceof Error ? error.message : 'Parallel checks failed'],
         processingTime: Date.now() - startTime,
-        currentStep: 'parallel_checks_failed'
+        currentStep: 'parallel_checks_failed',
       };
     }
   }
@@ -281,12 +279,14 @@ export class ComplianceGraph {
   /**
    * Supervisor review for medium-risk transactions
    */
-  private async supervisorReview(state: ComplianceWorkflowState): Promise<Partial<ComplianceWorkflowState>> {
+  private async supervisorReview(
+    state: ComplianceWorkflowState
+  ): Promise<Partial<ComplianceWorkflowState>> {
     const { transaction, kycResult, amlResult, sebiResult } = state;
 
     logger.info('Supervisor review initiated', {
       transactionId: transaction.id,
-      riskScore: state.riskScore
+      riskScore: state.riskScore,
     });
 
     try {
@@ -302,8 +302,8 @@ export class ComplianceGraph {
         metadata: {
           kycResult,
           amlResult,
-          sebiResult
-        }
+          sebiResult,
+        },
       };
 
       const supervisorResult = await this.supervisorAgent.executeCheck(check);
@@ -311,18 +311,17 @@ export class ComplianceGraph {
       return {
         supervisorDecision: supervisorResult,
         riskScore: supervisorResult.riskScore,
-        currentStep: 'supervisor_review_complete'
+        currentStep: 'supervisor_review_complete',
       };
-
     } catch (error) {
       logger.error('Supervisor review failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         errors: [error instanceof Error ? error.message : 'Supervisor review failed'],
-        currentStep: 'supervisor_review_failed'
+        currentStep: 'supervisor_review_failed',
       };
     }
   }
@@ -330,12 +329,14 @@ export class ComplianceGraph {
   /**
    * Generate final compliance report
    */
-  private async generateReport(state: ComplianceWorkflowState): Promise<Partial<ComplianceWorkflowState>> {
+  private async generateReport(
+    state: ComplianceWorkflowState
+  ): Promise<Partial<ComplianceWorkflowState>> {
     const { transaction, kycResult, amlResult, sebiResult, supervisorDecision, riskScore } = state;
 
     logger.info('Generating compliance report', {
       transactionId: transaction.id,
-      finalRiskScore: riskScore
+      finalRiskScore: riskScore,
     });
 
     // Determine final status
@@ -376,25 +377,27 @@ export class ComplianceGraph {
       recommendations,
       processingTime: state.processingTime,
       timestamp: new Date().toISOString(),
-      agentsUsed: this.getAgentsUsed(kycResult, amlResult, sebiResult, supervisorDecision)
+      agentsUsed: this.getAgentsUsed(kycResult, amlResult, sebiResult, supervisorDecision),
     };
 
     return {
       finalResult,
-      currentStep: 'report_generated'
+      currentStep: 'report_generated',
     };
   }
 
   /**
    * Handle errors in the workflow
    */
-  private async handleErrors(state: ComplianceWorkflowState): Promise<Partial<ComplianceWorkflowState>> {
+  private async handleErrors(
+    state: ComplianceWorkflowState
+  ): Promise<Partial<ComplianceWorkflowState>> {
     const { transaction, errors } = state;
 
     logger.error('Handling workflow errors', {
       transactionId: transaction.id,
       errorCount: errors.length,
-      errors
+      errors,
     });
 
     // Create error result
@@ -402,17 +405,17 @@ export class ComplianceGraph {
       transactionId: transaction.id,
       status: 'escalated',
       riskScore: 1.0,
-      findings: errors.map(error => ({ type: 'error', message: error })),
+      findings: errors.map((error) => ({ type: 'error', message: error })),
       recommendations: ['Manual compliance review required due to system errors'],
       processingTime: state.processingTime,
       timestamp: new Date().toISOString(),
       agentsUsed: [],
-      errors
+      errors,
     };
 
     return {
       finalResult,
-      currentStep: 'errors_handled'
+      currentStep: 'errors_handled',
     };
   }
 
@@ -425,7 +428,7 @@ export class ComplianceGraph {
     try {
       logger.info('Starting compliance workflow', {
         transactionId: transaction.id,
-        type: transaction.type
+        type: transaction.type,
       });
 
       const initialState: ComplianceWorkflowState = {
@@ -434,10 +437,10 @@ export class ComplianceGraph {
         currentStep: 'initialization',
         riskScore: 0,
         processingTime: 0,
-        errors: []
+        errors: [],
       };
 
-      const finalState = await this.graph.invoke(initialState);
+      const finalState = await (this.graph as any).invoke(initialState);
       const totalProcessingTime = Date.now() - startTime;
 
       // Update processing time
@@ -449,15 +452,14 @@ export class ComplianceGraph {
         transactionId: transaction.id,
         status: finalState.finalResult?.status,
         riskScore: finalState.finalResult?.riskScore,
-        processingTime: totalProcessingTime
+        processingTime: totalProcessingTime,
       });
 
       return finalState.finalResult;
-
     } catch (error) {
       logger.error('Compliance workflow execution failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return error result
@@ -470,7 +472,7 @@ export class ComplianceGraph {
         processingTime: Date.now() - startTime,
         timestamp: new Date().toISOString(),
         agentsUsed: [],
-        errors: [error instanceof Error ? error.message : 'Workflow execution failed']
+        errors: [error instanceof Error ? error.message : 'Workflow execution failed'],
       };
     }
   }
@@ -507,13 +509,26 @@ export class ComplianceGraph {
   /**
    * Get list of agents that were used
    */
-  private getAgentsUsed(kycResult: any, amlResult: any, sebiResult: any, supervisorDecision: any): string[] {
+  private getAgentsUsed(
+    kycResult: any,
+    amlResult: any,
+    sebiResult: any,
+    supervisorDecision: any
+  ): string[] {
     const agents = [];
 
-    if (kycResult) {agents.push('kyc');}
-    if (amlResult) {agents.push('aml');}
-    if (sebiResult) {agents.push('sebi');}
-    if (supervisorDecision) {agents.push('supervisor');}
+    if (kycResult) {
+      agents.push('kyc');
+    }
+    if (amlResult) {
+      agents.push('aml');
+    }
+    if (sebiResult) {
+      agents.push('sebi');
+    }
+    if (supervisorDecision) {
+      agents.push('supervisor');
+    }
 
     return agents;
   }

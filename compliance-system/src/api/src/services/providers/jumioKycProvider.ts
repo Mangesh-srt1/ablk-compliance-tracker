@@ -11,19 +11,16 @@ import {
   KycProviderConfig,
   KycVerificationRequest,
   KycVerificationResult,
-  KycFlag
+  KycFlag,
 } from './kycProviderInterface';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/jumio-kyc.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/jumio-kyc.log' }),
+  ],
 });
 
 export class JumioKycProvider implements IKycProvider {
@@ -43,8 +40,8 @@ export class JumioKycProvider implements IKycProvider {
       timeout: config.timeout,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'Ableka-Lumina/1.0'
-      }
+        'User-Agent': 'Ableka-Lumina/1.0',
+      },
     });
 
     // Add request/response interceptors for logging and auth
@@ -60,15 +57,15 @@ export class JumioKycProvider implements IKycProvider {
 
         config.headers = {
           ...config.headers,
-          'Authorization': `Jumio ${this.config.apiKey}:${signature}`,
+          Authorization: `Jumio ${this.config.apiKey}:${signature}`,
           'X-Jumio-Timestamp': timestamp.toString(),
-          'X-Jumio-Nonce': nonce
+          'X-Jumio-Nonce': nonce,
         } as any;
 
         logger.debug('Jumio API Request', {
           url: config.url,
           method: config.method,
-          entityId: config.data?.entityId
+          entityId: config.data?.entityId,
         });
         return config;
       },
@@ -82,7 +79,7 @@ export class JumioKycProvider implements IKycProvider {
       (response) => {
         logger.debug('Jumio API Response', {
           status: response.status,
-          url: response.config.url
+          url: response.config.url,
         });
         return response;
       },
@@ -90,7 +87,7 @@ export class JumioKycProvider implements IKycProvider {
         logger.error('Jumio API Response Error', {
           status: error.response?.status,
           url: error.config?.url,
-          message: error.message
+          message: error.message,
         });
         return Promise.reject(error);
       }
@@ -104,7 +101,7 @@ export class JumioKycProvider implements IKycProvider {
       logger.info('Starting Jumio KYC verification', {
         entityId: request.entityId,
         jurisdiction: request.jurisdiction,
-        documentCount: request.documents.length
+        documentCount: request.documents.length,
       });
 
       // Prepare the verification payload for Jumio
@@ -116,7 +113,8 @@ export class JumioKycProvider implements IKycProvider {
         frontsideImage: this.extractDocumentImage(request.documents, 'front'),
         backsideImage: this.extractDocumentImage(request.documents, 'back'),
         faceImage: this.extractDocumentImage(request.documents, 'face'),
-        callbackUrl: process.env.JUMIO_CALLBACK_URL || 'https://api.ableka-lumina.com/webhooks/jumio'
+        callbackUrl:
+          process.env.JUMIO_CALLBACK_URL || 'https://api.ableka-lumina.com/webhooks/jumio',
       };
 
       // Make the API call with retry logic
@@ -133,9 +131,9 @@ export class JumioKycProvider implements IKycProvider {
           }
           logger.warn(`Jumio API call failed, retrying (${attempt}/${this.config.retries})`, {
             error: error.message,
-            entityId: request.entityId
+            entityId: request.entityId,
           });
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
       }
 
@@ -148,7 +146,8 @@ export class JumioKycProvider implements IKycProvider {
       // For Jumio, we typically get a transaction reference and need to poll for results
       // For this implementation, we'll simulate the result based on the response
       const flags = this.parseJumioFlags(response.data);
-      const verified = response.data.verified && flags.filter(f => f.severity === 'CRITICAL').length === 0;
+      const verified =
+        response.data.verified && flags.filter((f) => f.severity === 'CRITICAL').length === 0;
 
       const result: KycVerificationResult = {
         provider: this.name,
@@ -157,7 +156,7 @@ export class JumioKycProvider implements IKycProvider {
         flags,
         extractedData: response.data.extractedData,
         processingTime,
-        rawResponse: response.data
+        rawResponse: response.data,
       };
 
       logger.info('Jumio KYC verification completed', {
@@ -165,31 +164,32 @@ export class JumioKycProvider implements IKycProvider {
         verified: result.verified,
         confidence: result.confidence,
         flagCount: flags.length,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       logger.error('Jumio KYC verification failed', {
         entityId: request.entityId,
         error: error.message,
-        processingTime
+        processingTime,
       });
 
       return {
         provider: this.name,
         verified: false,
         confidence: 0,
-        flags: [{
-          type: 'DOCUMENT_INVALID',
-          severity: 'CRITICAL',
-          message: `Verification failed: ${error.message}`,
-          details: { error: error.message }
-        }],
+        flags: [
+          {
+            type: 'DOCUMENT_INVALID',
+            severity: 'CRITICAL',
+            message: `Verification failed: ${error.message}`,
+            details: { error: error.message },
+          },
+        ],
         processingTime,
-        rawResponse: error.response?.data
+        rawResponse: error.response?.data,
       };
     }
   }
@@ -212,34 +212,55 @@ export class JumioKycProvider implements IKycProvider {
     try {
       const response = await this.client.get('/api/v1/capabilities');
       return {
-        supportedDocuments: response.data.supportedDocuments || ['passport', 'drivers_license', 'national_id', 'aadhaar'],
+        supportedDocuments: response.data.supportedDocuments || [
+          'passport',
+          'drivers_license',
+          'national_id',
+          'aadhaar',
+        ],
         supportedJurisdictions: response.data.supportedCountries || this.supportedJurisdictions,
-        features: response.data.features || ['document_verification', 'biometric_check', 'liveness_detection', 'face_matching']
+        features: response.data.features || [
+          'document_verification',
+          'biometric_check',
+          'liveness_detection',
+          'face_matching',
+        ],
       };
     } catch (error) {
-      logger.warn('Failed to get Jumio capabilities, using defaults', { error: (error as Error).message });
+      logger.warn('Failed to get Jumio capabilities, using defaults', {
+        error: (error as Error).message,
+      });
       return {
         supportedDocuments: ['passport', 'drivers_license', 'national_id', 'aadhaar'],
         supportedJurisdictions: this.supportedJurisdictions,
-        features: ['document_verification', 'biometric_check', 'liveness_detection', 'face_matching']
+        features: [
+          'document_verification',
+          'biometric_check',
+          'liveness_detection',
+          'face_matching',
+        ],
       };
     }
   }
 
-  private generateSignature(method: string, path: string, timestamp: number, nonce: string, data?: any): string {
+  private generateSignature(
+    method: string,
+    path: string,
+    timestamp: number,
+    nonce: string,
+    data?: any
+  ): string {
     const body = data ? JSON.stringify(data) : '';
     const message = `${method}${path}${timestamp}${nonce}${body}`;
 
-    return crypto.createHmac('sha256', this.apiSecret)
-      .update(message)
-      .digest('hex');
+    return crypto.createHmac('sha256', this.apiSecret).update(message).digest('hex');
   }
 
   private mapJurisdictionToCountry(jurisdiction: string): string {
     const countryMap: { [key: string]: string } = {
-      'IN': 'IND',
-      'EU': 'DEU', // Default to Germany for EU
-      'US': 'USA'
+      IN: 'IND',
+      EU: 'DEU', // Default to Germany for EU
+      US: 'USA',
     };
     return countryMap[jurisdiction] || 'USA';
   }
@@ -247,14 +268,18 @@ export class JumioKycProvider implements IKycProvider {
   private extractDocumentImage(documents: any[], side: string): string | undefined {
     // Find the appropriate document image based on side
     // This is a simplified implementation
-    const document = documents.find(doc => doc.type.includes(side) || doc.filename.includes(side));
+    const document = documents.find(
+      (doc) => doc.type.includes(side) || doc.filename.includes(side)
+    );
     return document?.data;
   }
 
   private parseJumioFlags(responseData: any): KycFlag[] {
     const flags: KycFlag[] = [];
 
-    if (!responseData) {return flags;}
+    if (!responseData) {
+      return flags;
+    }
 
     // Parse Jumio-specific rejection reasons
     if (responseData.rejectionReason) {
@@ -266,7 +291,7 @@ export class JumioKycProvider implements IKycProvider {
             type: 'DOCUMENT_EXPIRED',
             severity: 'HIGH',
             message: 'Document has expired',
-            details: rejection.details
+            details: rejection.details,
           });
           break;
         case '200': // Document not readable
@@ -274,7 +299,7 @@ export class JumioKycProvider implements IKycProvider {
             type: 'DOCUMENT_INVALID',
             severity: 'CRITICAL',
             message: 'Document is not readable or valid',
-            details: rejection.details
+            details: rejection.details,
           });
           break;
         case '300': // Face not found
@@ -282,7 +307,7 @@ export class JumioKycProvider implements IKycProvider {
             type: 'FACE_NOT_MATCHED',
             severity: 'HIGH',
             message: 'Face image not found or not clear',
-            details: rejection.details
+            details: rejection.details,
           });
           break;
         case '400': // Underage
@@ -290,7 +315,7 @@ export class JumioKycProvider implements IKycProvider {
             type: 'AGE_UNDERAGE',
             severity: 'CRITICAL',
             message: 'Individual appears to be underage',
-            details: rejection.details
+            details: rejection.details,
           });
           break;
         default:
@@ -298,7 +323,7 @@ export class JumioKycProvider implements IKycProvider {
             type: 'DOCUMENT_INVALID',
             severity: 'MEDIUM',
             message: `Document verification issue: ${rejection.message}`,
-            details: rejection.details
+            details: rejection.details,
           });
       }
     }
@@ -312,7 +337,7 @@ export class JumioKycProvider implements IKycProvider {
           type: 'NAME_MISMATCH',
           severity: 'MEDIUM',
           message: 'Name verification failed',
-          details: identity.nameCheckDetails
+          details: identity.nameCheckDetails,
         });
       }
 
@@ -321,7 +346,7 @@ export class JumioKycProvider implements IKycProvider {
           type: 'ADDRESS_MISMATCH',
           severity: 'LOW',
           message: 'Address verification failed',
-          details: identity.addressCheckDetails
+          details: identity.addressCheckDetails,
         });
       }
     }

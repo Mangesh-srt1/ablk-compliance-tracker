@@ -3,7 +3,11 @@
  * Tests supervisor agent workflow, state transitions, and multi-agent coordination
  */
 
-import { ComplianceSupervisorAgent, ComplianceCheck, ComplianceResult } from '../../../agents/supervisorAgent';
+import {
+  ComplianceSupervisorAgent,
+  ComplianceCheck,
+  ComplianceResult,
+} from '../../../agents/supervisorAgent';
 import { KYCAgent } from '../../../agents/kycAgent';
 import { AMLAgent } from '../../../agents/amlAgent';
 import { SEBIAgent } from '../../../agents/sebiAgent';
@@ -20,24 +24,24 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Create supervisor
     supervisor = new ComplianceSupervisorAgent();
 
     // Create mocked agents
     mockKycAgent = {
       run: jest.fn(),
-      validate: jest.fn()
+      validate: jest.fn(),
     } as any;
 
     mockAmlAgent = {
       run: jest.fn(),
-      analyzeRisk: jest.fn()
+      analyzeRisk: jest.fn(),
     } as any;
 
     mockSebiAgent = {
       run: jest.fn(),
-      checkRegulation: jest.fn()
+      checkRegulation: jest.fn(),
     } as any;
   });
 
@@ -49,14 +53,14 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-1',
         checkType: 'kyc',
         fromAddress: '0x1234567890abcdef1234567890abcdef12345678',
-        amount: 100000
+        amount: 100000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
         riskScore: 15,
         confidence: 0.98,
-        flags: []
+        flags: [],
       });
 
       // This would be called through the graph execution
@@ -75,13 +79,13 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-2',
         checkType: 'aml',
         fromAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
-        amount: 500000
+        amount: 500000,
       };
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 25,
         riskLevel: 'LOW',
-        screening: { sanctionsMatch: false }
+        screening: { sanctionsMatch: false },
       });
 
       const result = await supervisor.executeCheck(check);
@@ -101,23 +105,23 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         toAddress: '0x2222222222222222222222222222222222222222',
         amount: 250000,
         metadata: {
-          jurisdiction: 'IN'
-        }
+          jurisdiction: 'IN',
+        },
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 20
+        riskScore: 20,
       });
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 30,
-        riskLevel: 'LOW'
+        riskLevel: 'LOW',
       });
 
       mockSebiAgent.checkRegulation.mockResolvedValue({
         compliant: true,
-        riskScore: 15
+        riskScore: 15,
       });
 
       const result = await supervisor.executeCheck(check);
@@ -138,7 +142,7 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         checkType: 'full',
         fromAddress: '0x3333333333333333333333333333333333333333',
         amount: 400000,
-        metadata: { jurisdiction: 'AE' }
+        metadata: { jurisdiction: 'AE' },
       };
 
       const callOrder: string[] = [];
@@ -176,16 +180,16 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-5',
         checkType: 'full',
         fromAddress: '0x4444444444444444444444444444444444444444',
-        amount: 150000
+        amount: 150000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 20 // 20/100
+        riskScore: 20, // 20/100
       });
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
-        riskScore: 30 // 30/100
+        riskScore: 30, // 30/100
       });
 
       const result = await supervisor.executeCheck(check);
@@ -202,12 +206,12 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-6',
         checkType: 'kyc', // Only KYC check
         fromAddress: '0x5555555555555555555555555555555555555555',
-        amount: 50000
+        amount: 50000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 15
+        riskScore: 15,
       });
 
       const result = await supervisor.executeCheck(check);
@@ -225,17 +229,17 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-7',
         checkType: 'full',
         fromAddress: '0x6666666666666666666666666666666666666666',
-        amount: 300000
+        amount: 300000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 22
+        riskScore: 22,
       });
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 28,
-        riskLevel: 'LOW'
+        riskLevel: 'LOW',
       });
 
       const stateTransitions: string[] = [];
@@ -262,17 +266,17 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-8',
         checkType: 'full',
         fromAddress: '0x7777777777777777777777777777777777777777',
-        amount: 5000000 // Large amount
+        amount: 5000000, // Large amount
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'REQUIRES_REVIEW',
-        riskScore: 55
+        riskScore: 55,
       });
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 65,
-        riskLevel: 'HIGH'
+        riskLevel: 'HIGH',
       });
 
       const result = await supervisor.executeCheck(check);
@@ -289,13 +293,13 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-9',
         checkType: 'full',
         fromAddress: '0x8888888888888888888888888888888888888888',
-        amount: 100000
+        amount: 100000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'REJECTED',
         riskScore: 85,
-        flags: ['SANCTIONS_MATCH', 'PEP_DETECTED']
+        flags: ['SANCTIONS_MATCH', 'PEP_DETECTED'],
       });
 
       const result = await supervisor.executeCheck(check);
@@ -314,25 +318,35 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-10',
         checkType: 'full',
         fromAddress: '0x9999999999999999999999999999999999999999',
-        amount: 200000
+        amount: 200000,
       };
 
       mockKycAgent.run.mockImplementation(
-        () => new Promise(resolve => 
-          setTimeout(() => resolve({
-            statusCode: 'APPROVED',
-            riskScore: 20
-          }), 100)
-        )
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  statusCode: 'APPROVED',
+                  riskScore: 20,
+                }),
+              100
+            )
+          )
       );
 
       mockAmlAgent.analyzeRisk.mockImplementation(
-        () => new Promise(resolve => 
-          setTimeout(() => resolve({
-            riskScore: 25,
-            riskLevel: 'LOW'
-          }), 100)
-        )
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  riskScore: 25,
+                  riskLevel: 'LOW',
+                }),
+              100
+            )
+          )
       );
 
       const start = Date.now();
@@ -354,14 +368,14 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-11',
         checkType: 'full',
         fromAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        amount: 150000
+        amount: 150000,
       };
 
       mockKycAgent.run.mockRejectedValue(new Error('KYC service timeout'));
-      
+
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 30,
-        riskLevel: 'LOW'
+        riskLevel: 'LOW',
       });
 
       const result = await supervisor.executeCheck(check);
@@ -379,12 +393,12 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-12',
         checkType: 'full',
         fromAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-        amount: 100000
+        amount: 100000,
       };
 
       mockKycAgent.run.mockRejectedValue(new Error('Service error'));
       mockAmlAgent.analyzeRisk.mockRejectedValue(new Error('Service error'));
-      
+
       const result = await supervisor.executeCheck(check);
 
       expect(result.status).toBe('escalated');
@@ -398,18 +412,16 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-13',
         checkType: 'full',
         fromAddress: '0xcccccccccccccccccccccccccccccccccccccccc',
-        amount: 200000
+        amount: 200000,
       };
 
       mockKycAgent.run.mockImplementation(
-        () => new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 50)
-        )
+        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 50))
       );
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 40,
-        riskLevel: 'MEDIUM'
+        riskLevel: 'MEDIUM',
       });
 
       const result = await supervisor.executeCheck(check);
@@ -427,17 +439,17 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-14',
         checkType: 'full',
         fromAddress: '0xdddddddddddddddddddddddddddddddddddddddd',
-        amount: 50000
+        amount: 50000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 15
+        riskScore: 15,
       });
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 10,
-        riskLevel: 'LOW'
+        riskLevel: 'LOW',
       });
 
       const result = await supervisor.executeCheck(check);
@@ -454,17 +466,17 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-15',
         checkType: 'full',
         fromAddress: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-        amount: 500000
+        amount: 500000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 40
+        riskScore: 40,
       });
 
       mockAmlAgent.analyzeRisk.mockResolvedValue({
         riskScore: 50,
-        riskLevel: 'MEDIUM'
+        riskLevel: 'MEDIUM',
       });
 
       const result = await supervisor.executeCheck(check);
@@ -483,12 +495,12 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
         transactionId: 'tx-16',
         checkType: 'kyc',
         fromAddress: '0xffffffffffffffffffffffffffffffffffffffff',
-        amount: 100000
+        amount: 100000,
       };
 
       mockKycAgent.run.mockResolvedValue({
         statusCode: 'APPROVED',
-        riskScore: 20
+        riskScore: 20,
       });
 
       const result1 = await supervisor.executeCheck(check);

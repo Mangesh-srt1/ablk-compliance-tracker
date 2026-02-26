@@ -11,7 +11,7 @@ export enum ErrorCategory {
   CONFLICT = 'CONFLICT',
   INTERNAL = 'INTERNAL',
   EXTERNAL_SERVICE = 'EXTERNAL_SERVICE',
-  RATE_LIMIT = 'RATE_LIMIT'
+  RATE_LIMIT = 'RATE_LIMIT',
 }
 
 export enum ErrorCode {
@@ -50,7 +50,7 @@ export enum ErrorCode {
   THIRD_PARTY_TIMEOUT = 'THIRD_PARTY_TIMEOUT',
 
   // Rate Limiting
-  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED'
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
 }
 
 export interface ErrorResponse {
@@ -143,10 +143,7 @@ export class RateLimitError extends AppError {
 /**
  * Create standardized error response
  */
-export function createErrorResponse(
-  error: AppError | Error,
-  requestId: string
-): ErrorResponse {
+export function createErrorResponse(error: AppError | Error, requestId: string): ErrorResponse {
   if (error instanceof AppError) {
     return {
       code: error.code,
@@ -155,7 +152,7 @@ export function createErrorResponse(
       details: error.details,
       httpStatus: error.httpStatus,
       timestamp: new Date().toISOString(),
-      requestId
+      requestId,
     };
   }
 
@@ -166,7 +163,7 @@ export function createErrorResponse(
     message: error.message || 'An unexpected error occurred',
     httpStatus: 500,
     timestamp: new Date().toISOString(),
-    requestId
+    requestId,
   };
 }
 
@@ -188,6 +185,6 @@ export function createErrorResponseFromDetails(
     details,
     httpStatus,
     timestamp: new Date().toISOString(),
-    requestId
+    requestId,
   };
 }

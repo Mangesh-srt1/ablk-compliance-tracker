@@ -2,7 +2,7 @@
  * Compliance Gateway - P2P Settlement Enforcement
  * Routes all token-to-fiat conversions through monitored compliance gateways
  * Enforces KYC, AML, and settlement compliance before fiat release
- * 
+ *
  * File: src/api/src/routes/complianceGatewayRoutes.ts
  */
 
@@ -64,12 +64,12 @@ export class ComplianceGatewayService {
         new winston.transports.Console(),
         new winston.transports.File({
           filename: 'logs/gateway-error.log',
-          level: 'error'
+          level: 'error',
         }),
         new winston.transports.File({
-          filename: 'logs/compliance-gateway.log'
-        })
-      ]
+          filename: 'logs/compliance-gateway.log',
+        }),
+      ],
     });
 
     this.amlDetector = new AMLAnomalyDetectorAgent(dbClient, besuProvider);
@@ -90,7 +90,7 @@ export class ComplianceGatewayService {
       walletAddress: req.walletAddress,
       tokenAmount: req.tokenAmount,
       assetId: req.assetId,
-      fiatCurrency: req.fiatCurrency
+      fiatCurrency: req.fiatCurrency,
     });
 
     try {
@@ -102,7 +102,7 @@ export class ComplianceGatewayService {
         this.logger.warn('KYC verification failed', {
           requestId,
           walletAddress: req.walletAddress,
-          reason: kycResult.reason
+          reason: kycResult.reason,
         });
 
         await this.logGatewayDecision(requestId, 'KYC_FAILED', 0, kycResult.reason);
@@ -111,7 +111,7 @@ export class ComplianceGatewayService {
           requestId,
           status: 'declined',
           reason: kycResult.reason,
-          message: 'KYC verification required or expired. Please update your profile.'
+          message: 'KYC verification required or expired. Please update your profile.',
         };
       }
 
@@ -126,7 +126,7 @@ export class ComplianceGatewayService {
         assetId: req.assetId,
         transactionHash: '', // Will be populated after on-chain tx
         chainId: 1, // Default to Ethereum mainnet
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       const amlAssessment = await this.amlDetector.assessHawalaRisk(p2pTransfer);
@@ -134,7 +134,7 @@ export class ComplianceGatewayService {
       this.logger.info('AML assessment completed', {
         requestId,
         riskScore: amlAssessment.overallRiskScore,
-        escalationLevel: amlAssessment.escalationLevel
+        escalationLevel: amlAssessment.escalationLevel,
       });
 
       // BLOCK: Definitive illicit activity detected
@@ -143,7 +143,8 @@ export class ComplianceGatewayService {
           requestId,
           walletAddress: req.walletAddress,
           riskScore: amlAssessment.overallRiskScore,
-          patterns: amlAssessment.patterns?.map(p => typeof p === 'string' ? p : p.pattern) || []
+          patterns:
+            amlAssessment.patterns?.map((p) => (typeof p === 'string' ? p : p.pattern)) || [],
         });
 
         await this.logGatewayDecision(
@@ -152,7 +153,7 @@ export class ComplianceGatewayService {
           amlAssessment.overallRiskScore,
           Array.isArray(amlAssessment.recommendations)
             ? amlAssessment.recommendations.join('; ')
-            : (amlAssessment.recommendations || '')
+            : amlAssessment.recommendations || ''
         );
 
         return {
@@ -160,7 +161,7 @@ export class ComplianceGatewayService {
           status: 'blocked',
           reason: 'AML compliance check failed',
           riskScore: amlAssessment.overallRiskScore,
-          message: 'Transaction blocked due to AML policy. Contact compliance team for appeal.'
+          message: 'Transaction blocked due to AML policy. Contact compliance team for appeal.',
         };
       }
 
@@ -168,7 +169,7 @@ export class ComplianceGatewayService {
       if (amlAssessment.escalationLevel === 'manual_review') {
         this.logger.info('AML assessment escalated to manual review', {
           requestId,
-          riskScore: amlAssessment.overallRiskScore
+          riskScore: amlAssessment.overallRiskScore,
         });
 
         await this.logGatewayDecision(
@@ -177,7 +178,7 @@ export class ComplianceGatewayService {
           amlAssessment.overallRiskScore,
           Array.isArray(amlAssessment.recommendations)
             ? amlAssessment.recommendations.join('; ')
-            : (amlAssessment.recommendations || '')
+            : amlAssessment.recommendations || ''
         );
 
         // Create escalation ticket for compliance team
@@ -189,18 +190,23 @@ export class ComplianceGatewayService {
           reason: 'AML review required',
           riskScore: amlAssessment.overallRiskScore,
           estimatedReviewTime: '2-4 business hours',
-          message: 'Your request is undergoing compliance review. You will be notified within 24 hours.'
+          message:
+            'Your request is undergoing compliance review. You will be notified within 24 hours.',
         };
       }
 
       // ============================================================
       // STEP 3: Bank Account Validation (Sanctions, FATF)
       // ============================================================
-      const bankValidation = await this.validateBankAccount(req.bankAccount, req.bankCode, req.bankCountry);
+      const bankValidation = await this.validateBankAccount(
+        req.bankAccount,
+        req.bankCode,
+        req.bankCountry
+      );
       if (!bankValidation.valid) {
         this.logger.warn('Bank account validation failed', {
           requestId,
-          reason: bankValidation.reason
+          reason: bankValidation.reason,
         });
 
         await this.logGatewayDecision(requestId, 'BANK_INVALID', 0, bankValidation.reason);
@@ -209,7 +215,7 @@ export class ComplianceGatewayService {
           requestId,
           status: 'declined',
           reason: bankValidation.reason,
-          message: 'Bank account validation failed. Please verify your banking details.'
+          message: 'Bank account validation failed. Please verify your banking details.',
         };
       }
 
@@ -229,14 +235,14 @@ export class ComplianceGatewayService {
       if (!settlementResult.success) {
         this.logger.error('Settlement execution failed', {
           requestId,
-          error: settlementResult.error
+          error: settlementResult.error,
         });
 
         return {
           requestId,
           status: 'error',
           reason: settlementResult.error,
-          message: 'Settlement processing failed. Please try again or contact support.'
+          message: 'Settlement processing failed. Please try again or contact support.',
         };
       }
 
@@ -246,7 +252,7 @@ export class ComplianceGatewayService {
       this.logger.info('Fiat ramp request APPROVED', {
         requestId,
         settlementId: settlementResult.settlementId,
-        elapsedMs: Date.now() - startTime
+        elapsedMs: Date.now() - startTime,
       });
 
       await this.logGatewayDecision(
@@ -261,9 +267,8 @@ export class ComplianceGatewayService {
         status: 'approved',
         settlementId: settlementResult.settlementId,
         estimatedCreditTime: '2-5 business days',
-        message: 'Your settlement has been approved and is being processed.'
+        message: 'Your settlement has been approved and is being processed.',
       };
-
     } catch (error) {
       this.logger.error('Fiat ramp request processing failed', { requestId, error });
 
@@ -271,7 +276,7 @@ export class ComplianceGatewayService {
         requestId,
         status: 'error',
         message: 'Service unavailable. Please try again later.',
-        reason: error instanceof Error ? error.message : 'Unknown error'
+        reason: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -290,17 +295,16 @@ export class ComplianceGatewayService {
       if (!result.verified || result.isExpired) {
         return {
           verified: false,
-          reason: result.isExpired ? 'KYC verification expired' : 'KYC verification not completed'
+          reason: result.isExpired ? 'KYC verification expired' : 'KYC verification not completed',
         };
       }
 
       return { verified: true };
-
     } catch (error) {
       this.logger.error('KYC validation failed', { walletAddress, error });
       return {
         verified: false,
-        reason: 'KYC service unavailable'
+        reason: 'KYC service unavailable',
       };
     }
   }
@@ -322,7 +326,7 @@ export class ComplianceGatewayService {
       if (!this.validateIBAN(bankAccount)) {
         return {
           valid: false,
-          reason: 'Invalid bank account format'
+          reason: 'Invalid bank account format',
         };
       }
 
@@ -330,7 +334,7 @@ export class ComplianceGatewayService {
       if (!this.validateSWIFTCode(bankCode)) {
         return {
           valid: false,
-          reason: 'Invalid SWIFT code'
+          reason: 'Invalid SWIFT code',
         };
       }
 
@@ -342,7 +346,7 @@ export class ComplianceGatewayService {
       if (fatfHighRisk.includes(countryToCheck)) {
         return {
           valid: false,
-          reason: `Bank in high-risk FATF jurisdiction: ${countryToCheck}`
+          reason: `Bank in high-risk FATF jurisdiction: ${countryToCheck}`,
         };
       }
 
@@ -350,17 +354,16 @@ export class ComplianceGatewayService {
       const highRiskCountries = ['PK', 'BA', 'ZW', 'VI'];
       if (highRiskCountries.includes(countryToCheck)) {
         this.logger.info('High-risk jurisdiction detected, but proceeding', {
-          country: countryToCheck
+          country: countryToCheck,
         });
       }
 
       return { valid: true };
-
     } catch (error) {
       this.logger.error('Bank account validation failed', { error });
       return {
         valid: false,
-        reason: 'Bank validation service error'
+        reason: 'Bank validation service error',
       };
     }
   }
@@ -390,7 +393,16 @@ export class ComplianceGatewayService {
         `INSERT INTO settlements 
          (id, fiat_ramp_request_id, wallet_address, token_amount, asset_id, fiat_currency, bank_account, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [settlementId, requestId, walletAddress, tokenAmount, assetId, fiatCurrency, bankAccount, 'pending']
+        [
+          settlementId,
+          requestId,
+          walletAddress,
+          tokenAmount,
+          assetId,
+          fiatCurrency,
+          bankAccount,
+          'pending',
+        ]
       );
 
       // 2. Call Besu contract to lock tokens in custody
@@ -398,10 +410,10 @@ export class ComplianceGatewayService {
       await this.lockTokensInCustody(walletAddress, tokenAmount, assetId);
 
       // 3. Update settlement status to 'in_progress'
-      await this.dbClient.query(
-        `UPDATE settlements SET status = $1 WHERE id = $2`,
-        ['in_progress', settlementId]
-      );
+      await this.dbClient.query(`UPDATE settlements SET status = $1 WHERE id = $2`, [
+        'in_progress',
+        settlementId,
+      ]);
 
       // 4. Submit to bank partner for fiat transfer
       // In production, this would call a real bank API
@@ -409,31 +421,29 @@ export class ComplianceGatewayService {
         settlementId,
         bankAccount,
         fiatAmount: this.estimateFiatAmount(tokenAmount),
-        fiatCurrency
+        fiatCurrency,
       });
 
       // 5. Update status to 'submitted'
-      await this.dbClient.query(
-        `UPDATE settlements SET status = $1 WHERE id = $2`,
-        ['submitted', settlementId]
-      );
+      await this.dbClient.query(`UPDATE settlements SET status = $1 WHERE id = $2`, [
+        'submitted',
+        settlementId,
+      ]);
 
       return {
         success: true,
-        settlementId
+        settlementId,
       };
-
     } catch (error) {
       this.logger.error('Settlement execution failed', { settlementId, error });
 
-      await this.dbClient.query(
-        `UPDATE settlements SET status = $1 WHERE id = $2`,
-        ['failed', settlementId]
-      ).catch((e: any) => this.logger.error('Failed to update settlement status', { error: e }));
+      await this.dbClient
+        .query(`UPDATE settlements SET status = $1 WHERE id = $2`, ['failed', settlementId])
+        .catch((e: any) => this.logger.error('Failed to update settlement status', { error: e }));
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown settlement error'
+        error: error instanceof Error ? error.message : 'Unknown settlement error',
       };
     }
   }
@@ -460,19 +470,18 @@ export class ComplianceGatewayService {
           req.walletAddress,
           'AML_ESCALATION',
           amlAssessment.overallRiskScore,
-          JSON.stringify(amlAssessment.patterns)
+          JSON.stringify(amlAssessment.patterns),
         ]
       );
 
       this.logger.info('Escalation ticket created', {
         ticketId,
         requestId,
-        riskScore: amlAssessment.overallRiskScore
+        riskScore: amlAssessment.overallRiskScore,
       });
 
       // In production: Send notification to compliance team
       // await this.notificationService.sendSlack(...);
-
     } catch (error) {
       this.logger.error('Failed to create escalation ticket', { error });
     }
@@ -513,7 +522,7 @@ export class ComplianceGatewayService {
     this.logger.debug('Locking tokens in custody', {
       wallet: walletAddress,
       amount: tokenAmount,
-      asset: assetId
+      asset: assetId,
     });
   }
 
@@ -553,10 +562,9 @@ export class ComplianceGatewayService {
     completedAt?: Date;
   }> {
     try {
-      const result = await this.dbClient.query(
-        `SELECT * FROM fiat_ramp_access WHERE id = $1`,
-        [requestId]
-      );
+      const result = await this.dbClient.query(`SELECT * FROM fiat_ramp_access WHERE id = $1`, [
+        requestId,
+      ]);
 
       if (!result.rows.length) {
         throw new Error('Request not found');
@@ -567,9 +575,8 @@ export class ComplianceGatewayService {
         status: request.request_status,
         riskScore: request.aml_risk_score,
         createdAt: request.created_at,
-        completedAt: request.completed_at
+        completedAt: request.completed_at,
       };
-
     } catch (error) {
       this.logger.error('Failed to get request status', { requestId, error });
       throw error;
@@ -580,9 +587,7 @@ export class ComplianceGatewayService {
 /**
  * Express Router: Compliance Gateway Routes
  */
-export function createComplianceGatewayRouter(
-  gatewayService: ComplianceGatewayService
-): Router {
+export function createComplianceGatewayRouter(gatewayService: ComplianceGatewayService): Router {
   const router = Router();
 
   /**
@@ -591,13 +596,28 @@ export function createComplianceGatewayRouter(
    */
   router.post('/request-fiat-ramp', async (req: Request, res: Response) => {
     try {
-      const { walletAddress, tokenAmount, assetId, fiatCurrency, bankAccount, bankCode, bankCountry } = req.body;
+      const {
+        walletAddress,
+        tokenAmount,
+        assetId,
+        fiatCurrency,
+        bankAccount,
+        bankCode,
+        bankCountry,
+      } = req.body;
 
       // Input validation
-      if (!walletAddress || !tokenAmount || !assetId || !fiatCurrency || !bankAccount || !bankCode) {
+      if (
+        !walletAddress ||
+        !tokenAmount ||
+        !assetId ||
+        !fiatCurrency ||
+        !bankAccount ||
+        !bankCode
+      ) {
         return res.status(400).json({
           status: 'error',
-          message: 'Missing required fields'
+          message: 'Missing required fields',
         });
       }
 
@@ -608,23 +628,24 @@ export function createComplianceGatewayRouter(
         fiatCurrency,
         bankAccount,
         bankCode,
-        bankCountry
+        bankCountry,
       };
 
       const result = await gatewayService.processFiatRampRequest(fiatRampRequest);
 
       // HTTP status based on result
       const httpStatus =
-        result.status === 'approved' || result.status === 'escalated' ? 200 :
-        result.status === 'declined' || result.status === 'blocked' ? 403 :
-        500;
+        result.status === 'approved' || result.status === 'escalated'
+          ? 200
+          : result.status === 'declined' || result.status === 'blocked'
+            ? 403
+            : 500;
 
       return res.status(httpStatus).json(result);
-
     } catch (error) {
       return res.status(500).json({
         status: 'error',
-        message: 'Service error'
+        message: 'Service error',
       });
     }
   });
@@ -637,10 +658,9 @@ export function createComplianceGatewayRouter(
     try {
       const status = await gatewayService.getRequestStatus(req.params.requestId);
       return res.json(status);
-
     } catch (error) {
       return res.status(404).json({
-        error: 'Request not found'
+        error: 'Request not found',
       });
     }
   });

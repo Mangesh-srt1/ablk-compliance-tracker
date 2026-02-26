@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/sebi-client.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/sebi-client.log' }),
+  ],
 });
 
 export interface SEBIRegistrationStatus {
@@ -58,10 +55,10 @@ export class SEBIClient {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
-      timeout: 30000
+      timeout: 30000,
     });
 
     // Add response interceptor for error handling
@@ -71,7 +68,7 @@ export class SEBIClient {
         logger.error('SEBI API error', {
           status: error.response?.status,
           data: error.response?.data,
-          message: error.message
+          message: error.message,
         });
         throw error;
       }
@@ -91,7 +88,7 @@ export class SEBIClient {
 
       logger.info('SEBI registration check completed', {
         userId,
-        registered: data.registered
+        registered: data.registered,
       });
 
       return {
@@ -101,19 +98,18 @@ export class SEBIClient {
         validity: data.validity,
         disciplinaryActions: data.disciplinaryActions || [],
         capitalAdequacy: data.capitalAdequacy || 0,
-        details: data.details
+        details: data.details,
       };
-
     } catch (error) {
       logger.error('Failed to check SEBI registration', {
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         registered: false,
         disciplinaryActions: [],
-        capitalAdequacy: 0
+        capitalAdequacy: 0,
       };
     }
   }
@@ -131,7 +127,7 @@ export class SEBIClient {
 
       logger.info('SEBI demat account check completed', {
         accountId,
-        active: data.active
+        active: data.active,
       });
 
       return {
@@ -141,19 +137,18 @@ export class SEBIClient {
         kycDetails: data.kycDetails,
         frozen: data.frozen || false,
         freezeDetails: data.freezeDetails,
-        details: data.details
+        details: data.details,
       };
-
     } catch (error) {
       logger.error('Failed to check SEBI demat account', {
         accountId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         active: false,
         kycCompliant: false,
-        frozen: false
+        frozen: false,
       };
     }
   }
@@ -171,7 +166,7 @@ export class SEBIClient {
 
       logger.info('SEBI trading limits retrieved', {
         userId,
-        maxPosition: data.maxPosition
+        maxPosition: data.maxPosition,
       });
 
       return {
@@ -179,19 +174,18 @@ export class SEBIClient {
         dailyTurnoverLimit: data.dailyTurnoverLimit || 0,
         maxConcentration: data.maxConcentration || 0,
         marginRequirements: data.marginRequirements,
-        details: data.details
+        details: data.details,
       };
-
     } catch (error) {
       logger.error('Failed to get SEBI trading limits', {
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         maxPosition: 0,
         dailyTurnoverLimit: 0,
-        maxConcentration: 0
+        maxConcentration: 0,
       };
     }
   }
@@ -212,18 +206,17 @@ export class SEBIClient {
 
       logger.info('SEBI insider status check completed', {
         userId,
-        isInsider: data.isInsider
+        isInsider: data.isInsider,
       });
 
       return {
         isInsider: data.isInsider || false,
-        details: data.details
+        details: data.details,
       };
-
     } catch (error) {
       logger.error('Failed to check SEBI insider status', {
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { isInsider: false };
@@ -247,18 +240,17 @@ export class SEBIClient {
       logger.info('SEBI disclosures check completed', {
         userId,
         missingCount: data.missing?.length || 0,
-        overdueCount: data.overdue?.length || 0
+        overdueCount: data.overdue?.length || 0,
       });
 
       return {
         missing: data.missing || [],
-        overdue: data.overdue || []
+        overdue: data.overdue || [],
       };
-
     } catch (error) {
       logger.error('Failed to check SEBI required disclosures', {
         userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { missing: [], overdue: [] };
@@ -271,23 +263,22 @@ export class SEBIClient {
   async reportSuspiciousTransaction(transaction: any): Promise<void> {
     try {
       logger.info('Reporting suspicious transaction to SEBI', {
-        transactionId: transaction.id
+        transactionId: transaction.id,
       });
 
       await this.client.post('/reports/suspicious-transaction', {
         transactionId: transaction.id,
         details: transaction,
-        reportedAt: new Date().toISOString()
+        reportedAt: new Date().toISOString(),
       });
 
       logger.info('Suspicious transaction reported to SEBI', {
-        transactionId: transaction.id
+        transactionId: transaction.id,
       });
-
     } catch (error) {
       logger.error('Failed to report suspicious transaction to SEBI', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -301,23 +292,22 @@ export class SEBIClient {
       logger.info('Getting SEBI market data', { symbol, days });
 
       const response = await this.client.get(`/market/${symbol}`, {
-        params: { days }
+        params: { days },
       });
 
       const data = response.data.data || [];
 
       logger.info('SEBI market data retrieved', {
         symbol,
-        dataPoints: data.length
+        dataPoints: data.length,
       });
 
       return data;
-
     } catch (error) {
       logger.error('Failed to get SEBI market data', {
         symbol,
         days,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return [];
@@ -332,23 +322,22 @@ export class SEBIClient {
       logger.info('Getting SEBI corporate events', { symbol, days });
 
       const response = await this.client.get(`/corporate-events/${symbol}`, {
-        params: { days }
+        params: { days },
       });
 
       const events = response.data.events || [];
 
       logger.info('SEBI corporate events retrieved', {
         symbol,
-        eventCount: events.length
+        eventCount: events.length,
       });
 
       return events;
-
     } catch (error) {
       logger.error('Failed to get SEBI corporate events', {
         symbol,
         days,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return [];
@@ -372,10 +361,9 @@ export class SEBIClient {
       const latency = Date.now() - startTime;
 
       return { healthy: true, latency };
-
     } catch (error) {
       logger.error('SEBI health check failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { healthy: false };

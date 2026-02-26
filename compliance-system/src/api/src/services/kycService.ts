@@ -15,7 +15,7 @@ import {
   KycCheckRecord,
   KycDocument,
   KycEntityData,
-  KycFlag
+  KycFlag,
 } from '../types/kyc';
 import SqlLoader from '../utils/sqlLoader';
 import db from '../config/database';
@@ -24,14 +24,11 @@ import { kycProviderManager } from './providers/kycProviderManager';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/kyc.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/kyc.log' }),
+  ],
 });
 
 export class KycService {
@@ -44,10 +41,7 @@ export class KycService {
   /**
    * Perform KYC check for an entity
    */
-  async performKycCheck(
-    request: KycCheckRequest,
-    userId?: string
-  ): Promise<KycCheckResult> {
+  async performKycCheck(request: KycCheckRequest, userId?: string): Promise<KycCheckResult> {
     const startTime = Date.now();
     const checkId = uuidv4();
 
@@ -56,7 +50,7 @@ export class KycService {
         checkId,
         entityId: request.entityId,
         jurisdiction: request.jurisdiction,
-        userId
+        userId,
       });
 
       // Validate jurisdiction
@@ -83,16 +77,15 @@ export class KycService {
         entityId: request.entityId,
         status: result.status,
         score: result.score,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error) {
       logger.error('KYC check failed', {
         checkId,
         entityId: request.entityId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       if (error instanceof AppError) {
@@ -145,7 +138,7 @@ export class KycService {
       flags,
       recommendations,
       processingTime: 0, // Will be set by caller
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -153,21 +146,21 @@ export class KycService {
    * Perform India-specific KYC validation (SEBI/DPDP compliance)
    */
   private async performIndiaKyc(request: KycCheckRequest): Promise<{
-    flags: KycFlag[],
-    score: number,
-    status: KycStatus
+    flags: KycFlag[];
+    score: number;
+    status: KycStatus;
   }> {
     const flags: KycFlag[] = [];
     let score = 100;
 
     // Check for Aadhaar document
-    const aadhaarDoc = request.documents.find(doc => doc.type === 'aadhaar');
+    const aadhaarDoc = request.documents.find((doc) => doc.type === 'aadhaar');
     if (!aadhaarDoc) {
       flags.push({
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.HIGH,
         message: 'Aadhaar document required for Indian KYC',
-        details: 'SEBI regulations require Aadhaar verification for KYC'
+        details: 'SEBI regulations require Aadhaar verification for KYC',
       });
       score -= 30;
     }
@@ -178,7 +171,7 @@ export class KycService {
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.MEDIUM,
         message: 'Date of birth required',
-        details: 'Required for age verification under DPDP'
+        details: 'Required for age verification under DPDP',
       });
       score -= 15;
     }
@@ -191,7 +184,7 @@ export class KycService {
           type: KycFlagType.AGE_UNDERAGE,
           severity: FlagSeverity.CRITICAL,
           message: 'Entity underage',
-          details: `Age ${age} is below minimum requirement of 18`
+          details: `Age ${age} is below minimum requirement of 18`,
         });
         score -= 50;
       }
@@ -203,13 +196,13 @@ export class KycService {
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.MEDIUM,
         message: 'Address information required',
-        details: 'DPDP requires complete address for data processing consent'
+        details: 'DPDP requires complete address for data processing consent',
       });
       score -= 10;
     }
 
-    const status = score >= 70 ? KycStatus.PASS :
-                   score >= 40 ? KycStatus.REQUIRES_REVIEW : KycStatus.FAIL;
+    const status =
+      score >= 70 ? KycStatus.PASS : score >= 40 ? KycStatus.REQUIRES_REVIEW : KycStatus.FAIL;
 
     return { flags, score: Math.max(0, score), status };
   }
@@ -218,15 +211,15 @@ export class KycService {
    * Perform EU-specific KYC validation (GDPR/eIDAS compliance)
    */
   private async performEuKyc(request: KycCheckRequest): Promise<{
-    flags: KycFlag[],
-    score: number,
-    status: KycStatus
+    flags: KycFlag[];
+    score: number;
+    status: KycStatus;
   }> {
     const flags: KycFlag[] = [];
     let score = 100;
 
     // Check for valid EU ID documents
-    const validDocs = request.documents.filter(doc =>
+    const validDocs = request.documents.filter((doc) =>
       ['passport', 'national_id', 'drivers_license'].includes(doc.type)
     );
 
@@ -235,7 +228,7 @@ export class KycService {
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.HIGH,
         message: 'Valid EU identity document required',
-        details: 'eIDAS regulation requires electronic identification'
+        details: 'eIDAS regulation requires electronic identification',
       });
       score -= 25;
     }
@@ -246,7 +239,7 @@ export class KycService {
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.MEDIUM,
         message: 'Email address required for GDPR consent',
-        details: 'GDPR requires explicit consent for data processing'
+        details: 'GDPR requires explicit consent for data processing',
       });
       score -= 15;
     }
@@ -259,14 +252,14 @@ export class KycService {
           type: KycFlagType.AGE_UNDERAGE,
           severity: FlagSeverity.CRITICAL,
           message: 'Entity underage for EU regulations',
-          details: `Age ${age} is below GDPR minimum of 16`
+          details: `Age ${age} is below GDPR minimum of 16`,
         });
         score -= 40;
       }
     }
 
-    const status = score >= 75 ? KycStatus.PASS :
-                   score >= 50 ? KycStatus.REQUIRES_REVIEW : KycStatus.FAIL;
+    const status =
+      score >= 75 ? KycStatus.PASS : score >= 50 ? KycStatus.REQUIRES_REVIEW : KycStatus.FAIL;
 
     return { flags, score: Math.max(0, score), status };
   }
@@ -275,15 +268,15 @@ export class KycService {
    * Perform US-specific KYC validation (FinCEN/CDD compliance)
    */
   private async performUsKyc(request: KycCheckRequest): Promise<{
-    flags: KycFlag[],
-    score: number,
-    status: KycStatus
+    flags: KycFlag[];
+    score: number;
+    status: KycStatus;
   }> {
     const flags: KycFlag[] = [];
     let score = 100;
 
     // Check for valid US ID documents
-    const validDocs = request.documents.filter(doc =>
+    const validDocs = request.documents.filter((doc) =>
       ['passport', 'drivers_license'].includes(doc.type)
     );
 
@@ -292,7 +285,7 @@ export class KycService {
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.HIGH,
         message: 'Valid US identity document required',
-        details: 'FinCEN CDD requires government-issued photo ID'
+        details: 'FinCEN CDD requires government-issued photo ID',
       });
       score -= 20;
     }
@@ -303,7 +296,7 @@ export class KycService {
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.MEDIUM,
         message: 'Complete entity information required',
-        details: 'US CDD requires comprehensive customer information'
+        details: 'US CDD requires comprehensive customer information',
       });
       score -= 15;
     }
@@ -316,14 +309,14 @@ export class KycService {
           type: KycFlagType.AGE_UNDERAGE,
           severity: FlagSeverity.CRITICAL,
           message: 'Entity underage',
-          details: `Age ${age} is below US legal minimum of 18`
+          details: `Age ${age} is below US legal minimum of 18`,
         });
         score -= 45;
       }
     }
 
-    const status = score >= 70 ? KycStatus.PASS :
-                   score >= 40 ? KycStatus.REQUIRES_REVIEW : KycStatus.FAIL;
+    const status =
+      score >= 70 ? KycStatus.PASS : score >= 40 ? KycStatus.REQUIRES_REVIEW : KycStatus.FAIL;
 
     return { flags, score: Math.max(0, score), status };
   }
@@ -337,39 +330,39 @@ export class KycService {
     // Jurisdiction-specific recommendations
     switch (jurisdiction) {
       case Jurisdiction.INDIA:
-        if (flags.some(f => f.type === KycFlagType.AGE_UNDERAGE)) {
+        if (flags.some((f) => f.type === KycFlagType.AGE_UNDERAGE)) {
           recommendations.push('Entity cannot be onboarded until reaching legal age (18+)');
         }
-        if (flags.some(f => f.type === KycFlagType.DOCUMENT_INVALID)) {
+        if (flags.some((f) => f.type === KycFlagType.DOCUMENT_INVALID)) {
           recommendations.push('Submit valid Aadhaar card for SEBI compliance');
         }
         break;
 
       case Jurisdiction.EUROPEAN_UNION:
-        if (flags.some(f => f.type === KycFlagType.AGE_UNDERAGE)) {
+        if (flags.some((f) => f.type === KycFlagType.AGE_UNDERAGE)) {
           recommendations.push('Entity cannot be processed under GDPR until age 16');
         }
-        if (flags.some(f => f.type === KycFlagType.DOCUMENT_INVALID)) {
+        if (flags.some((f) => f.type === KycFlagType.DOCUMENT_INVALID)) {
           recommendations.push('Submit eIDAS-compliant electronic identification');
         }
         break;
 
       case Jurisdiction.UNITED_STATES:
-        if (flags.some(f => f.type === KycFlagType.AGE_UNDERAGE)) {
+        if (flags.some((f) => f.type === KycFlagType.AGE_UNDERAGE)) {
           recommendations.push('Entity cannot be onboarded until reaching legal age (18+)');
         }
-        if (flags.some(f => f.type === KycFlagType.DOCUMENT_INVALID)) {
+        if (flags.some((f) => f.type === KycFlagType.DOCUMENT_INVALID)) {
           recommendations.push('Submit government-issued photo ID for FinCEN CDD');
         }
         break;
     }
 
     // General recommendations
-    if (flags.some(f => f.severity === FlagSeverity.CRITICAL)) {
+    if (flags.some((f) => f.severity === FlagSeverity.CRITICAL)) {
       recommendations.push('Immediate compliance review required');
     }
 
-    if (flags.some(f => f.severity === FlagSeverity.HIGH)) {
+    if (flags.some((f) => f.severity === FlagSeverity.HIGH)) {
       recommendations.push('Enhanced due diligence recommended');
     }
 
@@ -396,7 +389,7 @@ export class KycService {
       JSON.stringify(request.documents),
       JSON.stringify(request.entityData),
       result.processingTime,
-      userId || null
+      userId || null,
     ]);
   }
 
@@ -418,7 +411,7 @@ export class KycService {
       flags: row.flags || [],
       recommendations: row.recommendations || [],
       documents: row.documents || [],
-      entityData: row.entity_data || {}
+      entityData: row.entity_data || {},
     };
   }
 
@@ -437,42 +430,44 @@ export class KycService {
         checkId,
         entityId: request.entityId,
         jurisdiction: request.jurisdiction,
-        userId
+        userId,
       });
 
       // Convert internal request to provider format
       const providerRequest = {
         entityId: request.entityId,
         jurisdiction: request.jurisdiction as 'IN' | 'EU' | 'US',
-        documents: (request.documents || []).map(doc => ({
+        documents: (request.documents || []).map((doc) => ({
           type: doc.type,
           data: doc.data,
           filename: doc.metadata.filename,
-          contentType: doc.metadata.contentType
+          contentType: doc.metadata.contentType,
         })),
         entityData: {
           name: request.entityData?.name || '',
           dateOfBirth: request.entityData?.dateOfBirth,
           address: request.entityData?.address,
           phoneNumber: request.entityData?.phoneNumber,
-          email: request.entityData?.email
-        }
+          email: request.entityData?.email,
+        },
       };
 
       // Perform verification with external provider
       const providerResult = await kycProviderManager.verify(providerRequest);
 
       // Convert provider result to internal format
-      const flags: KycFlag[] = providerResult.flags.map(flag => ({
+      const flags: KycFlag[] = providerResult.flags.map((flag) => ({
         type: flag.type as KycFlagType,
         severity: flag.severity as FlagSeverity,
         message: flag.message,
-        details: flag.details
+        details: flag.details,
       }));
 
-      const status = providerResult.verified ? KycStatus.PASS :
-                    flags.some(f => f.severity === 'CRITICAL') ? KycStatus.FAIL :
-                    KycStatus.REQUIRES_REVIEW;
+      const status = providerResult.verified
+        ? KycStatus.PASS
+        : flags.some((f) => f.severity === 'CRITICAL')
+          ? KycStatus.FAIL
+          : KycStatus.REQUIRES_REVIEW;
 
       const score = Math.round(providerResult.confidence * 100);
 
@@ -486,7 +481,7 @@ export class KycService {
         recommendations: [],
         processingTime: providerResult.processingTime,
         timestamp: new Date().toISOString(),
-        providerResponse: providerResult
+        providerResponse: providerResult,
       };
 
       // Store successful check result
@@ -497,16 +492,15 @@ export class KycService {
         entityId: request.entityId,
         status: result.status,
         score: result.score,
-        processingTime: result.processingTime
+        processingTime: result.processingTime,
       });
 
       return result;
-
     } catch (error) {
       logger.error('External provider KYC check failed', {
         checkId,
         entityId: request.entityId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       throw new AppError(

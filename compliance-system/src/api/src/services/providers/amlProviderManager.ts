@@ -4,21 +4,32 @@
  */
 
 import winston from 'winston';
-import { IAmlProvider, AmlScreeningRequest, AmlScreeningResult, AmlTransactionAnalysisRequest, AmlTransactionAnalysisResult } from './amlProviderInterface';
+import {
+  IAmlProvider,
+  AmlScreeningRequest,
+  AmlScreeningResult,
+  AmlTransactionAnalysisRequest,
+  AmlTransactionAnalysisResult,
+} from './amlProviderInterface';
 import { MarbleAmlProvider } from './marbleAmlProvider';
 import { ChainalysisAmlProvider } from './chainalysisAmlProvider';
-import { AmlCheckRequest, AmlCheckResult, Jurisdiction, AmlRiskLevel, ScreeningResult, AmlFlag, AmlTransaction, AmlFlagType } from '../../types/aml';
+import {
+  AmlCheckRequest,
+  AmlCheckResult,
+  Jurisdiction,
+  AmlRiskLevel,
+  ScreeningResult,
+  AmlFlag,
+  AmlFlagType,
+} from '../../types/aml';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/aml-provider-manager.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/aml-provider-manager.log' }),
+  ],
 });
 
 export class AmlProviderManager {
@@ -38,7 +49,7 @@ export class AmlProviderManager {
           apiKey: process.env.MARBLE_API_KEY,
           baseUrl: process.env.MARBLE_BASE_URL || 'https://api.marble.com',
           timeout: parseInt(process.env.MARBLE_TIMEOUT || '30000'),
-          retries: parseInt(process.env.MARBLE_RETRIES || '3')
+          retries: parseInt(process.env.MARBLE_RETRIES || '3'),
         };
         this.providers.set('marble', new MarbleAmlProvider(marbleConfig));
         logger.info('Marble AML provider initialized');
@@ -52,16 +63,18 @@ export class AmlProviderManager {
           apiKey: process.env.CHAINALYSIS_API_KEY,
           baseUrl: process.env.CHAINALYSIS_BASE_URL || 'https://api.chainalysis.com',
           timeout: parseInt(process.env.CHAINALYSIS_TIMEOUT || '30000'),
-          retries: parseInt(process.env.CHAINALYSIS_RETRIES || '3')
+          retries: parseInt(process.env.CHAINALYSIS_RETRIES || '3'),
         };
-        this.providers.set('chainalysis', new ChainalysisAmlProvider(chainalysisConfig, process.env.CHAINALYSIS_API_SECRET));
+        this.providers.set(
+          'chainalysis',
+          new ChainalysisAmlProvider(chainalysisConfig, process.env.CHAINALYSIS_API_SECRET)
+        );
         logger.info('Chainalysis AML provider initialized');
       } else {
         logger.warn('Chainalysis API credentials not configured, provider disabled');
       }
 
       logger.info(`AML Provider Manager initialized with ${this.providers.size} providers`);
-
     } catch (error) {
       logger.error('Failed to initialize AML providers', { error: (error as Error).message });
       throw error;
@@ -72,20 +85,24 @@ export class AmlProviderManager {
     const provider = this.selectProvider(request);
 
     if (!provider) {
-      throw new Error(`No suitable AML provider found for jurisdiction: ${request.jurisdiction || 'GLOBAL'}`);
+      throw new Error(
+        `No suitable AML provider found for jurisdiction: ${request.jurisdiction || 'GLOBAL'}`
+      );
     }
 
     logger.info('Selected AML provider for entity screening', {
       entityId: request.entityId,
       entityName: request.entityName,
       jurisdiction: request.jurisdiction,
-      provider: provider.name
+      provider: provider.name,
     });
 
     return await provider.screenEntity(request);
   }
 
-  async analyzeTransactions(request: AmlTransactionAnalysisRequest): Promise<AmlTransactionAnalysisResult> {
+  async analyzeTransactions(
+    request: AmlTransactionAnalysisRequest
+  ): Promise<AmlTransactionAnalysisResult> {
     const provider = this.selectProvider(request);
 
     if (!provider) {
@@ -95,7 +112,7 @@ export class AmlProviderManager {
     logger.info('Selected AML provider for transaction analysis', {
       entityId: request.entityId,
       transactionCount: request.transactions.length,
-      provider: provider.name
+      provider: provider.name,
     });
 
     return await provider.analyzeTransactions(request);
@@ -111,19 +128,20 @@ export class AmlProviderManager {
     logger.info('Selected AML provider for comprehensive check', {
       entityId: request.entityId,
       jurisdiction: request.jurisdiction,
-      provider: provider.name
+      provider: provider.name,
     });
 
     // Perform entity screening
+    const entityName = request.entityData.name || request.entityData.fullName || 'Unknown Entity';
     const screeningRequest: AmlScreeningRequest = {
       entityId: request.entityId,
-      entityName: request.entityData.name,
+      entityName: entityName,
       entityType: 'individual', // Default to individual since AmlEntityData doesn't specify
       jurisdiction: request.jurisdiction,
       additionalInfo: {
-        country: request.entityData.country
+        country: request.entityData.country,
         // dateOfBirth, aliases not available in AmlEntityData
-      }
+      },
     };
 
     const screeningResult = await provider.screenEntity(screeningRequest);
@@ -133,14 +151,14 @@ export class AmlProviderManager {
     if (request.transactions && request.transactions.length > 0) {
       const transactionRequest: AmlTransactionAnalysisRequest = {
         entityId: request.entityId,
-        transactions: request.transactions.map(t => ({
+        transactions: request.transactions.map((t) => ({
           amount: t.amount,
-          currency: t.currency,
-          counterparty: t.counterparty,
-          timestamp: t.timestamp,
+          currency: t.currency || 'USD',
+          counterparty: t.counterparty || 'Unknown',
+          timestamp: typeof t.timestamp === 'number' ? new Date(t.timestamp).toISOString() : String(t.timestamp),
           description: t.description,
-          type: t.type as 'credit' | 'debit' | 'transfer'
-        }))
+          type: (t.type || 'transfer') as 'credit' | 'debit' | 'transfer',
+        })),
       };
       transactionResult = await provider.analyzeTransactions(transactionRequest);
     }
@@ -155,16 +173,20 @@ export class AmlProviderManager {
       flags: this.mapFlags(screeningResult, transactionResult),
       recommendations: this.generateRecommendations(screeningResult, transactionResult),
       screeningResults: {
-        ofac: screeningResult.sanctionsLists.includes('OFAC') ? ScreeningResult.HIT : ScreeningResult.CLEAR,
-        euSanctions: screeningResult.sanctionsLists.includes('EU') ? ScreeningResult.HIT : ScreeningResult.CLEAR,
-        pep: ScreeningResult.CLEAR // Would need PEP-specific logic
+        ofac: screeningResult.sanctionsLists.includes('OFAC')
+          ? ScreeningResult.HIT
+          : ScreeningResult.CLEAR,
+        euSanctions: screeningResult.sanctionsLists.includes('EU')
+          ? ScreeningResult.HIT
+          : ScreeningResult.CLEAR,
+        pep: ScreeningResult.CLEAR, // Would need PEP-specific logic
       },
       processingTime: screeningResult.processingTime + (transactionResult?.processingTime || 0),
       timestamp: new Date().toISOString(),
       providerResponse: {
         screening: screeningResult,
-        transactionAnalysis: transactionResult
-      }
+        transactionAnalysis: transactionResult,
+      },
     };
 
     return combinedResult;
@@ -179,7 +201,7 @@ export class AmlProviderManager {
       try {
         logger.info(`Attempting entity screening with ${name}`, {
           entityId: request.entityId,
-          entityName: request.entityName
+          entityName: request.entityName,
         });
 
         const result = await provider.screenEntity(request);
@@ -189,7 +211,7 @@ export class AmlProviderManager {
         if (result.riskLevel === 'CRITICAL') {
           logger.info(`Critical risk detected with ${name}, stopping fallback`, {
             entityId: request.entityId,
-            riskLevel: result.riskLevel
+            riskLevel: result.riskLevel,
           });
           break;
         }
@@ -207,15 +229,23 @@ export class AmlProviderManager {
     return results;
   }
 
-  private selectProvider(request: AmlScreeningRequest | AmlTransactionAnalysisRequest): IAmlProvider | null {
+  private selectProvider(
+    request: AmlScreeningRequest | AmlTransactionAnalysisRequest
+  ): IAmlProvider | null {
     // For transaction analysis, prefer Chainalysis for crypto transactions
-    if ('transactions' in request && request.transactions.some(tx =>
-      tx.description?.toLowerCase().includes('crypto') ||
-      tx.description?.toLowerCase().includes('bitcoin') ||
-      tx.description?.toLowerCase().includes('ethereum')
-    )) {
+    if (
+      'transactions' in request &&
+      request.transactions.some(
+        (tx) =>
+          tx.description?.toLowerCase().includes('crypto') ||
+          tx.description?.toLowerCase().includes('bitcoin') ||
+          tx.description?.toLowerCase().includes('ethereum')
+      )
+    ) {
       const chainalysis = this.providers.get('chainalysis');
-      if (chainalysis) {return chainalysis;}
+      if (chainalysis) {
+        return chainalysis;
+      }
     }
 
     // First, try the primary provider
@@ -227,7 +257,11 @@ export class AmlProviderManager {
     // Fallback to any provider that supports the jurisdiction
     const jurisdiction = 'jurisdiction' in request ? request.jurisdiction : undefined;
     for (const provider of this.providers.values()) {
-      if (!jurisdiction || provider.supportedJurisdictions.includes(jurisdiction) || provider.supportedJurisdictions.includes('GLOBAL')) {
+      if (
+        !jurisdiction ||
+        provider.supportedJurisdictions.includes(jurisdiction) ||
+        provider.supportedJurisdictions.includes('GLOBAL')
+      ) {
         return provider;
       }
     }
@@ -240,7 +274,7 @@ export class AmlProviderManager {
       healthy: boolean;
       supportedJurisdictions: string[];
       capabilities?: any;
-    }
+    };
   }> {
     const status: { [key: string]: any } = {};
 
@@ -252,13 +286,13 @@ export class AmlProviderManager {
         status[name] = {
           healthy,
           supportedJurisdictions: provider.supportedJurisdictions,
-          capabilities
+          capabilities,
         };
       } catch (error) {
         status[name] = {
           healthy: false,
           supportedJurisdictions: provider.supportedJurisdictions,
-          error: (error as Error).message
+          error: (error as Error).message,
         };
       }
     }
@@ -294,15 +328,23 @@ export class AmlProviderManager {
 
   private mapRiskLevel(providerRiskLevel: string): AmlRiskLevel {
     switch (providerRiskLevel) {
-      case 'CRITICAL': return AmlRiskLevel.CRITICAL;
-      case 'HIGH': return AmlRiskLevel.HIGH;
-      case 'MEDIUM': return AmlRiskLevel.MEDIUM;
-      case 'LOW': return AmlRiskLevel.LOW;
-      default: return AmlRiskLevel.LOW;
+      case 'CRITICAL':
+        return AmlRiskLevel.CRITICAL;
+      case 'HIGH':
+        return AmlRiskLevel.HIGH;
+      case 'MEDIUM':
+        return AmlRiskLevel.MEDIUM;
+      case 'LOW':
+        return AmlRiskLevel.LOW;
+      default:
+        return AmlRiskLevel.LOW;
     }
   }
 
-  private mapFlags(screeningResult: AmlScreeningResult, transactionResult: AmlTransactionAnalysisResult | null): AmlFlag[] {
+  private mapFlags(
+    screeningResult: AmlScreeningResult,
+    transactionResult: AmlTransactionAnalysisResult | null
+  ): AmlFlag[] {
     const flags: AmlFlag[] = [];
 
     // Map screening matches to flags
@@ -311,7 +353,7 @@ export class AmlProviderManager {
         type: AmlFlagType.SANCTIONS_MATCH,
         severity: match.confidence > 0.8 ? 'HIGH' : match.confidence > 0.5 ? 'MEDIUM' : 'LOW',
         message: `Match found in ${match.listName}: ${match.matchedEntity.name}`,
-        confidence: match.confidence
+        confidence: match.confidence,
       });
     }
 
@@ -322,7 +364,7 @@ export class AmlProviderManager {
           type: this.mapRiskIndicatorType(indicator.type),
           severity: indicator.severity,
           message: indicator.description,
-          evidence: indicator.evidence
+          evidence: indicator.evidence,
         });
       }
     }
@@ -332,16 +374,25 @@ export class AmlProviderManager {
 
   private mapRiskIndicatorType(indicatorType: string): AmlFlagType {
     switch (indicatorType) {
-      case 'UNUSUAL_AMOUNT': return AmlFlagType.LARGE_TRANSACTION;
-      case 'FREQUENT_TRANSACTIONS': return AmlFlagType.FREQUENT_TRANSACTIONS;
-      case 'HIGH_RISK_COUNTERPARTY': return AmlFlagType.HIGH_RISK_COUNTRY;
-      case 'SANCTIONS_MATCH': return AmlFlagType.SANCTIONS_MATCH;
-      case 'PEP_ASSOCIATION': return AmlFlagType.PEP_MATCH;
-      default: return AmlFlagType.UNUSUAL_TRANSACTION_PATTERN;
+      case 'UNUSUAL_AMOUNT':
+        return AmlFlagType.LARGE_TRANSACTION;
+      case 'FREQUENT_TRANSACTIONS':
+        return AmlFlagType.FREQUENT_TRANSACTIONS;
+      case 'HIGH_RISK_COUNTERPARTY':
+        return AmlFlagType.HIGH_RISK_COUNTRY;
+      case 'SANCTIONS_MATCH':
+        return AmlFlagType.SANCTIONS_MATCH;
+      case 'PEP_ASSOCIATION':
+        return AmlFlagType.PEP_MATCH;
+      default:
+        return AmlFlagType.UNUSUAL_TRANSACTION_PATTERN;
     }
   }
 
-  private generateRecommendations(screeningResult: AmlScreeningResult, transactionResult: AmlTransactionAnalysisResult | null): string[] {
+  private generateRecommendations(
+    screeningResult: AmlScreeningResult,
+    transactionResult: AmlTransactionAnalysisResult | null
+  ): string[] {
     const recommendations: string[] = [];
 
     if (screeningResult.riskLevel === 'HIGH' || screeningResult.riskLevel === 'CRITICAL') {
@@ -350,7 +401,10 @@ export class AmlProviderManager {
     }
 
     if (transactionResult) {
-      if (transactionResult.overallRisk === 'HIGH' || transactionResult.overallRisk === 'CRITICAL') {
+      if (
+        transactionResult.overallRisk === 'HIGH' ||
+        transactionResult.overallRisk === 'CRITICAL'
+      ) {
         recommendations.push('Review transaction patterns for suspicious activity');
         recommendations.push('Monitor account activity closely');
       }

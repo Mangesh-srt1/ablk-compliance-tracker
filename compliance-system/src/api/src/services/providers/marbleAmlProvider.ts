@@ -14,19 +14,16 @@ import {
   AmlTransactionAnalysisResult,
   AmlMatch,
   AmlRiskIndicator,
-  AmlPattern
+  AmlPattern,
 } from './amlProviderInterface';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/marble-aml.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/marble-aml.log' }),
+  ],
 });
 
 export class MarbleAmlProvider implements IAmlProvider {
@@ -42,10 +39,10 @@ export class MarbleAmlProvider implements IAmlProvider {
       baseURL: config.baseUrl,
       timeout: config.timeout,
       headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
-        'X-API-Key': config.apiKey
-      }
+        'X-API-Key': config.apiKey,
+      },
     });
 
     // Add request/response interceptors for logging
@@ -54,7 +51,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         logger.debug('Marble API Request', {
           url: config.url,
           method: config.method,
-          entityId: config.data?.entityId
+          entityId: config.data?.entityId,
         });
         return config;
       },
@@ -68,7 +65,7 @@ export class MarbleAmlProvider implements IAmlProvider {
       (response) => {
         logger.debug('Marble API Response', {
           status: response.status,
-          url: response.config.url
+          url: response.config.url,
         });
         return response;
       },
@@ -76,7 +73,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         logger.error('Marble API Response Error', {
           status: error.response?.status,
           url: error.config?.url,
-          message: error.message
+          message: error.message,
         });
         return Promise.reject(error);
       }
@@ -90,7 +87,7 @@ export class MarbleAmlProvider implements IAmlProvider {
       logger.info('Starting Marble entity screening', {
         entityId: request.entityId,
         entityName: request.entityName,
-        entityType: request.entityType
+        entityType: request.entityType,
       });
 
       const payload = {
@@ -98,7 +95,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         name: request.entityName,
         type: request.entityType,
         jurisdiction: request.jurisdiction,
-        additionalInfo: request.additionalInfo
+        additionalInfo: request.additionalInfo,
       };
 
       let response: any;
@@ -114,9 +111,9 @@ export class MarbleAmlProvider implements IAmlProvider {
           }
           logger.warn(`Marble API call failed, retrying (${attempt}/${this.config.retries})`, {
             error: error.message,
-            entityId: request.entityId
+            entityId: request.entityId,
           });
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
       }
 
@@ -139,7 +136,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         matches,
         sanctionsLists: data.sanctionsLists || [],
         processingTime,
-        rawResponse: data
+        rawResponse: data,
       };
 
       logger.info('Marble entity screening completed', {
@@ -147,17 +144,16 @@ export class MarbleAmlProvider implements IAmlProvider {
         riskLevel,
         riskScore,
         matchCount: matches.length,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       logger.error('Marble entity screening failed', {
         entityId: request.entityId,
         error: error.message,
-        processingTime
+        processingTime,
       });
 
       // Return high-risk result on failure
@@ -169,24 +165,26 @@ export class MarbleAmlProvider implements IAmlProvider {
         matches: [],
         sanctionsLists: [],
         processingTime,
-        rawResponse: { error: error.message }
+        rawResponse: { error: error.message },
       };
     }
   }
 
-  async analyzeTransactions(request: AmlTransactionAnalysisRequest): Promise<AmlTransactionAnalysisResult> {
+  async analyzeTransactions(
+    request: AmlTransactionAnalysisRequest
+  ): Promise<AmlTransactionAnalysisResult> {
     const startTime = Date.now();
 
     try {
       logger.info('Starting Marble transaction analysis', {
         entityId: request.entityId,
-        transactionCount: request.transactions.length
+        transactionCount: request.transactions.length,
       });
 
       const payload = {
         entityId: request.entityId,
         transactions: request.transactions,
-        analysisPeriod: request.analysisPeriod
+        analysisPeriod: request.analysisPeriod,
       };
 
       let response: any;
@@ -200,11 +198,14 @@ export class MarbleAmlProvider implements IAmlProvider {
           if (attempt >= this.config.retries) {
             throw error;
           }
-          logger.warn(`Marble transaction analysis failed, retrying (${attempt}/${this.config.retries})`, {
-            error: error.message,
-            entityId: request.entityId
-          });
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          logger.warn(
+            `Marble transaction analysis failed, retrying (${attempt}/${this.config.retries})`,
+            {
+              error: error.message,
+              entityId: request.entityId,
+            }
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
       }
 
@@ -227,7 +228,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         overallRisk,
         recommendations: data.recommendations || [],
         processingTime,
-        rawResponse: data
+        rawResponse: data,
       };
 
       logger.info('Marble transaction analysis completed', {
@@ -235,17 +236,16 @@ export class MarbleAmlProvider implements IAmlProvider {
         overallRisk,
         indicatorCount: riskIndicators.length,
         patternCount: patterns.length,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       logger.error('Marble transaction analysis failed', {
         entityId: request.entityId,
         error: error.message,
-        processingTime
+        processingTime,
       });
 
       return {
@@ -256,7 +256,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         overallRisk: 'CRITICAL',
         recommendations: ['Manual review required due to analysis failure'],
         processingTime,
-        rawResponse: { error: error.message }
+        rawResponse: { error: error.message },
       };
     }
   }
@@ -279,22 +279,33 @@ export class MarbleAmlProvider implements IAmlProvider {
     try {
       const response = await this.client.get('/api/v1/capabilities');
       return {
-        supportedLists: response.data.supportedLists || ['OFAC', 'EU_SANCTIONS', 'UN_SANCTIONS', 'INTERPOL'],
+        supportedLists: response.data.supportedLists || [
+          'OFAC',
+          'EU_SANCTIONS',
+          'UN_SANCTIONS',
+          'INTERPOL',
+        ],
         supportedJurisdictions: response.data.supportedJurisdictions || this.supportedJurisdictions,
-        features: response.data.features || ['entity_screening', 'transaction_analysis', 'risk_scoring']
+        features: response.data.features || [
+          'entity_screening',
+          'transaction_analysis',
+          'risk_scoring',
+        ],
       };
     } catch (error) {
-      logger.warn('Failed to get Marble capabilities, using defaults', { error: (error as Error).message });
+      logger.warn('Failed to get Marble capabilities, using defaults', {
+        error: (error as Error).message,
+      });
       return {
         supportedLists: ['OFAC', 'EU_SANCTIONS', 'UN_SANCTIONS', 'INTERPOL'],
         supportedJurisdictions: this.supportedJurisdictions,
-        features: ['entity_screening', 'transaction_analysis', 'risk_scoring']
+        features: ['entity_screening', 'transaction_analysis', 'risk_scoring'],
       };
     }
   }
 
   private parseMarbleMatches(matchesData: any[]): AmlMatch[] {
-    return matchesData.map(match => ({
+    return matchesData.map((match) => ({
       listName: match.listName || 'Unknown',
       matchType: match.matchType || 'EXACT',
       confidence: match.confidence || 0.95,
@@ -302,45 +313,63 @@ export class MarbleAmlProvider implements IAmlProvider {
         name: match.entityName || '',
         aliases: match.aliases || [],
         country: match.country,
-        sanctionsType: match.sanctionsType
+        sanctionsType: match.sanctionsType,
       },
-      details: match.details
+      details: match.details,
     }));
   }
 
   private parseRiskIndicators(indicatorsData: any[]): AmlRiskIndicator[] {
-    return indicatorsData.map(indicator => ({
+    return indicatorsData.map((indicator) => ({
       type: indicator.type || 'UNUSUAL_AMOUNT',
       severity: indicator.severity || 'MEDIUM',
       description: indicator.description || 'Risk indicator detected',
-      evidence: indicator.evidence
+      evidence: indicator.evidence,
     }));
   }
 
   private parsePatterns(patternsData: any[]): AmlPattern[] {
-    return patternsData.map(pattern => ({
+    return patternsData.map((pattern) => ({
       type: pattern.type || 'STRUCTURING',
       confidence: pattern.confidence || 0.8,
       description: pattern.description || 'Pattern detected',
-      transactions: pattern.transactionIds || []
+      transactions: pattern.transactionIds || [],
     }));
   }
 
-  private calculateRiskLevel(score: number, matches: AmlMatch[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-    if (matches.length > 0) {return 'CRITICAL';}
-    if (score >= 80) {return 'HIGH';}
-    if (score >= 60) {return 'MEDIUM';}
+  private calculateRiskLevel(
+    score: number,
+    matches: AmlMatch[]
+  ): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    if (matches.length > 0) {
+      return 'CRITICAL';
+    }
+    if (score >= 80) {
+      return 'HIGH';
+    }
+    if (score >= 60) {
+      return 'MEDIUM';
+    }
     return 'LOW';
   }
 
-  private calculateOverallRisk(indicators: AmlRiskIndicator[], patterns: AmlPattern[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-    const criticalIndicators = indicators.filter(i => i.severity === 'CRITICAL').length;
-    const highIndicators = indicators.filter(i => i.severity === 'HIGH').length;
-    const criticalPatterns = patterns.filter(p => p.confidence > 0.9).length;
+  private calculateOverallRisk(
+    indicators: AmlRiskIndicator[],
+    patterns: AmlPattern[]
+  ): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    const criticalIndicators = indicators.filter((i) => i.severity === 'CRITICAL').length;
+    const highIndicators = indicators.filter((i) => i.severity === 'HIGH').length;
+    const criticalPatterns = patterns.filter((p) => p.confidence > 0.9).length;
 
-    if (criticalIndicators > 0 || criticalPatterns > 0) {return 'CRITICAL';}
-    if (highIndicators > 2 || patterns.length > 3) {return 'HIGH';}
-    if (indicators.length > 0 || patterns.length > 0) {return 'MEDIUM';}
+    if (criticalIndicators > 0 || criticalPatterns > 0) {
+      return 'CRITICAL';
+    }
+    if (highIndicators > 2 || patterns.length > 3) {
+      return 'HIGH';
+    }
+    if (indicators.length > 0 || patterns.length > 0) {
+      return 'MEDIUM';
+    }
     return 'LOW';
   }
 }

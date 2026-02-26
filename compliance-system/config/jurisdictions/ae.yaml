@@ -1,11 +1,11 @@
 jurisdiction:
   code: AE
-  name: "United Arab Emirates - Dubai"
+  name: 'United Arab Emirates - Dubai'
   region: MENA
-  launchDate: "2026-03-15"
-  timeZone: "Asia/Dubai"
-  currencyCode: "AED"
-  currencySymbol: "د.إ"
+  launchDate: '2026-03-15'
+  timeZone: 'Asia/Dubai'
+  currencyCode: 'AED'
+  currencySymbol: 'د.إ'
 
 regulatoryFramework:
   primaryRegulator: DFSA
@@ -18,44 +18,44 @@ regulatoryFramework:
 
 regulatoryBodies:
   - id: DFSA
-    name: "Dubai Financial Services Authority"
+    name: 'Dubai Financial Services Authority'
     jurisdiction: DIFC
-    website: "https://www.dfsa.ae"
-    reportingEmail: "aml@dfsa.ae"
-    contactPhone: "+971-4-308-8100"
+    website: 'https://www.dfsa.ae'
+    reportingEmail: 'aml@dfsa.ae'
+    contactPhone: '+971-4-308-8100'
     reportingFormats: [INTERACTIVE, PDF, XML]
-    
+
   - id: SCA
-    name: "Securities and Commodities Authority"
+    name: 'Securities and Commodities Authority'
     jurisdiction: UAE_NATIONWIDE
-    website: "https://www.sca.ae"
-    reportingEmail: "aml@sca.ae"
+    website: 'https://www.sca.ae'
+    reportingEmail: 'aml@sca.ae'
     reportingFormats: [EMAIL, WEB_PORTAL]
 
 fundStructure:
-  requiredLegalEntity: "DFSA_AUTHORIZED_FUND_MANAGER"
-  minFundSize: 1000000  # AED (~$272,000 USD)
-  maxInvestors: 500     # DFSA limit
+  requiredLegalEntity: 'DFSA_AUTHORIZED_FUND_MANAGER'
+  minFundSize: 1000000 # AED (~$272,000 USD)
+  maxInvestors: 500 # DFSA limit
   minInvestors: 2
   allowedFundTypes:
     - DFSA_PRIVATE_FUND
     - DFSA_QUALIFIED_INVESTOR_FUND
     - DFSA_PROFESSIONAL_FUND
-    
+
   lpEligibility:
     - QUALIFIED_INVESTOR
     - FINANCIAL_PROFESSIONAL
     - GOVERNMENT_ENTITY
     - INSTITUTIONAL_INVESTOR
-    
-  minInvestmentAmount: 100000  # AED per LP
+
+  minInvestmentAmount: 100000 # AED per LP
 
 kyc:
   providerIntegration: ballerine
   livenessCheck: true
   faceMatch: true
   docLanguages: [EN, AR]
-  
+
   docRequirements:
     individual:
       - PASSPORT_OR_ID
@@ -63,14 +63,14 @@ kyc:
       - PROOF_OF_ADDRESS
       - SOURCE_OF_FUNDS_CERTIFICATION
       - BENEFICIAL_OWNERSHIP_DECLARATION
-      
+
     corporate:
       - CERTIFICATE_OF_INCORPORATION
       - BOARD_RESOLUTION_FOR_INVESTMENT
       - REGISTER_OF_DIRECTORS
       - PROOF_OF_ADDRESS
       - AUDITED_FINANCIALS
-      
+
   sanctionsList:
     - OFAC_SDN
     - UN_SECURITY_COUNCIL
@@ -79,21 +79,21 @@ kyc:
     - SCA_PERSONS_LIST
     - INTERPOL_RED_NOTICES
     - STATE_LIST_UAE
-    
+
   adverseMediaScreening: true
   pepCheck: true
-  pepDefinition: "Government official, military, judicial, or board member of SOE"
+  pepDefinition: 'Government official, military, judicial, or board member of SOE'
   pepRelativeCheck: true
   pepRelativeLevels: 1
-  
-  kycRefreshInterval: 365  # Days
-  kycExpiryNotification: 30  # Days before expiry
+
+  kycRefreshInterval: 365 # Days
+  kycExpiryNotification: 30 # Days before expiry
 
 governance:
   majorChangesRequireVote: true
   gpHasVeto: false
   gpCanInitiateMajorChanges: false
-  
+
   majorChangeDefinitions:
     - SIGNATORY_CHANGE
     - CHANGE_OF_INVESTMENT_STRATEGY
@@ -104,46 +104,46 @@ governance:
     - AMENDMENT_TO_LPA
     - INCREASE_MANAGEMENT_FEE
     - CHANGE_OF_VALUATION_POLICY
-    
-  votingThreshold: 66  # % of LPs
+
+  votingThreshold: 66 # % of LPs
   votingDeadlineDays: 14
-  minVotingParticipation: 25  # % of LPs must vote
-  
+  minVotingParticipation: 25 # % of LPs must vote
+
   unanimousConsentRequired:
     - CHANGE_OF_FUND_BASE_CURRENCY
     - CHANGE_OF_AUDITOR
     - WINDING_UP_FUND
-    
+
   distributionChangesRequireVote: true
 
 distributions:
-  frequencyMonths: 3  # Quarterly only - DFSA requirement
+  frequencyMonths: 3 # Quarterly only - DFSA requirement
   allowedFrequencies: [3]
   allowedWaterfallStructures:
     - STANDARD
     - HURDLE_RATE
     - CLAWBACK
-    
+
   minManagementFeePercentage: 0.5
   maxManagementFeePercentage: 2.5
   standardManagementFee: 2.0
-  
+
   minCarryPercentage: 15
   maxCarryPercentage: 25
   standardCarryPercentage: 20
-  
+
   hurdle:
     mandatory: false
     minSuggested: 6
     maxAllowed: 10
-    
+
   clawbackEnabled: true
-  clawbackPeriod: 3  # Years post-exit
-  
-  earlyExitPenalty: 3  # %
+  clawbackPeriod: 3 # Years post-exit
+
+  earlyExitPenalty: 3 # %
   gatingAllowed: true
-  gatingThreshold: 25  # % of fund requesting redemption
-  
+  gatingThreshold: 25 # % of fund requesting redemption
+
   managementFeeFrequency: MONTHLY_ACCRUAL_QUARTERLY_PAYMENT
   distributionCurrency: AED
 
@@ -151,13 +151,13 @@ lockup:
   initialLockupMonths: 24
   hardLockupMonths: 12
   softLockupMonths: 12
-  
+
   redemptionFrequency: QUARTERLY
   redemptionNoticeDays: 45
   redemptionProcessingDays: 60
-  
+
   redemptionRestrictions:
-    - NO_PARTIAL_REDEMPTION_BELOW: 50000  # Min AED
+    - NO_PARTIAL_REDEMPTION_BELOW: 50000 # Min AED
     - NO_REDEMPTION_DURING_LIQUIDATION: true
 
 insiderTrading:
@@ -165,91 +165,91 @@ insiderTrading:
   applicableToGPAffiliates: true
   applicableToAdvisers: true
   applicableToInterestedParties: true
-  
+
   signals:
     gpActivityCorrelation:
       enabled: true
       threshold: 0.3
       detectionDays: 5
       weight: 0.3
-      
+
     informationAsymmetry:
       enabled: true
       threshold: 0.35
       minDaysBeforeAnnouncement: 2
       weight: 0.35
-      
+
     frontRunningPattern:
       enabled: true
       threshold: 0.25
       minDaysBeforeAnnouncement: 2
       weight: 0.25
-      
+
     temporalAnomaly:
       enabled: true
       threshold: 0.1
       weight: 0.1
-      
+
   escalationThresholds:
     block: 0.90
     regulatoryReport: 0.75
     manualReview: 0.60
     monitor: 0.30
-    
+
   stricterRulesForGPAffiliates: true
   reportToRegulator: true
-  regulatoryReportingDeadline: 3  # Days
+  regulatoryReportingDeadline: 3 # Days
 
 amlCft:
-  ctfThreshold: 100000  # AED
+  ctfThreshold: 100000 # AED
   ctfReportingAuthorized: true
   ctfReportingAuthority: SCA
-  
+
   suspiciousActivity:
     sarRequired: true
-    sarFilingDeadline: 3  # Days (stricter)
+    sarFilingDeadline: 3 # Days (stricter)
     reportingAuthority:
       - DFSA
       - SCA
-    
+
   strRequired: true
-  strFilingDeadline: 3  # Days
-  
+  strFilingDeadline: 3 # Days
+
   pep:
     check: true
     familyCheck: true
     relativeLevels: 1
-    
+
   adverseMedia:
     screening: true
-    updateFrequency: 86400  # Daily
+    updateFrequency: 86400 # Daily
     blacklistTrigger: IMMEDIATE_FREEZE
-    
+
   transactionMonitoring:
     enabled: true
     frequency: REAL_TIME
     velocityChecks: true
-    velocityThreshold: 5  # Transfers per day
-    
+    velocityThreshold: 5 # Transfers per day
+
   layering:
     detection: true
-    alert: "3+ transfers within 24 hours to new wallets"
-    
+    alert: '3+ transfers within 24 hours to new wallets'
+
   riskCategorization:
     high_risk_countries:
-      - KP  # North Korea
-      - IR  # Iran
-      - SY  # Syria
-      - CU  # Cuba
+      - KP # North Korea
+      - IR # Iran
+      - SY # Syria
+      - CU # Cuba
     medium_risk_countries:
-      - PK  # Pakistan
-      - BD  # Bangladesh
-      - AF  # Afghanistan
+      - PK # Pakistan
+      - BD # Bangladesh
+      - AF # Afghanistan
 
 reporting:
   quarterlyReportRequired: true
   quarterlyReportDays: 45
-  
+
   quarterlyReportContents:
     - FUND_NAV
     - DISTRIBUTION_PAID
@@ -259,12 +259,12 @@ reporting:
     - INSIDER_TRADING_INCIDENTS
     - AML_INCIDENTS
     - GOVERNANCE_VOTES_HELD
-    
+
   annualAuditRequired: true
   auditStandard: IFRS_9
-  auditDeadline: 120  # Days after year-end
+  auditDeadline: 120 # Days after year-end
   auditPublishRequired: true
-  
+
   amlReporting:
     strRequired: true
     sarRequired: true
@@ -273,26 +273,26 @@ reporting:
     reportingAuthority:
       - DFSA
       - SCA
-    
-  recordRetention: 10  # Years
+
+  recordRetention: 10 # Years
 
 peerToPeer:
   allowSecondaryMarketTrading: true
   requiresComplianceApproval: true
-  
+
   allowedDistributionChannels:
     - DFSA_APPROVED_EXCHANGE
     - BISC_DCE
     - DESIGNATED_SMART_CONTRACT_ONLY
-    
-  lockupPeriod: 365  # Days
-  earlyExitPenalty: 3  # %
-  
+
+  lockupPeriod: 365 # Days
+  earlyExitPenalty: 3 # %
+
   allowedExchanges:
     - BISC_DCE
     - DIFC_EXCHANGE
     - REGULATED_ISLAMIC_FINANCE_PLATFORM
-    
+
   restrictedCountries:
     hardBlock:
       - KP
@@ -303,25 +303,25 @@ peerToPeer:
       - PK
       - BD
       - AF
-      
+
   approvalProcess: MANDATORY_COMPLIANCE_GATE
-  approvalLatency: 120  # Minutes max
+  approvalLatency: 120 # Minutes max
   auditTrail: IMMUTABLE
 
 oracles:
   proofOfReserve:
     enabled: true
     provider: CHAINLINK
-    checkInterval: 3600  # Hourly
+    checkInterval: 3600 # Hourly
     backupOracle: BAND_PROTOCOL
-    
+
   assetRegistry:
     enabled: true
     registry: DUBAI_LAND_DEPARTMENT
-    apiEndpoint: "https://api.dubailand.ae/verify"
+    apiEndpoint: 'https://api.dubailand.ae/verify'
     authentication: OAUTH2_WITH_CERTIFICATE
-    backupRegistry: "https://api2.dubailand.ae"
-    
+    backupRegistry: 'https://api2.dubailand.ae'
+
   sanctionsData:
     enabled: true
     primaryProviders:
@@ -330,7 +330,7 @@ oracles:
       - DFSA
       - SCA
       - UAE_CBE
-    updateFrequency: 43200  # Every 12 hours
+    updateFrequency: 43200 # Every 12 hours
     fallbackToLocalList: true
 
 smartContract:
@@ -343,41 +343,41 @@ smartContract:
     - REGULATORY_SUSPENSION
     - AML_ALERT_TRIGGERED
     - SANCTIONS_MATCH_DETECTED
-    
+
   automaticBurning: false
   burningAllowedVia: LP_VOTE_ONLY
-  
-  pausingTimeLock: 86400  # 24 hours
+
+  pausingTimeLock: 86400 # 24 hours
   resumingRequiresReview: true
-  
+
   auditTrailOnChain: true
 
 dataProtection:
   standard: UAE_DATA_PROTECTION_ACT_2021
   piiEncryption: AES_256
-  minDataRetention: 7  # Years
-  maxDataRetention: 10  # Years
+  minDataRetention: 7 # Years
+  maxDataRetention: 10 # Years
   jurisdictionalDataStorage: REQUIRED
   dataStorageLocation: DUBAI_DATA_CENTERS_ONLY
   dataProcessingCountries: [AE]
-  
+
   dataSubjectRights:
     - ACCESS
     - RECTIFICATION
     - ERASURE
     - PORTABILITY
-    
+
   consentMechanism: EXPLICIT_OPT_IN
 
 escalation:
-  escalationEmail: "compliance@yourfirm.ae"
+  escalationEmail: 'compliance@yourfirm.ae'
   escalationTicketing: JIRA
-  
+
   manualReviewQueue:
-    maxWaitTime: 48  # Hours
-    slaTarget: 95  # %
-    notificationEmail: "escalations@yourfirm.ae"
-    
+    maxWaitTime: 48 # Hours
+    slaTarget: 95 # %
+    notificationEmail: 'escalations@yourfirm.ae'
+
   regulatoryReporting:
     autoFileSAR: false
     autoFileSTR: false
@@ -385,13 +385,13 @@ escalation:
     internalReviewDays: 2
     regulatoryFilingDays: 1
     reportingEmail:
-      - "aml@dfsa.ae"
-      - "aml@sca.ae"
+      - 'aml@dfsa.ae'
+      - 'aml@sca.ae'
 
 pricing:
-  setupFee: 50000  # AED
-  monthlyFee: 15000  # AED per fund
-  transactionFee: 0.05  # %
+  setupFee: 50000 # AED
+  monthlyFee: 15000 # AED per fund
+  transactionFee: 0.05 # %
 
 features:
   enableBatchDistributions: true
@@ -404,21 +404,21 @@ features:
   enableCryptoValuesReporting: false
 
 deployment:
-  environment: "PRODUCTION"
+  environment: 'PRODUCTION'
   besuNetworkID: 1
-  databaseSchema: "pe_funds_ae"
-  logLevel: "INFO"
+  databaseSchema: 'pe_funds_ae'
+  logLevel: 'INFO'
   alertingEnabled: true
-  alertEmail: "alerts@yourfirm.ae"
-  backupEmail: "alerts.backup@yourfirm.ae"
+  alertEmail: 'alerts@yourfirm.ae'
+  backupEmail: 'alerts.backup@yourfirm.ae'
 
 complianceOfficer:
-  name: "Chief Compliance Officer"
-  email: "cco@yourfirm.ae"
-  phone: "+971-XX-XXX-XXXX"
+  name: 'Chief Compliance Officer'
+  email: 'cco@yourfirm.ae'
+  phone: '+971-XX-XXX-XXXX'
   regulatoryLiability: true
 
-configVersion: "1.0.0-AE"
-lastUpdated: "2026-02-25"
-nextReviewDate: "2026-06-30"
-effectiveDate: "2026-03-15"
+configVersion: '1.0.0-AE'
+lastUpdated: '2026-02-25'
+nextReviewDate: '2026-06-30'
+effectiveDate: '2026-03-15'

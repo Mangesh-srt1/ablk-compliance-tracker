@@ -6,23 +6,15 @@
 import { Request, Response, NextFunction } from 'express';
 import winston from 'winston';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  AppError,
-  ErrorResponse,
-  ErrorCategory,
-  ErrorCode
-} from '../types/errors';
+import { AppError, ErrorResponse, ErrorCategory, ErrorCode } from '../types/errors';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/error-handler.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/error-handler.log' }),
+  ],
 });
 
 /**
@@ -43,7 +35,7 @@ function createErrorResponse(
     details,
     httpStatus,
     timestamp: new Date().toISOString(),
-    requestId: requestId || uuidv4()
+    requestId: requestId || uuidv4(),
   };
 }
 
@@ -87,7 +79,8 @@ function mapErrorToResponse(error: any, requestId: string): ErrorResponse {
   }
 
   // Handle database errors
-  if (error.code?.startsWith('42')) { // PostgreSQL syntax/schema errors
+  if (error.code?.startsWith('42')) {
+    // PostgreSQL syntax/schema errors
     return createErrorResponse(
       ErrorCode.DATABASE_ERROR,
       ErrorCategory.INTERNAL,
@@ -118,7 +111,7 @@ function mapErrorToResponse(error: any, requestId: string): ErrorResponse {
       400,
       error.details.map((detail: any) => ({
         field: detail.path.join('.'),
-        message: detail.message
+        message: detail.message,
       })),
       requestId
     );
@@ -150,13 +143,8 @@ function mapErrorToResponse(error: any, requestId: string): ErrorResponse {
 /**
  * Centralized error handling middleware
  */
-export const errorHandler = (
-  error: any,
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const requestId = req.headers['x-request-id'] as string || uuidv4();
+export const errorHandler = (error: any, req: Request, res: Response, next: NextFunction): void => {
+  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
 
   // Log the error
   logger.error('Request error', {
@@ -168,8 +156,8 @@ export const errorHandler = (
     error: {
       name: error.name,
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    }
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    },
   });
 
   // Map error to standardized response
@@ -177,19 +165,15 @@ export const errorHandler = (
 
   // Send response
   res.status(errorResponse.httpStatus).json({
-    error: errorResponse
+    error: errorResponse,
   });
 };
 
 /**
  * 404 Not Found handler
  */
-export const notFoundHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const requestId = req.headers['x-request-id'] as string || uuidv4();
+export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
+  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
 
   const errorResponse = createErrorResponse(
     ErrorCode.RESOURCE_NOT_FOUND,
@@ -201,6 +185,6 @@ export const notFoundHandler = (
   );
 
   res.status(404).json({
-    error: errorResponse
+    error: errorResponse,
   });
 };

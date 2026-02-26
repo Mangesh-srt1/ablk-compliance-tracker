@@ -28,11 +28,13 @@ This guide helps you analyze code quality for Ableka Lumina using your local Son
 ### Step 3: Run Analysis Locally
 
 **Navigate to compliance-system folder:**
+
 ```bash
 cd compliance-system
 ```
 
 **Run analysis with token:**
+
 ```bash
 npx sonarqube-scanner \
   -Dsonar.projectBaseDir=. \
@@ -43,6 +45,7 @@ npx sonarqube-scanner \
 **Replace `<YOUR-TOKEN-HERE>` with the token from Step 2**
 
 Example:
+
 ```bash
 npx sonarqube-scanner \
   -Dsonar.projectBaseDir=. \
@@ -73,6 +76,7 @@ npx sonarqube-scanner \
 ### Option A: Use npm Script (Recommended)
 
 **1. Add to package.json:**
+
 ```json
 {
   "scripts": {
@@ -83,11 +87,13 @@ npx sonarqube-scanner \
 ```
 
 **2. Install SonarScanner CLI:**
+
 ```bash
 npm install --save-dev sonarqube-scanner
 ```
 
 **3. Run analysis:**
+
 ```bash
 # With token (recommended):
 export SONAR_TOKEN=<your-token>
@@ -131,12 +137,14 @@ npx sonarqube-scanner \
 ### Use Token in Analysis
 
 **Option 1: Environment Variable (Recommended)**
+
 ```bash
 export SONAR_TOKEN=squ_abc123xyz789
 npm run sonar
 ```
 
 **Option 2: Command Line**
+
 ```bash
 npx sonarqube-scanner \
   -Dsonar.login=squ_abc123xyz789 \
@@ -145,12 +153,14 @@ npx sonarqube-scanner \
 
 **Option 3: .env File**
 Create `compliance-system/.env.local`:
+
 ```
 SONAR_TOKEN=squ_abc123xyz789
 SONAR_HOST_URL=http://localhost:9000
 ```
 
 Then run:
+
 ```bash
 npx sonarqube-scanner \
   -Dsonar.host.url=$SONAR_HOST_URL \
@@ -160,6 +170,7 @@ npx sonarqube-scanner \
 ### Token Security
 
 ⚠️ **Important:**
+
 - 🔒 Never commit tokens to Git
 - 🔒 Never share tokens publicly
 - 🔒 Tokens can be revoked from SonarQube UI
@@ -204,32 +215,39 @@ sonar.sourceEncoding=UTF-8
 ### Main Metrics
 
 **🐛 Bugs**
+
 - Code defects that will cause runtime errors
 - Priority: **CRITICAL** - Fix immediately
 
 **🔒 Vulnerabilities**
+
 - Security weaknesses
 - Priority: **CRITICAL** - Fix immediately
 
 **🧹 Code Smells**
+
 - Maintainability issues (complexity, duplication)
 - Priority: **HIGH** - Fix soon
 
 **📈 Coverage**
+
 - Percentage of code tested by unit tests
 - Target: **≥80%** for compliance code
 
 **♻️ Duplication**
+
 - Code that's copied/repeated
 - Target: **<5%** duplication
 
 **⚡ Hotspots**
+
 - Code that's complex or risky
 - Review for potential improvements
 
 ### Quality Gate
 
 A **Quality Gate** is a set of rules that must pass:
+
 - ✅ No critical bugs
 - ✅ No critical vulnerabilities
 - ✅ Code coverage ≥80%
@@ -244,6 +262,7 @@ View quality gate at project dashboard.
 ### Error: "Cannot connect to http://localhost:9000"
 
 **Solution 1:** Check if SonarQube is running
+
 ```bash
 # Test connection
 curl http://localhost:9000
@@ -251,6 +270,7 @@ curl http://localhost:9000
 ```
 
 **Solution 2:** Check firewall
+
 ```bash
 # Windows: Check port 9000
 netstat -ano | findstr :9000
@@ -262,6 +282,7 @@ docker run -d --name sonarqube -p 9000:9000 sonarqube
 ### Error: "Invalid token"
 
 **Solution:** Regenerate token
+
 1. Go to http://localhost:9000/admin/credentials
 2. Delete old token
 3. Generate new token
@@ -270,6 +291,7 @@ docker run -d --name sonarqube -p 9000:9000 sonarqube
 ### Error: "Project not found"
 
 **Solution:** Create project first
+
 1. Go to http://localhost:9000
 2. Click **Create Project**
 3. Use same project key as in command: `ablk-compliance-system`
@@ -277,6 +299,7 @@ docker run -d --name sonarqube -p 9000:9000 sonarqube
 ### Analysis Takes Too Long
 
 **Solution:** Skip large folders
+
 ```bash
 npx sonarqube-scanner \
   -Dsonar.host.url=http://localhost:9000 \
@@ -287,17 +310,20 @@ npx sonarqube-scanner \
 ### Coverage Report Not Found
 
 **Solution 1:** Generate coverage first
+
 ```bash
 npm run test:coverage
 ```
 
 **Solution 2:** Check path in properties
+
 ```properties
 # Check this path exists:
 sonar.javascript.lcov.reportPaths=src/api/coverage/lcov.info
 ```
 
 **Solution 3:** Create empty coverage if needed
+
 ```bash
 mkdir -p src/api/coverage
 ```
@@ -309,11 +335,13 @@ mkdir -p src/api/coverage
 ### Before Committing Code
 
 **Step 1: Run tests with coverage**
+
 ```bash
 npm run test:coverage
 ```
 
 **Step 2: Run SonarQube analysis**
+
 ```bash
 export SONAR_TOKEN=<your-token>
 npm run sonar
@@ -323,11 +351,13 @@ npm run sonar
 Open http://localhost:9000/projects/ablk-compliance-system
 
 **Step 4: Fix critical issues**
+
 - Bugs must be fixed
 - Vulnerabilities must be fixed
 - Aim for quality gate pass
 
 **Step 5: Commit**
+
 ```bash
 git add -A
 git commit -m "feat: add feature with SonarQube quality check"
@@ -353,6 +383,7 @@ Add to `compliance-system/package.json`:
 ```
 
 Then use:
+
 ```bash
 npm run sonar              # Run full analysis
 npm run sonar:check       # Check if project exists
@@ -364,6 +395,7 @@ npm run test:coverage     # Just generate coverage
 ## 🔄 Quality Gate Rules
 
 Set up quality gate that enforces:
+
 - ✅ New hotspot review: 100%
 - ✅ Bugs: 0
 - ✅ Vulnerabilities: 0
@@ -371,6 +403,7 @@ Set up quality gate that enforces:
 - ✅ Duplicated lines: <3%
 
 **To configure:**
+
 1. Go to http://localhost:9000/admin/qualitygates
 2. Create new or edit existing gate
 3. Add conditions
@@ -391,6 +424,7 @@ Set up quality gate that enforces:
 4. Select project: `ablk-compliance-system`
 
 Benefits:
+
 - Real-time code analysis in editor
 - Issues highlighted as you type
 - Auto-fix suggestions
@@ -418,7 +452,7 @@ Benefits:
 
 **URL:** http://localhost:9000  
 **Project Key:** `ablk-compliance-system`  
-**Project Name:** Ableka Lumina - Compliance System  
+**Project Name:** Ableka Lumina - Compliance System
 
 **Configuration:** See `sonar-project.properties` in compliance-system folder
 

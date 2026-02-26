@@ -4,20 +4,21 @@
  */
 
 import winston from 'winston';
-import { IKycProvider, KycVerificationRequest, KycVerificationResult } from './kycProviderInterface';
+import {
+  IKycProvider,
+  KycVerificationRequest,
+  KycVerificationResult,
+} from './kycProviderInterface';
 import { BallerineKycProvider } from './ballerineKycProvider';
 import { JumioKycProvider } from './jumioKycProvider';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/kyc-provider-manager.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/kyc-provider-manager.log' }),
+  ],
 });
 
 export class KycProviderManager {
@@ -37,7 +38,7 @@ export class KycProviderManager {
           apiKey: process.env.BALLERINE_API_KEY,
           baseUrl: process.env.BALLERINE_BASE_URL || 'https://api.ballerine.com',
           timeout: parseInt(process.env.BALLERINE_TIMEOUT || '30000'),
-          retries: parseInt(process.env.BALLERINE_RETRIES || '3')
+          retries: parseInt(process.env.BALLERINE_RETRIES || '3'),
         };
         this.providers.set('ballerine', new BallerineKycProvider(ballerineConfig));
         logger.info('Ballerine KYC provider initialized');
@@ -51,16 +52,18 @@ export class KycProviderManager {
           apiKey: process.env.JUMIO_API_KEY,
           baseUrl: process.env.JUMIO_BASE_URL || 'https://api.jumio.com',
           timeout: parseInt(process.env.JUMIO_TIMEOUT || '30000'),
-          retries: parseInt(process.env.JUMIO_RETRIES || '3')
+          retries: parseInt(process.env.JUMIO_RETRIES || '3'),
         };
-        this.providers.set('jumio', new JumioKycProvider(jumioConfig, process.env.JUMIO_API_SECRET));
+        this.providers.set(
+          'jumio',
+          new JumioKycProvider(jumioConfig, process.env.JUMIO_API_SECRET)
+        );
         logger.info('Jumio KYC provider initialized');
       } else {
         logger.warn('Jumio API credentials not configured, provider disabled');
       }
 
       logger.info(`KYC Provider Manager initialized with ${this.providers.size} providers`);
-
     } catch (error) {
       logger.error('Failed to initialize KYC providers', { error: (error as Error).message });
       throw error;
@@ -77,7 +80,7 @@ export class KycProviderManager {
     logger.info('Selected KYC provider for verification', {
       entityId: request.entityId,
       jurisdiction: request.jurisdiction,
-      provider: provider.name
+      provider: provider.name,
     });
 
     return await provider.verify(request);
@@ -93,7 +96,7 @@ export class KycProviderManager {
         if (provider.supportedJurisdictions.includes(request.jurisdiction)) {
           logger.info(`Attempting KYC verification with ${name}`, {
             entityId: request.entityId,
-            jurisdiction: request.jurisdiction
+            jurisdiction: request.jurisdiction,
           });
 
           const result = await provider.verify(request);
@@ -103,7 +106,7 @@ export class KycProviderManager {
           if (result.verified && result.confidence > 0.8) {
             logger.info(`Successful KYC verification with ${name}, stopping fallback`, {
               entityId: request.entityId,
-              confidence: result.confidence
+              confidence: result.confidence,
             });
             break;
           }
@@ -144,7 +147,7 @@ export class KycProviderManager {
       healthy: boolean;
       supportedJurisdictions: string[];
       capabilities?: any;
-    }
+    };
   }> {
     const status: { [key: string]: any } = {};
 
@@ -156,13 +159,13 @@ export class KycProviderManager {
         status[name] = {
           healthy,
           supportedJurisdictions: provider.supportedJurisdictions,
-          capabilities
+          capabilities,
         };
       } catch (error) {
         status[name] = {
           healthy: false,
           supportedJurisdictions: provider.supportedJurisdictions,
-          error: (error as Error).message
+          error: (error as Error).message,
         };
       }
     }

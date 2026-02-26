@@ -15,19 +15,16 @@ import {
   AmlTransactionAnalysisResult,
   AmlMatch,
   AmlRiskIndicator,
-  AmlPattern
+  AmlPattern,
 } from './amlProviderInterface';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/chainalysis-aml.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/chainalysis-aml.log' }),
+  ],
 });
 
 export class ChainalysisAmlProvider implements IAmlProvider {
@@ -47,8 +44,8 @@ export class ChainalysisAmlProvider implements IAmlProvider {
       timeout: config.timeout,
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': config.apiKey
-      }
+        'X-API-Key': config.apiKey,
+      },
     });
 
     // Add request/response interceptors for logging and auth
@@ -63,14 +60,14 @@ export class ChainalysisAmlProvider implements IAmlProvider {
           config.headers = {
             ...config.headers,
             'X-Auth-Signature': signature,
-            'X-Auth-Timestamp': timestamp.toString()
+            'X-Auth-Timestamp': timestamp.toString(),
           } as any;
         }
 
         logger.debug('Chainalysis API Request', {
           url: config.url,
           method: config.method,
-          entityId: config.data?.entityId
+          entityId: config.data?.entityId,
         });
         return config;
       },
@@ -84,7 +81,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
       (response) => {
         logger.debug('Chainalysis API Response', {
           status: response.status,
-          url: response.config.url
+          url: response.config.url,
         });
         return response;
       },
@@ -92,7 +89,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         logger.error('Chainalysis API Response Error', {
           status: error.response?.status,
           url: error.config?.url,
-          message: error.message
+          message: error.message,
         });
         return Promise.reject(error);
       }
@@ -106,7 +103,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
       logger.info('Starting Chainalysis entity screening', {
         entityId: request.entityId,
         entityName: request.entityName,
-        entityType: request.entityType
+        entityType: request.entityType,
       });
 
       const payload = {
@@ -114,10 +111,10 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         name: request.entityName,
         type: request.entityType,
         jurisdiction: request.jurisdiction,
-        additionalInfo: request.additionalInfo
+        additionalInfo: request.additionalInfo,
       };
 
-      let response;
+      let response: any;
       let attempt = 0;
       while (attempt < this.config.retries) {
         try {
@@ -130,10 +127,14 @@ export class ChainalysisAmlProvider implements IAmlProvider {
           }
           logger.warn(`Chainalysis API call failed, retrying (${attempt}/${this.config.retries})`, {
             error: error.message,
-            entityId: request.entityId
+            entityId: request.entityId,
           });
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
+      }
+
+      if (!response) {
+        throw new Error('Failed to get response from Chainalysis API');
       }
 
       const processingTime = Date.now() - startTime;
@@ -151,7 +152,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         matches,
         sanctionsLists: data.sanctionsLists || ['OFAC', 'CHAINALYSIS_SANCTIONS'],
         processingTime,
-        rawResponse: data
+        rawResponse: data,
       };
 
       logger.info('Chainalysis entity screening completed', {
@@ -159,17 +160,16 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         riskLevel,
         riskScore,
         matchCount: matches.length,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       logger.error('Chainalysis entity screening failed', {
         entityId: request.entityId,
         error: error.message,
-        processingTime
+        processingTime,
       });
 
       return {
@@ -180,29 +180,29 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         matches: [],
         sanctionsLists: [],
         processingTime,
-        rawResponse: { error: error.message }
+        rawResponse: { error: error.message },
       };
     }
   }
 
-  async analyzeTransactions(request: AmlTransactionAnalysisRequest): Promise<AmlTransactionAnalysisResult> {
+  async analyzeTransactions(
+    request: AmlTransactionAnalysisRequest
+  ): Promise<AmlTransactionAnalysisResult> {
     const startTime = Date.now();
 
     try {
       logger.info('Starting Chainalysis transaction analysis', {
         entityId: request.entityId,
-        transactionCount: request.transactions.length
+        transactionCount: request.transactions.length,
       });
 
       // Filter for crypto transactions only
-      const cryptoTransactions = request.transactions.filter(tx =>
-        this.isCryptoTransaction(tx)
-      );
+      const cryptoTransactions = request.transactions.filter((tx) => this.isCryptoTransaction(tx));
 
       if (cryptoTransactions.length === 0) {
         logger.info('No crypto transactions found for Chainalysis analysis', {
           entityId: request.entityId,
-          totalTransactions: request.transactions.length
+          totalTransactions: request.transactions.length,
         });
 
         return {
@@ -213,20 +213,20 @@ export class ChainalysisAmlProvider implements IAmlProvider {
           overallRisk: 'LOW',
           recommendations: ['No cryptocurrency transactions to analyze'],
           processingTime: Date.now() - startTime,
-          rawResponse: { message: 'No crypto transactions' }
+          rawResponse: { message: 'No crypto transactions' },
         };
       }
 
       const payload = {
         entityId: request.entityId,
-        transactions: cryptoTransactions.map(tx => ({
+        transactions: cryptoTransactions.map((tx) => ({
           ...tx,
-          blockchain: this.detectBlockchain(tx)
+          blockchain: this.detectBlockchain(tx),
         })),
-        analysisPeriod: request.analysisPeriod
+        analysisPeriod: request.analysisPeriod,
       };
 
-      let response;
+      let response: any;
       let attempt = 0;
       while (attempt < this.config.retries) {
         try {
@@ -237,12 +237,19 @@ export class ChainalysisAmlProvider implements IAmlProvider {
           if (attempt >= this.config.retries) {
             throw error;
           }
-          logger.warn(`Chainalysis transaction analysis failed, retrying (${attempt}/${this.config.retries})`, {
-            error: error.message,
-            entityId: request.entityId
-          });
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          logger.warn(
+            `Chainalysis transaction analysis failed, retrying (${attempt}/${this.config.retries})`,
+            {
+              error: error.message,
+              entityId: request.entityId,
+            }
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
+      }
+
+      if (!response) {
+        throw new Error('Failed to get response from Chainalysis API');
       }
 
       const processingTime = Date.now() - startTime;
@@ -260,7 +267,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         overallRisk,
         recommendations: data.recommendations || [],
         processingTime,
-        rawResponse: data
+        rawResponse: data,
       };
 
       logger.info('Chainalysis transaction analysis completed', {
@@ -268,17 +275,16 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         overallRisk,
         indicatorCount: riskIndicators.length,
         patternCount: patterns.length,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       logger.error('Chainalysis transaction analysis failed', {
         entityId: request.entityId,
         error: error.message,
-        processingTime
+        processingTime,
       });
 
       return {
@@ -289,7 +295,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         overallRisk: 'CRITICAL',
         recommendations: ['Manual review required due to analysis failure'],
         processingTime,
-        rawResponse: { error: error.message }
+        rawResponse: { error: error.message },
       };
     }
   }
@@ -312,29 +318,37 @@ export class ChainalysisAmlProvider implements IAmlProvider {
     try {
       const response = await this.client.get('/api/v1/capabilities');
       return {
-        supportedLists: response.data.supportedLists || ['OFAC', 'CHAINALYSIS_SANCTIONS', 'CRYPTO_SANCTIONS'],
+        supportedLists: response.data.supportedLists || [
+          'OFAC',
+          'CHAINALYSIS_SANCTIONS',
+          'CRYPTO_SANCTIONS',
+        ],
         supportedJurisdictions: response.data.supportedJurisdictions || this.supportedJurisdictions,
-        features: response.data.features || ['entity_screening', 'crypto_transaction_analysis', 'blockchain_risk_scoring']
+        features: response.data.features || [
+          'entity_screening',
+          'crypto_transaction_analysis',
+          'blockchain_risk_scoring',
+        ],
       };
     } catch (error) {
-      logger.warn('Failed to get Chainalysis capabilities, using defaults', { error: (error as Error).message });
+      logger.warn('Failed to get Chainalysis capabilities, using defaults', {
+        error: (error as Error).message,
+      });
       return {
         supportedLists: ['OFAC', 'CHAINALYSIS_SANCTIONS', 'CRYPTO_SANCTIONS'],
         supportedJurisdictions: this.supportedJurisdictions,
-        features: ['entity_screening', 'crypto_transaction_analysis', 'blockchain_risk_scoring']
+        features: ['entity_screening', 'crypto_transaction_analysis', 'blockchain_risk_scoring'],
       };
     }
   }
 
   private generateSignature(payload: string, timestamp: number): string {
     const message = `${timestamp}${payload}`;
-    return crypto.createHmac('sha256', this.apiSecret)
-      .update(message)
-      .digest('hex');
+    return crypto.createHmac('sha256', this.apiSecret).update(message).digest('hex');
   }
 
   private parseChainalysisMatches(matchesData: any[]): AmlMatch[] {
-    return matchesData.map(match => ({
+    return matchesData.map((match) => ({
       listName: match.listName || 'Chainalysis Sanctions',
       matchType: match.matchType || 'EXACT',
       confidence: match.confidence || 0.95,
@@ -342,45 +356,63 @@ export class ChainalysisAmlProvider implements IAmlProvider {
         name: match.entityName || '',
         aliases: match.aliases || [],
         country: match.country,
-        sanctionsType: match.sanctionsType || 'Crypto Sanctions'
+        sanctionsType: match.sanctionsType || 'Crypto Sanctions',
       },
-      details: match.details
+      details: match.details,
     }));
   }
 
   private parseCryptoRiskIndicators(indicatorsData: any[]): AmlRiskIndicator[] {
-    return indicatorsData.map(indicator => ({
+    return indicatorsData.map((indicator) => ({
       type: indicator.type || 'HIGH_RISK_COUNTERPARTY',
       severity: indicator.severity || 'MEDIUM',
       description: indicator.description || 'Cryptocurrency risk indicator detected',
-      evidence: indicator.evidence
+      evidence: indicator.evidence,
     }));
   }
 
   private parseCryptoPatterns(patternsData: any[]): AmlPattern[] {
-    return patternsData.map(pattern => ({
+    return patternsData.map((pattern) => ({
       type: pattern.type || 'RAPID_MOVEMENT',
       confidence: pattern.confidence || 0.8,
       description: pattern.description || 'Cryptocurrency pattern detected',
-      transactions: pattern.transactionIds || []
+      transactions: pattern.transactionIds || [],
     }));
   }
 
-  private calculateRiskLevel(score: number, matches: AmlMatch[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-    if (matches.length > 0) {return 'CRITICAL';}
-    if (score >= 80) {return 'HIGH';}
-    if (score >= 60) {return 'MEDIUM';}
+  private calculateRiskLevel(
+    score: number,
+    matches: AmlMatch[]
+  ): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    if (matches.length > 0) {
+      return 'CRITICAL';
+    }
+    if (score >= 80) {
+      return 'HIGH';
+    }
+    if (score >= 60) {
+      return 'MEDIUM';
+    }
     return 'LOW';
   }
 
-  private calculateCryptoRisk(indicators: AmlRiskIndicator[], patterns: AmlPattern[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-    const criticalIndicators = indicators.filter(i => i.severity === 'CRITICAL').length;
-    const highIndicators = indicators.filter(i => i.severity === 'HIGH').length;
-    const highConfidencePatterns = patterns.filter(p => p.confidence > 0.9).length;
+  private calculateCryptoRisk(
+    indicators: AmlRiskIndicator[],
+    patterns: AmlPattern[]
+  ): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    const criticalIndicators = indicators.filter((i) => i.severity === 'CRITICAL').length;
+    const highIndicators = indicators.filter((i) => i.severity === 'HIGH').length;
+    const highConfidencePatterns = patterns.filter((p) => p.confidence > 0.9).length;
 
-    if (criticalIndicators > 0 || highConfidencePatterns > 0) {return 'CRITICAL';}
-    if (highIndicators > 1 || patterns.length > 2) {return 'HIGH';}
-    if (indicators.length > 0 || patterns.length > 0) {return 'MEDIUM';}
+    if (criticalIndicators > 0 || highConfidencePatterns > 0) {
+      return 'CRITICAL';
+    }
+    if (highIndicators > 1 || patterns.length > 2) {
+      return 'HIGH';
+    }
+    if (indicators.length > 0 || patterns.length > 0) {
+      return 'MEDIUM';
+    }
     return 'LOW';
   }
 
@@ -389,22 +421,32 @@ export class ChainalysisAmlProvider implements IAmlProvider {
     const description = transaction.description?.toLowerCase() || '';
     const counterparty = transaction.counterparty?.toLowerCase() || '';
 
-    return description.includes('crypto') ||
-           description.includes('bitcoin') ||
-           description.includes('ethereum') ||
-           description.includes('wallet') ||
-           counterparty.includes('exchange') ||
-           counterparty.includes('blockchain');
+    return (
+      description.includes('crypto') ||
+      description.includes('bitcoin') ||
+      description.includes('ethereum') ||
+      description.includes('wallet') ||
+      counterparty.includes('exchange') ||
+      counterparty.includes('blockchain')
+    );
   }
 
   private detectBlockchain(transaction: any): string {
     // Simple blockchain detection based on transaction details
     const description = transaction.description?.toLowerCase() || '';
 
-    if (description.includes('bitcoin') || description.includes('btc')) {return 'bitcoin';}
-    if (description.includes('ethereum') || description.includes('eth')) {return 'ethereum';}
-    if (description.includes('polygon') || description.includes('matic')) {return 'polygon';}
-    if (description.includes('bnb') || description.includes('binance')) {return 'bsc';}
+    if (description.includes('bitcoin') || description.includes('btc')) {
+      return 'bitcoin';
+    }
+    if (description.includes('ethereum') || description.includes('eth')) {
+      return 'ethereum';
+    }
+    if (description.includes('polygon') || description.includes('matic')) {
+      return 'polygon';
+    }
+    if (description.includes('bnb') || description.includes('binance')) {
+      return 'bsc';
+    }
 
     return 'unknown';
   }

@@ -34,15 +34,15 @@ describe('KycService', () => {
           fullName: 'Rajesh Kumar',
           dateOfBirth: '1990-01-15',
           address: '123 Main St, Mumbai',
-          email: 'rajesh@test.com'
+          email: 'rajesh@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: '1234-5678-9012',
-            expiryDate: '2030-12-31'
-          }
-        ]
+            expiryDate: '2030-12-31',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -62,15 +62,15 @@ describe('KycService', () => {
           fullName: 'Jean Dupont',
           dateOfBirth: '1985-06-20',
           address: 'Paris, France',
-          email: 'jean@test.com'
+          email: 'jean@test.com',
         },
         documents: [
-          { 
-            type: 'passport', 
+          {
+            type: 'passport',
             documentNumber: 'AB123456',
-            expiryDate: '2030-06-20'
-          }
-        ]
+            expiryDate: '2030-06-20',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -89,15 +89,15 @@ describe('KycService', () => {
           fullName: 'John Smith',
           dateOfBirth: '1980-03-10',
           address: 'New York, USA',
-          email: 'john@test.com'
+          email: 'john@test.com',
         },
         documents: [
-          { 
-            type: 'drivers_license', 
+          {
+            type: 'drivers_license',
             documentNumber: 'DL123456789',
-            expiryDate: '2029-03-10'
-          }
-        ]
+            expiryDate: '2029-03-10',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -115,9 +115,9 @@ describe('KycService', () => {
           fullName: 'Priya Singh',
           dateOfBirth: '1992-07-18',
           address: 'New Delhi, India',
-          email: 'priya@test.com'
+          email: 'priya@test.com',
         },
-        documents: [] // No Aadhaar!
+        documents: [], // No Aadhaar!
       };
 
       const result = await service.performKycCheck(request);
@@ -137,22 +137,22 @@ describe('KycService', () => {
           fullName: 'Anil Young',
           dateOfBirth: '2010-01-01', // Age 14
           address: 'Mumbai, India',
-          email: 'anil@test.com'
+          email: 'anil@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: '9876-5432-1098',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
 
       expect(result.status).toBe(KycStatus.FAIL);
       expect(result.score).toBeLessThan(50);
-      expect(result.flags.some(f => f.type === KycFlagType.AGE_UNDERAGE)).toBe(true);
+      expect(result.flags.some((f) => f.type === KycFlagType.AGE_UNDERAGE)).toBe(true);
     });
 
     // 6. Edge case: EU entity underage for GDPR (< 16)
@@ -164,21 +164,21 @@ describe('KycService', () => {
           fullName: 'Anna Young',
           dateOfBirth: '2012-01-01', // Age 12
           address: 'Berlin, Germany',
-          email: 'anna@test.com'
+          email: 'anna@test.com',
         },
         documents: [
-          { 
-            type: 'passport', 
+          {
+            type: 'passport',
             documentNumber: 'DE123456',
-            expiryDate: '2032-01-01'
-          }
-        ]
+            expiryDate: '2032-01-01',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
 
       expect(result.status).toBe(KycStatus.FAIL);
-      expect(result.flags.some(f => f.type === KycFlagType.AGE_UNDERAGE)).toBe(true);
+      expect(result.flags.some((f) => f.type === KycFlagType.AGE_UNDERAGE)).toBe(true);
     });
 
     // 7. Edge case: Missing email in EU requires review
@@ -190,15 +190,15 @@ describe('KycService', () => {
           fullName: 'Marie Claire',
           dateOfBirth: '1988-04-22',
           address: 'Paris, France',
-          email: undefined // Missing email
+          email: undefined, // Missing email
         },
         documents: [
-          { 
-            type: 'national_id', 
+          {
+            type: 'national_id',
             documentNumber: 'FR789456',
-            expiryDate: '2030-04-22'
-          }
-        ]
+            expiryDate: '2030-04-22',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -216,9 +216,9 @@ describe('KycService', () => {
         entityData: {
           fullName: 'Invalid Entity',
           dateOfBirth: '1990-01-01',
-          address: 'Somewhere'
+          address: 'Somewhere',
         },
-        documents: []
+        documents: [],
       };
 
       await expect(service.performKycCheck(request)).rejects.toThrow(AppError);
@@ -233,15 +233,15 @@ describe('KycService', () => {
           fullName: 'Test User',
           dateOfBirth: '1990-01-01',
           address: 'Test Address',
-          email: 'test@test.com'
+          email: 'test@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: '1111-2222-3333',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -260,15 +260,15 @@ describe('KycService', () => {
           fullName: 'Amit Patel',
           dateOfBirth: '1990-01-01',
           address: 'Bangalore, India',
-          email: 'amit@test.com'
+          email: 'amit@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: '5555-6666-7777',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -288,15 +288,15 @@ describe('KycService', () => {
           fullName: 'Adult User',
           dateOfBirth: '1990-01-01',
           address: 'Test Address',
-          email: 'adult@test.com'
+          email: 'adult@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: '8888-9999-0000',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -318,15 +318,15 @@ describe('KycService', () => {
           fullName: 'Just Legal',
           dateOfBirth: dobString,
           address: 'Test Address',
-          email: 'legal@test.com'
+          email: 'legal@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: 'AAAA-BBBB-CCCC',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);
@@ -345,15 +345,15 @@ describe('KycService', () => {
           fullName: 'Consistent User',
           dateOfBirth: '1990-01-01',
           address: 'Test Address',
-          email: 'consistent@test.com'
+          email: 'consistent@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: 'DDDD-EEEE-FFFF',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       const result1 = await service.performKycCheck(request);
@@ -375,15 +375,15 @@ describe('KycService', () => {
           fullName: 'DB Error User',
           dateOfBirth: '1990-01-01',
           address: 'Test Address',
-          email: 'dberror@test.com'
+          email: 'dberror@test.com',
         },
         documents: [
-          { 
-            type: 'aadhaar', 
+          {
+            type: 'aadhaar',
             documentNumber: 'GGGG-HHHH-IIII',
-            expiryDate: '2030-01-01'
-          }
-        ]
+            expiryDate: '2030-01-01',
+          },
+        ],
       };
 
       // This will depend on how storeKycCheck is mocked
@@ -406,20 +406,20 @@ describe('KycService', () => {
           fullName: 'Multi Doc User',
           dateOfBirth: '1988-05-15',
           address: 'Amsterdam, Netherlands',
-          email: 'multidoc@test.com'
+          email: 'multidoc@test.com',
         },
         documents: [
-          { 
-            type: 'passport', 
+          {
+            type: 'passport',
             documentNumber: 'NL123456',
-            expiryDate: '2030-05-15'
+            expiryDate: '2030-05-15',
           },
-          { 
-            type: 'national_id', 
+          {
+            type: 'national_id',
             documentNumber: 'ID789012',
-            expiryDate: '2030-05-15'
-          }
-        ]
+            expiryDate: '2030-05-15',
+          },
+        ],
       };
 
       const result = await service.performKycCheck(request);

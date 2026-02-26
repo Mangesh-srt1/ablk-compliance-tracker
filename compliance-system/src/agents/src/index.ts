@@ -56,14 +56,11 @@ const winstonLogger = winston.createLogger({
   defaultMeta: { service: 'compliance-agents' },
   transports: [
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
     }),
     new winston.transports.File({ filename: 'logs/agents-error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/agents-combined.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/agents-combined.log' }),
+  ],
 });
 
 // Global logger instance
@@ -101,7 +98,7 @@ async function initializeAgents(): Promise<{
     supervisor: supervisorAgent,
     kyc: kycAgent,
     aml: amlAgent,
-    sebi: sebiAgent
+    sebi: sebiAgent,
   });
 
   // Initialize agent orchestrator
@@ -115,7 +112,7 @@ async function initializeAgents(): Promise<{
     amlAgent,
     sebiAgent,
     complianceGraph,
-    orchestrator
+    orchestrator,
   };
 }
 
@@ -145,24 +142,28 @@ async function initializeApp(): Promise<void> {
     await eventProcessor.initialize();
 
     // Security middleware
-    app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
         },
-      },
-    }));
+      })
+    );
 
     // CORS configuration
-    app.use(cors({
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-    }));
+    app.use(
+      cors({
+        origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      })
+    );
 
     // Body parsing middleware
     app.use(express.json({ limit: '10mb' }));
@@ -175,7 +176,7 @@ async function initializeApp(): Promise<void> {
     app.use((req: Request, res: Response, next: NextFunction) => {
       logger.debug(`${req.method} ${req.path}`, {
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: req.get('User-Agent'),
       });
       next();
     });
@@ -192,7 +193,7 @@ async function initializeApp(): Promise<void> {
         error: 'Route not found',
         code: 'ROUTE_NOT_FOUND',
         path: req.originalUrl,
-        method: req.method
+        method: req.method,
       });
     });
 
@@ -201,7 +202,7 @@ async function initializeApp(): Promise<void> {
       logger.error('Unhandled error:', error);
       res.status(500).json({
         error: 'Internal server error',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       });
     });
 
@@ -211,7 +212,6 @@ async function initializeApp(): Promise<void> {
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`Health check: http://localhost:${PORT}/health`);
     });
-
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     process.exit(1);

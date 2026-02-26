@@ -14,50 +14,54 @@ import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../typ
 const router = Router();
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/auth.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/auth.log' }),
+  ],
 });
 
 /**
  * POST /api/auth/login
  * User login endpoint
  */
-router.post('/login',
-  [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 })
-  ],
+router.post(
+  '/login',
+  [body('email').isEmail().normalizeEmail(), body('password').isLength({ min: 6 })],
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json(createErrorResponseFromDetails(
-          ErrorCode.INVALID_INPUT,
-          ErrorCategory.VALIDATION,
-          'Validation failed',
-          400,
-          errors.array()
-        ));
+        return res
+          .status(400)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_INPUT,
+              ErrorCategory.VALIDATION,
+              'Validation failed',
+              400,
+              errors.array()
+            )
+          );
       }
 
       const { email, password } = req.body;
 
       // Find user by email
-      const userQuery = 'SELECT id, email, password_hash, role, permissions FROM users WHERE email = $1 AND is_active = true';
+      const userQuery =
+        'SELECT id, email, password_hash, role, permissions FROM users WHERE email = $1 AND is_active = true';
       const userResult = await db.query(userQuery, [email]);
 
       if (userResult.rows.length === 0) {
-        return res.status(401).json(createErrorResponseFromDetails(
-          ErrorCode.INVALID_CREDENTIALS,
-          ErrorCategory.AUTHENTICATION,
-          'Invalid email or password'
-        ));
+        return res
+          .status(401)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_CREDENTIALS,
+              ErrorCategory.AUTHENTICATION,
+              'Invalid email or password'
+            )
+          );
       }
 
       const user = userResult.rows[0];
@@ -65,11 +69,15 @@ router.post('/login',
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
-        return res.status(401).json(createErrorResponseFromDetails(
-          ErrorCode.INVALID_CREDENTIALS,
-          ErrorCategory.AUTHENTICATION,
-          'Invalid email or password'
-        ));
+        return res
+          .status(401)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_CREDENTIALS,
+              ErrorCategory.AUTHENTICATION,
+              'Invalid email or password'
+            )
+          );
       }
 
       // Generate JWT token
@@ -77,18 +85,14 @@ router.post('/login',
         id: user.id,
         email: user.email,
         role: user.role,
-        permissions: user.permissions || []
+        permissions: user.permissions || [],
       };
 
-      const token = jwt.sign(
-        tokenPayload,
-        process.env.JWT_SECRET || 'default-secret',
-        {
-          expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-          issuer: 'compliance-api',
-          audience: 'compliance-client'
-        } as jwt.SignOptions
-      );
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'default-secret', {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+        issuer: 'compliance-api',
+        audience: 'compliance-client',
+      } as jwt.SignOptions);
 
       // Generate refresh token
       const refreshToken = jwt.sign(
@@ -97,14 +101,14 @@ router.post('/login',
         {
           expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
           issuer: 'compliance-api',
-          audience: 'compliance-client'
+          audience: 'compliance-client',
         } as jwt.SignOptions
       );
 
       logger.info('User logged in successfully', {
         userId: user.id,
         email: user.email,
-        ip: req.ip
+        ip: req.ip,
       });
 
       res.json({
@@ -115,18 +119,23 @@ router.post('/login',
           user: {
             id: user.id,
             email: user.email,
-            role: user.role
-          }
-        }
+            role: user.role,
+          },
+        },
       });
-
     } catch (error) {
-      logger.error('Login error', { error: error instanceof Error ? error.message : String(error) });
-      res.status(500).json(createErrorResponseFromDetails(
-        ErrorCode.SERVICE_UNAVAILABLE,
-        ErrorCategory.INTERNAL,
-        'Login failed'
-      ));
+      logger.error('Login error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res
+        .status(500)
+        .json(
+          createErrorResponseFromDetails(
+            ErrorCode.SERVICE_UNAVAILABLE,
+            ErrorCategory.INTERNAL,
+            'Login failed'
+          )
+        );
     }
   }
 );
@@ -135,10 +144,9 @@ router.post('/login',
  * POST /api/auth/refresh
  * Refresh access token
  */
-router.post('/refresh',
-  [
-    body('refreshToken').isLength({ min: 1 })
-  ],
+router.post(
+  '/refresh',
+  [body('refreshToken').isLength({ min: 1 })],
   async (req: Request, res: Response) => {
     try {
       const { refreshToken } = req.body;
@@ -150,15 +158,20 @@ router.post('/refresh',
       ) as jwt.JwtPayload;
 
       // Get user details
-      const userQuery = 'SELECT id, email, role, permissions FROM users WHERE id = $1 AND is_active = true';
+      const userQuery =
+        'SELECT id, email, role, permissions FROM users WHERE id = $1 AND is_active = true';
       const userResult = await db.query(userQuery, [decoded.id]);
 
       if (userResult.rows.length === 0) {
-        return res.status(401).json(createErrorResponseFromDetails(
-          ErrorCode.INVALID_CREDENTIALS,
-          ErrorCategory.AUTHENTICATION,
-          'Invalid refresh token'
-        ));
+        return res
+          .status(401)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_CREDENTIALS,
+              ErrorCategory.AUTHENTICATION,
+              'Invalid refresh token'
+            )
+          );
       }
 
       const user = userResult.rows[0];
@@ -168,33 +181,34 @@ router.post('/refresh',
         id: user.id,
         email: user.email,
         role: user.role,
-        permissions: user.permissions || []
+        permissions: user.permissions || [],
       };
 
-      const newToken = jwt.sign(
-        tokenPayload,
-        process.env.JWT_SECRET || 'default-secret',
-        {
-          expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-          issuer: 'compliance-api',
-          audience: 'compliance-client'
-        } as jwt.SignOptions
-      );
+      const newToken = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'default-secret', {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+        issuer: 'compliance-api',
+        audience: 'compliance-client',
+      } as jwt.SignOptions);
 
       res.json({
         success: true,
         data: {
-          token: newToken
-        }
+          token: newToken,
+        },
       });
-
     } catch (error) {
-      logger.error('Token refresh error', { error: error instanceof Error ? error.message : String(error) });
-      res.status(401).json(createErrorResponseFromDetails(
-        ErrorCode.TOKEN_INVALID,
-        ErrorCategory.AUTHENTICATION,
-        'Invalid refresh token'
-      ));
+      logger.error('Token refresh error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res
+        .status(401)
+        .json(
+          createErrorResponseFromDetails(
+            ErrorCode.TOKEN_INVALID,
+            ErrorCategory.AUTHENTICATION,
+            'Invalid refresh token'
+          )
+        );
     }
   }
 );
@@ -208,7 +222,7 @@ router.post('/logout', (req: Request, res: Response) => {
   // For enhanced security, you could implement token blacklisting here
   res.json({
     success: true,
-    message: 'Logged out successfully'
+    message: 'Logged out successfully',
   });
 });
 

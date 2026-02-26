@@ -1,7 +1,7 @@
 /**
  * API Service Unit Tests - Simplified
  * Demonstrates test infrastructure with mocked services
- * 
+ *
  * NOTE: Full test implementations will import real services
  * For now, this shows the test structure and setup
  */
@@ -9,7 +9,6 @@
 import * as mockData from '../../fixtures/mockData';
 
 describe('API Service Tests - Setup Verification', () => {
-  
   describe('Test Infrastructure', () => {
     it('should have mock data available', () => {
       expect(mockData.mockUsers).toBeDefined();
@@ -92,7 +91,7 @@ describe('API Service Tests - Setup Verification', () => {
 
   describe('Test Data Validation', () => {
     it('should have valid user data', () => {
-      Object.values(mockData.mockUsers).forEach(user => {
+      Object.values(mockData.mockUsers).forEach((user) => {
         expect(user.id).toBeDefined();
         expect(user.email).toBeDefined();
         expect(user.name).toBeDefined();
@@ -101,7 +100,7 @@ describe('API Service Tests - Setup Verification', () => {
     });
 
     it('should have valid KYC records with required fields', () => {
-      Object.values(mockData.mockKYCRecords).forEach(kyc => {
+      Object.values(mockData.mockKYCRecords).forEach((kyc) => {
         expect(kyc.id).toBeDefined();
         expect(kyc.wallet_address).toBeDefined();
         expect(kyc.jurisdiction_code).toBeDefined();
@@ -111,7 +110,7 @@ describe('API Service Tests - Setup Verification', () => {
     });
 
     it('should have valid AML records', () => {
-      Object.values(mockData.mockAMLRecords).forEach(aml => {
+      Object.values(mockData.mockAMLRecords).forEach((aml) => {
         expect(aml.id).toBeDefined();
         expect(aml.wallet_address).toBeDefined();
         expect(aml.risk_score).toBeValidRiskScore();
@@ -120,7 +119,7 @@ describe('API Service Tests - Setup Verification', () => {
     });
 
     it('should have valid jurisdiction configurations', () => {
-      Object.values(mockData.mockJurisdictionRules).forEach(juris => {
+      Object.values(mockData.mockJurisdictionRules).forEach((juris) => {
         expect(juris.code).toBeDefined();
         expect(juris.name).toBeDefined();
         expect(juris.kyc_required).toBeDefined();
@@ -133,7 +132,7 @@ describe('API Service Tests - Setup Verification', () => {
     it('should mock database query method', async () => {
       const mockDb = mockData.createMockDatabasePool();
       const result = await mockDb.query('SELECT * FROM test', []);
-      
+
       expect(result).toBeDefined();
       expect(result.rows).toBeDefined();
       expect(result.rowCount).toBeDefined();
@@ -142,13 +141,13 @@ describe('API Service Tests - Setup Verification', () => {
 
     it('should mock Redis operations', async () => {
       const mockRedis = mockData.createMockRedisClient();
-      
+
       const setResult = await mockRedis.set('test-key', 'test-value');
       expect(setResult).toBe('OK');
-      
+
       const getResult = await mockRedis.get('test-key');
       expect(getResult).toBeNull();
-      
+
       const pingResult = await mockRedis.ping();
       expect(pingResult).toBe('PONG');
     });

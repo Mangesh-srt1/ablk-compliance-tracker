@@ -18,6 +18,7 @@ npm run test:coverage
 ## Test Structure
 
 **Test files are located in:**
+
 ```
 src/api/src/__tests__/unit/services/
 ├── setupVerification.test.ts    ✅ Infrastructure tests (22 tests - PASSING)
@@ -34,22 +35,26 @@ src/agents/src/__tests__/unit/
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 cd src/api
 npm test
 ```
 
 ### Run Single Test File
+
 ```bash
 npm test -- kycService.test.ts
 ```
 
 ### Run Tests Matching Pattern
+
 ```bash
 npm test -- --testNamePattern="should approve"
 ```
 
 ### Run with Coverage Report
+
 ```bash
 npm run test:coverage
 ```
@@ -57,11 +62,13 @@ npm run test:coverage
 Output: `coverage/lcov-report/index.html` (open in browser)
 
 ### Watch Mode (re-run on file changes)
+
 ```bash
 npm test -- --watch
 ```
 
 ### Debug Tests
+
 ```bash
 node --inspect-brk node_modules/.bin/jest --runInBand
 # Then open: chrome://inspect in Chrome DevTools
@@ -70,9 +77,11 @@ node --inspect-brk node_modules/.bin/jest --runInBand
 ## Test Infrastructure Status
 
 ### ✅ Infrastructure Tests (22/22 Passing)
+
 File: `setupVerification.test.ts`
 
 Validates:
+
 - Mock data available and correct
 - Jest custom matchers working
 - Global test utilities initialized
@@ -82,9 +91,11 @@ Validates:
 **Run:** `npm test -- setupVerification.test.ts`
 
 ### 🔧 KYC Service Tests (Currently Failing - Needs Mocking)
+
 File: `kycService.test.ts` (432 lines, 15 test cases)
 
 Test Coverage:
+
 - **Happy Paths** (3 tests): India, EU, US KYC validation
 - **Edge Cases** (4 tests): Missing docs, underage, GDPR issues
 - **Error Handling** (1 test): Invalid jurisdiction
@@ -95,9 +106,11 @@ Test Coverage:
 See section "Fixing Failing Tests" below.
 
 ### 🔧 AML Service Tests (Currently Failing - Needs Mocking)
+
 File: `amlService.test.ts` (478 lines, 15 test cases)
 
 Test Coverage:
+
 - **Risk Scoring** (3 tests): LOW, MEDIUM, HIGH risk
 - **Screening** (2 tests): Sanctions, PEP detection
 - **Pattern Analysis** (4 tests): Velocity, burst, round-trip, structuring
@@ -106,9 +119,11 @@ Test Coverage:
 **Why Failing:** Service implementation needs to be properly mocked.
 
 ### 🔧 Supervisor Agent Tests (Currently Failing - Needs Mocking)
+
 File: `supervisorAgent.test.ts` (503 lines, 16 test cases)
 
 Test Coverage:
+
 - **Workflow Orchestration** (4 tests): KYC, AML, full, sequential
 - **Risk Aggregation** (2 tests): Combined scores, missing agents
 - **State Transitions** (3 tests): Workflow states, escalation, rejection
@@ -120,6 +135,7 @@ Test Coverage:
 ## Fixing Failing Tests
 
 ### Option 1: Create Proper Mocks (Recommended)
+
 For unit tests, mock the service at module level:
 
 ```typescript
@@ -136,6 +152,7 @@ beforeEach(() => {
 ```
 
 ### Option 2: Mock Implementation with jest.mock()
+
 ```typescript
 jest.mock('../../../services/kycService', () => ({
   KycService: jest.fn().mockImplementation(() => ({
@@ -148,6 +165,7 @@ jest.mock('../../../services/kycService', () => ({
 ```
 
 ### Option 3: Use Test Doubles from Fixtures
+
 ```typescript
 import * as mockData from '../../fixtures/mockData';
 
@@ -160,6 +178,7 @@ beforeEach(() => {
 ## Common Jest Patterns
 
 ### Mock a Service
+
 ```typescript
 jest.mock('../../../services/myService');
 const MockedService = require('../../../services/myService');
@@ -170,6 +189,7 @@ beforeEach(() => {
 ```
 
 ### Mock a Database Query
+
 ```typescript
 jest.mock('../../../config/database');
 const db = require('../../../config/database');
@@ -183,6 +203,7 @@ beforeEach(() => {
 ```
 
 ### Mock Redis
+
 ```typescript
 jest.mock('../../../config/redis');
 const redis = require('../../../config/redis');
@@ -194,17 +215,17 @@ beforeEach(() => {
 ```
 
 ### Test Error Handling
+
 ```typescript
 it('should handle errors gracefully', async () => {
-  MockedService.verify.mockRejectedValue(
-    new Error('Service timeout')
-  );
+  MockedService.verify.mockRejectedValue(new Error('Service timeout'));
 
   expect(() => service.process()).rejects.toThrow('Service timeout');
 });
 ```
 
 ### Use Test Data
+
 ```typescript
 import * as mockData from '../../fixtures/mockData';
 
@@ -217,6 +238,7 @@ it('should process approved user', () => {
 ## Jest Configuration
 
 ### API Service Config
+
 File: `src/api/jest.config.js`
 
 ```javascript
@@ -239,14 +261,17 @@ File: `src/api/jest.config.js`
 ```
 
 ### Agents Service Config
+
 File: `src/agents/jest.config.js`
 
 Same as API but with `testTimeout: 15000` (for LangChain operations)
 
 ### Setup File
+
 File: `src/api/jest.setup.js`
 
 Includes:
+
 - **Global Test Utilities:** `global.testUtils` with helper functions
 - **Default Mocks:** Database, Redis, SqlLoader
 - **Custom Matchers:** `toBeValidRiskScore()`, `toBeValidStatus()`, etc.
@@ -255,6 +280,7 @@ Includes:
 ## Debugging Tests
 
 ### Add console.log
+
 ```typescript
 it('should work', () => {
   console.log('Debug value:', myVar);
@@ -265,9 +291,10 @@ it('should work', () => {
 **Run:** `npm test -- --verbose`
 
 ### Use debugger
+
 ```typescript
 it('should work', () => {
-  debugger;  // Pauses execution
+  debugger; // Pauses execution
   expect(myVar).toBe(expected);
 });
 ```
@@ -275,14 +302,15 @@ it('should work', () => {
 **Run:** `node --inspect-brk node_modules/.bin/jest --runInBand`
 
 ### Check Mock Calls
+
 ```typescript
 it('should call database', async () => {
   await service.getData();
-  
+
   // Verify called
   expect(db.query).toHaveBeenCalled();
   expect(db.query).toHaveBeenCalledWith('SELECT ...', []);
-  
+
   // Check call count
   expect(db.query).toHaveBeenCalledTimes(1);
 });
@@ -291,6 +319,7 @@ it('should call database', async () => {
 ## Coverage Reports
 
 ### Generate Report
+
 ```bash
 npm run test:coverage
 ```
@@ -298,19 +327,23 @@ npm run test:coverage
 **Output:** `coverage/lcov-report/index.html`
 
 ### View in Terminal
+
 ```bash
 npm run test:coverage -- --verbose
 # Shows line-by-line coverage
 ```
 
 ### Check Coverage Threshold
+
 Coverage must be ≥75% to pass CI/CD:
+
 - Lines: 75%
 - Functions: 75%
 - Branches: 75%
 - Statements: 75%
 
 If below threshold, tests fail with:
+
 ```
 FAIL Test suites: X failed
 ERROR: Coverage thresholds not met
@@ -319,15 +352,18 @@ ERROR: Coverage thresholds not met
 ## GitHub Actions CI/CD
 
 ### Automatic on Every Push
+
 File: `.github/workflows/ci.yml`
 
 Runs:
+
 1. `npm run lint` - ESLint
 2. `npm run typecheck` - TypeScript
 3. `npm test:ci` - Jest with coverage
 4. Uploads to Codecov
 
 ### Local CI Simulation
+
 ```bash
 npm run lint
 npm run typecheck
@@ -335,12 +371,14 @@ npm run test:ci
 ```
 
 ### View Results
+
 - GitHub: Actions tab → Latest workflow run
 - Codecov: https://codecov.io/ (after setup)
 
 ## Test Data (Fixtures)
 
 ### Using Mock Data
+
 File: `src/__tests__/fixtures/mockData.ts`
 
 ```typescript
@@ -367,6 +405,7 @@ const usRules = mockData.mockJurisdictionRules.US;
 ```
 
 ### Creating Custom Test Data
+
 ```typescript
 const customUser = mockData.createMockDatabasePool();
 const customDb = mockData.createMockRedisClient();
@@ -376,9 +415,11 @@ const customBallerine = customData.createMockBallerineClient();
 ## Troubleshooting
 
 ### Error: "Cannot find module"
+
 **Cause:** Incorrect relative path
 
 **Fix:** Check directory structure:
+
 ```
 From: src/__tests__/unit/services/kycService.test.ts
 To:   src/services/kycService.ts
@@ -386,48 +427,58 @@ Path: ../../../services/kycService  ✅ (3 levels up)
 ```
 
 ### Error: "Mock is not a constructor"
+
 **Cause:** Service class not properly mocked
 
 **Fix:** Use `jest.mocked()` for proper types:
+
 ```typescript
 jest.mock('../../../services/kycService');
 const MockKycService = jest.mocked(KycService);
 ```
 
 ### Error: "Test timeout"
+
 **Cause:** Async operation slow or mocked incorrectly
 
 **Fix:** Increase timeout:
+
 ```typescript
 it('should work', async () => {
   // test code
-}, 10000);  // 10 second timeout
+}, 10000); // 10 second timeout
 ```
 
 Or mock faster:
+
 ```typescript
 mockService.method.mockResolvedValue(result);
 ```
 
 ### Tests Pass Locally but Fail in CI
+
 **Cause:** Environment differences
 
 **Check:**
+
 - All mocks are in jest.setup.js
 - No hardcoded paths (use relative)
 - All dependencies in package.json
 - Test doesn't rely on Docker services
 
 ### Coverage Below Threshold
+
 **Cause:** Not enough test cases
 
 **Check:**
+
 - Happy path tests
 - Error cases
 - Edge cases
 - All branches (if/else, switch)
 
 **Fix:**
+
 ```bash
 npm run test:coverage -- --verbose
 # Shows which lines aren't covered
@@ -436,6 +487,7 @@ npm run test:coverage -- --verbose
 ## Best Practices
 
 ### ✅ Do's
+
 - Write tests BEFORE code (TDD)
 - Mock external APIs and databases
 - Use consistent naming: `should...` for test names
@@ -446,6 +498,7 @@ npm run test:coverage -- --verbose
 - Use descriptive assertion messages
 
 ### ❌ Don'ts
+
 - Don't test implementation details
 - Don't have side effects between tests
 - Don't hardcode paths or credentials
@@ -492,6 +545,7 @@ npm run test:coverage -- --verbose
 ## Questions?
 
 For testing questions or issues:
+
 1. Check this guide's troubleshooting section
 2. Review existing test examples
 3. Check Jest documentation

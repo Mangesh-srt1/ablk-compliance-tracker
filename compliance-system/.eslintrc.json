@@ -18,12 +18,7 @@
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier"
   ],
-  "plugins": [
-    "@typescript-eslint",
-    "import",
-    "security",
-    "jest"
-  ],
+  "plugins": ["@typescript-eslint", "import", "security", "jest"],
   "rules": {
     // TypeScript-specific rules
     "@typescript-eslint/explicit-function-return-types": [
@@ -65,20 +60,13 @@
     "no-console": [
       "warn",
       {
-        "allow": [
-          "warn",
-          "error",
-          "info"
-        ]
+        "allow": ["warn", "error", "info"]
       }
     ],
     "no-debugger": "error",
     "no-var": "error",
     "prefer-const": "error",
-    "eqeqeq": [
-      "error",
-      "always"
-    ],
+    "eqeqeq": ["error", "always"],
     "curly": "error",
     "prefer-arrow-callback": "error",
     "no-implicit-coercion": "error",
@@ -100,18 +88,13 @@
   },
   "overrides": [
     {
-      "files": [
-        "*.test.ts",
-        "*.spec.ts"
-      ],
+      "files": ["*.test.ts", "*.spec.ts"],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off"
       }
     },
     {
-      "files": [
-        "*.js"
-      ],
+      "files": ["*.js"],
       "rules": {
         "@typescript-eslint/no-var-requires": "off"
       }

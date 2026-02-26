@@ -9,14 +9,11 @@ import { Transaction, ComplianceResult, AgentResponse } from '../types';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/orchestrator.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/orchestrator.log' }),
+  ],
 });
 
 export class AgentOrchestrator {
@@ -36,7 +33,7 @@ export class AgentOrchestrator {
       logger.info('Starting compliance check orchestration', {
         transactionId: transaction.id,
         type: transaction.type,
-        amount: transaction.amount
+        amount: transaction.amount,
       });
 
       // Validate transaction
@@ -53,15 +50,14 @@ export class AgentOrchestrator {
         transactionId: transaction.id,
         status: result.status,
         riskScore: result.riskScore,
-        processingTime
+        processingTime,
       });
 
       return result;
-
     } catch (error) {
       logger.error('Compliance check orchestration failed', {
         transactionId: transaction.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return error result
@@ -69,18 +65,20 @@ export class AgentOrchestrator {
         transactionId: transaction.id,
         status: 'escalated',
         riskScore: 1.0,
-        findings: [{
-          type: 'system_error',
-          severity: 'critical',
-          message: 'Compliance check orchestration failed',
-          details: { error: error instanceof Error ? error.message : String(error) }
-        }],
+        findings: [
+          {
+            type: 'system_error',
+            severity: 'critical',
+            message: 'Compliance check orchestration failed',
+            details: { error: error instanceof Error ? error.message : String(error) },
+          },
+        ],
         recommendations: ['Manual compliance review required'],
         metadata: {},
         processingTime: Date.now() - startTime,
         timestamp: new Date().toISOString(),
         agentsUsed: [],
-        errors: [error instanceof Error ? error.message : 'Orchestration failed']
+        errors: [error instanceof Error ? error.message : 'Orchestration failed'],
       };
     }
   }
@@ -90,7 +88,7 @@ export class AgentOrchestrator {
    */
   async executeBatchComplianceChecks(transactions: Transaction[]): Promise<ComplianceResult[]> {
     logger.info('Starting batch compliance checks', {
-      batchSize: transactions.length
+      batchSize: transactions.length,
     });
 
     const results: ComplianceResult[] = [];
@@ -100,9 +98,7 @@ export class AgentOrchestrator {
     const batches = this.chunkArray(transactions, concurrencyLimit);
 
     for (const batch of batches) {
-      const batchPromises = batch.map(transaction =>
-        this.executeComplianceCheck(transaction)
-      );
+      const batchPromises = batch.map((transaction) => this.executeComplianceCheck(transaction));
 
       const batchResults = await Promise.allSettled(batchPromises);
 
@@ -113,7 +109,7 @@ export class AgentOrchestrator {
           const transaction = batch[index];
           logger.error('Batch compliance check failed', {
             transactionId: transaction.id,
-            error: result.reason
+            error: result.reason,
           });
 
           // Add error result
@@ -121,18 +117,22 @@ export class AgentOrchestrator {
             transactionId: transaction.id,
             status: 'escalated',
             riskScore: 1.0,
-            findings: [{
-              type: 'batch_error',
-              severity: 'critical',
-              message: 'Batch compliance check failed',
-              details: { error: result.reason }
-            }],
+            findings: [
+              {
+                type: 'batch_error',
+                severity: 'critical',
+                message: 'Batch compliance check failed',
+                details: { error: result.reason },
+              },
+            ],
             recommendations: ['Manual compliance review required'],
             metadata: {},
             processingTime: 0,
             timestamp: new Date().toISOString(),
             agentsUsed: [],
-            errors: [result.reason instanceof Error ? result.reason.message : 'Batch processing failed']
+            errors: [
+              result.reason instanceof Error ? result.reason.message : 'Batch processing failed',
+            ],
           });
         }
       });
@@ -140,7 +140,7 @@ export class AgentOrchestrator {
 
     logger.info('Batch compliance checks completed', {
       totalTransactions: transactions.length,
-      resultsCount: results.length
+      resultsCount: results.length,
     });
 
     return results;
@@ -156,11 +156,10 @@ export class AgentOrchestrator {
       // This would typically query the database
       // For now, return null (not implemented)
       return null;
-
     } catch (error) {
       logger.error('Failed to get compliance status', {
         transactionId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }
@@ -213,14 +212,13 @@ export class AgentOrchestrator {
       return {
         healthy: isGraphHealthy,
         message: isGraphHealthy ? 'Orchestrator is healthy' : 'Graph health check failed',
-        lastCheck: new Date().toISOString()
+        lastCheck: new Date().toISOString(),
       };
-
     } catch (error) {
       return {
         healthy: false,
         message: `Health check failed: ${error instanceof Error ? error.message : String(error)}`,
-        lastCheck: new Date().toISOString()
+        lastCheck: new Date().toISOString(),
       };
     }
   }
@@ -235,16 +233,15 @@ export class AgentOrchestrator {
         id: 'health-check-' + Date.now(),
         type: 'transfer',
         amount: 100,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       // This should not actually process, just validate the graph structure
       // For now, just return true
       return true;
-
     } catch (error) {
       logger.error('Graph health check failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return false;
     }

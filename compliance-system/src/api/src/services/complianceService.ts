@@ -9,14 +9,11 @@ import SqlLoader from '../utils/sqlLoader';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/compliance-service.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/compliance-service.log' }),
+  ],
 });
 
 const sqlLoader = SqlLoader.getInstance();
@@ -70,7 +67,13 @@ export class ComplianceService {
     const offset = (page - 1) * limit;
 
     // Prepare parameters for externalized queries
-    const riskThreshold = riskLevel ? (riskLevel === 'high' ? 0.7 : riskLevel === 'medium' ? 0.3 : 0) : null;
+    const riskThreshold = riskLevel
+      ? riskLevel === 'high'
+        ? 0.7
+        : riskLevel === 'medium'
+          ? 0.3
+          : 0
+      : null;
 
     const countQuery = sqlLoader.getQuery('compliance_checks/get_checks_count');
     const dataQuery = sqlLoader.getQuery('compliance_checks/get_checks_paginated');
@@ -80,13 +83,13 @@ export class ComplianceService {
     try {
       const [countResult, dataResult] = await Promise.all([
         db.query(countQuery, queryParams.slice(0, 3)), // count query uses first 3 params
-        db.query(dataQuery, queryParams) // data query uses all 5 params
+        db.query(dataQuery, queryParams), // data query uses all 5 params
       ]);
 
       const total = Number.parseInt(countResult.rows[0].total, 10);
       const totalPages = Math.ceil(total / limit);
 
-      const checks: ComplianceCheck[] = dataResult.rows.map(row => ({
+      const checks: ComplianceCheck[] = dataResult.rows.map((row) => ({
         id: row.id,
         transactionId: row.transaction_id,
         checkType: row.check_type,
@@ -96,7 +99,7 @@ export class ComplianceService {
         agentId: row.agent_id,
         createdAt: row.created_at,
         completedAt: row.completed_at,
-        requestedBy: row.requested_by
+        requestedBy: row.requested_by,
       }));
 
       return {
@@ -105,10 +108,9 @@ export class ComplianceService {
           page,
           limit,
           total,
-          totalPages
-        }
+          totalPages,
+        },
       };
-
     } catch (error) {
       logger.error('Error fetching compliance checks:', error);
       throw error;
@@ -156,9 +158,8 @@ export class ComplianceService {
         agentId: row.agent_id,
         createdAt: row.created_at,
         completedAt: row.completed_at,
-        requestedBy: row.requested_by
+        requestedBy: row.requested_by,
       };
-
     } catch (error) {
       logger.error('Error fetching compliance check by ID:', error);
       throw error;
@@ -205,19 +206,14 @@ export class ComplianceService {
     const insertQuery = sqlLoader.getQuery('compliance_checks/insert_check');
 
     try {
-      const result = await db.query(insertQuery, [
-        transactionId,
-        checkType,
-        agentId,
-        requestedBy
-      ]);
+      const result = await db.query(insertQuery, [transactionId, checkType, agentId, requestedBy]);
 
       const row = result.rows[0];
       logger.info('Compliance check created', {
         checkId: row.id,
         transactionId,
         checkType,
-        agentType
+        agentType,
       });
 
       return {
@@ -227,9 +223,8 @@ export class ComplianceService {
         status: row.status,
         agentId: row.agent_id,
         createdAt: row.created_at,
-        requestedBy: row.requested_by
+        requestedBy: row.requested_by,
       };
-
     } catch (error) {
       logger.error('Error creating compliance check:', error);
       throw error;
@@ -250,11 +245,15 @@ export class ComplianceService {
       approved: true,
       approvedBy,
       approvedAt: new Date().toISOString(),
-      notes: notes || null
+      notes: notes || null,
     };
 
     try {
-      const result = await db.query(updateQuery, [checkId, approvedBy, JSON.stringify(approvalData)]);
+      const result = await db.query(updateQuery, [
+        checkId,
+        approvedBy,
+        JSON.stringify(approvalData),
+      ]);
 
       if (result.rows.length > 0) {
         logger.info('Compliance check approved', { checkId, approvedBy });
@@ -262,7 +261,6 @@ export class ComplianceService {
       }
 
       return false;
-
     } catch (error) {
       logger.error('Error approving compliance check:', error);
       throw error;
@@ -280,11 +278,16 @@ export class ComplianceService {
   ): Promise<boolean> {
     const updateQuery = sqlLoader.getQuery('compliance_checks/reject_check');
     const rejectionData = {
-      notes: notes || null
+      notes: notes || null,
     };
 
     try {
-      const result = await db.query(updateQuery, [checkId, rejectedBy, reason, JSON.stringify(rejectionData)]);
+      const result = await db.query(updateQuery, [
+        checkId,
+        rejectedBy,
+        reason,
+        JSON.stringify(rejectionData),
+      ]);
 
       if (result.rows.length > 0) {
         logger.info('Compliance check rejected', { checkId, rejectedBy, reason });
@@ -292,7 +295,6 @@ export class ComplianceService {
       }
 
       return false;
-
     } catch (error) {
       logger.error('Error rejecting compliance check:', error);
       throw error;
@@ -308,7 +310,7 @@ export class ComplianceService {
     try {
       const result = await db.query(query, [activeOnly]);
 
-      return result.rows.map(row => ({
+      return result.rows.map((row) => ({
         id: row.id,
         ruleName: row.rule_name,
         ruleType: row.rule_type,
@@ -317,9 +319,8 @@ export class ComplianceService {
         priority: row.priority,
         isActive: row.is_active,
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
       }));
-
     } catch (error) {
       logger.error('Error fetching compliance rules:', error);
       throw error;
@@ -348,7 +349,7 @@ export class ComplianceService {
         JSON.stringify(conditions),
         JSON.stringify(actions),
         priority,
-        true
+        true,
       ]);
 
       const row = result.rows[0];
@@ -356,7 +357,7 @@ export class ComplianceService {
         ruleId: row.id,
         ruleName,
         ruleType,
-        createdBy
+        createdBy,
       });
 
       return {
@@ -368,9 +369,8 @@ export class ComplianceService {
         priority: row.priority,
         isActive: row.is_active,
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
       };
-
     } catch (error) {
       logger.error('Error creating compliance rule:', error);
       throw error;
@@ -406,11 +406,13 @@ export class ComplianceService {
         averageRiskScore: Number.parseFloat(metrics.avg_risk_score) || 0,
         highRiskChecks: Number.parseInt(metrics.high_risk_checks, 10),
         checksLast24Hours: Number.parseInt(metrics.checks_last_24h, 10),
-        successRate: metrics.total_checks > 0
-          ? (Number.parseInt(metrics.completed_checks, 10) / Number.parseInt(metrics.total_checks, 10)) * 100
-          : 0
+        successRate:
+          metrics.total_checks > 0
+            ? (Number.parseInt(metrics.completed_checks, 10) /
+                Number.parseInt(metrics.total_checks, 10)) *
+              100
+            : 0,
       };
-
     } catch (error) {
       logger.error('Error fetching dashboard metrics:', error);
       throw error;

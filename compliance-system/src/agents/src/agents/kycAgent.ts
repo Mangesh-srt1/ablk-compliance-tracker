@@ -9,14 +9,11 @@ import { BallerineClient } from '../tools/ballerineClient';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/kyc-agent.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/kyc-agent.log' }),
+  ],
 });
 
 export interface KYCResult {
@@ -55,7 +52,7 @@ export class KYCAgent extends BaseAgent {
 
     logger.info('Starting KYC check', {
       transactionId: transaction.id,
-      userId: transaction.userId
+      userId: transaction.userId,
     });
 
     try {
@@ -81,7 +78,9 @@ export class KYCAgent extends BaseAgent {
         workflowResult = await this.initializeBallerineWorkflow(userProfile);
       } else {
         // Check existing workflow status
-        workflowResult = await this.ballerineClient.getWorkflowStatus(userProfile.ballerineWorkflowId);
+        workflowResult = await this.ballerineClient.getWorkflowStatus(
+          userProfile.ballerineWorkflowId
+        );
       }
 
       // Analyze workflow result
@@ -93,16 +92,15 @@ export class KYCAgent extends BaseAgent {
         userId: transaction.userId,
         status: analysis.status,
         riskScore: analysis.riskScore,
-        processingTime
+        processingTime,
       });
 
       return analysis;
-
     } catch (error) {
       logger.error('KYC check failed', {
         transactionId: transaction.id,
         userId: transaction.userId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return this.createEscalatedResult(
@@ -127,8 +125,8 @@ export class KYCAgent extends BaseAgent {
         name: 'John Doe',
         email: 'john@example.com',
         phone: '+1234567890',
-        address: '123 Main St, City, Country'
-      }
+        address: '123 Main St, City, Country',
+      },
     };
   }
 
@@ -142,25 +140,24 @@ export class KYCAgent extends BaseAgent {
           id: userProfile.id,
           name: userProfile.personalInfo.name,
           email: userProfile.personalInfo.email,
-          phone: userProfile.personalInfo.phone
+          phone: userProfile.personalInfo.phone,
         },
         documents: userProfile.documents || [],
-        workflowType: 'kyc'
+        workflowType: 'kyc',
       };
 
       const workflow = await this.ballerineClient.createWorkflow(workflowData);
 
       // Update user profile with workflow ID
       await this.updateUserProfile(userProfile.id, {
-        ballerineWorkflowId: workflow.id
+        ballerineWorkflowId: workflow.id,
       });
 
       return workflow;
-
     } catch (error) {
       logger.error('Failed to initialize Ballerine workflow', {
         userId: userProfile.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -181,14 +178,14 @@ export class KYCAgent extends BaseAgent {
         findings.push({
           type: 'document_verification',
           severity: 'low',
-          message: 'Document verification passed'
+          message: 'Document verification passed',
         });
       } else if (docStatus === 'rejected') {
         findings.push({
           type: 'document_verification',
           severity: 'high',
           message: 'Document verification failed',
-          details: workflowResult.documentVerification.reasons
+          details: workflowResult.documentVerification.reasons,
         });
         riskScore += 0.4;
         recommendations.push('Provide valid identification documents');
@@ -202,14 +199,14 @@ export class KYCAgent extends BaseAgent {
         findings.push({
           type: 'biometric_verification',
           severity: 'low',
-          message: 'Biometric verification passed'
+          message: 'Biometric verification passed',
         });
       } else if (bioStatus === 'rejected') {
         findings.push({
           type: 'biometric_verification',
           severity: 'high',
           message: 'Biometric verification failed',
-          details: workflowResult.biometricVerification.reasons
+          details: workflowResult.biometricVerification.reasons,
         });
         riskScore += 0.3;
         recommendations.push('Complete biometric verification process');
@@ -223,14 +220,14 @@ export class KYCAgent extends BaseAgent {
         findings.push({
           type: 'address_verification',
           severity: 'low',
-          message: 'Address verification passed'
+          message: 'Address verification passed',
         });
       } else if (addrStatus === 'rejected') {
         findings.push({
           type: 'address_verification',
           severity: 'medium',
           message: 'Address verification failed',
-          details: workflowResult.addressVerification.reasons
+          details: workflowResult.addressVerification.reasons,
         });
         riskScore += 0.2;
         recommendations.push('Provide proof of address');
@@ -244,7 +241,7 @@ export class KYCAgent extends BaseAgent {
           type: 'sanctions_check',
           severity: 'critical',
           message: 'Sanctions list match detected',
-          details: workflowResult.sanctionsCheck.matches
+          details: workflowResult.sanctionsCheck.matches,
         });
         riskScore += 1.0;
         recommendations.push('Immediate compliance review required');
@@ -257,7 +254,7 @@ export class KYCAgent extends BaseAgent {
           type: 'pep_check',
           severity: 'high',
           message: 'Politically Exposed Person detected',
-          details: workflowResult.pepCheck.matches
+          details: workflowResult.pepCheck.matches,
         });
         riskScore += 0.6;
         recommendations.push('Enhanced due diligence required');
@@ -290,8 +287,8 @@ export class KYCAgent extends BaseAgent {
         biometricVerification: workflowResult.biometricVerification?.status === 'approved',
         addressVerification: workflowResult.addressVerification?.status === 'approved',
         sanctionsCheck: !workflowResult.sanctionsCheck?.hit,
-        pepCheck: !workflowResult.pepCheck?.hit
-      }
+        pepCheck: !workflowResult.pepCheck?.hit,
+      },
     };
   }
 
@@ -310,13 +307,15 @@ export class KYCAgent extends BaseAgent {
     return {
       status: 'approved',
       riskScore: 0.0,
-      findings: [{
-        type: 'kyc_check',
-        severity: 'low',
-        message
-      }],
+      findings: [
+        {
+          type: 'kyc_check',
+          severity: 'low',
+          message,
+        },
+      ],
       recommendations: [],
-      metadata: {}
+      metadata: {},
     };
   }
 
@@ -327,13 +326,15 @@ export class KYCAgent extends BaseAgent {
     return {
       status: 'escalated',
       riskScore,
-      findings: [{
-        type: 'kyc_check',
-        severity: 'high',
-        message
-      }],
+      findings: [
+        {
+          type: 'kyc_check',
+          severity: 'high',
+          message,
+        },
+      ],
       recommendations: ['Manual KYC review required'],
-      metadata: {}
+      metadata: {},
     };
   }
 }

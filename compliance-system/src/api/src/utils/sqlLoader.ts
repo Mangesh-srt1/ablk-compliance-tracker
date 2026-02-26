@@ -9,14 +9,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/sql-loader.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/sql-loader.log' }),
+  ],
 });
 
 class SqlLoader {
@@ -42,7 +39,9 @@ class SqlLoader {
       this.loadQueriesFromDirectory('compliance_rules');
       logger.info('All SQL queries loaded successfully');
     } catch (error) {
-      logger.error('Failed to load SQL queries', { error: error instanceof Error ? error.message : String(error) });
+      logger.error('Failed to load SQL queries', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -55,7 +54,7 @@ class SqlLoader {
       return;
     }
 
-    const files = fs.readdirSync(dirPath).filter(file => file.endsWith('.sql'));
+    const files = fs.readdirSync(dirPath).filter((file) => file.endsWith('.sql'));
 
     for (const file of files) {
       const filePath = path.join(dirPath, file);

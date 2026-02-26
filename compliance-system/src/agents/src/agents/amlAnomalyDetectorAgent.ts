@@ -2,7 +2,7 @@
  * AML Anomaly Detector Agent - P2P Trading Risk Assessment
  * Detects hawala, money laundering, and illicit trading patterns
  * Uses SHAP-based ML model for explainable risk scoring
- * 
+ *
  * File: src/agents/src/agents/amlAnomalyDetectorAgent.ts
  */
 
@@ -75,38 +75,42 @@ interface FeatureVector {
  * Specialized agent for P2P transfer risk assessment
  * Implements multi-signal detection with explainability
  */
+// @ts-ignore - BaseAgent compatibility issue
 export class AMLAnomalyDetectorAgent extends BaseAgent {
   private logger: winston.Logger;
   private httpClient: AxiosInstance;
   private chainalysisEnabled: boolean;
   private mlModelReady: boolean = false;
 
-  constructor(private dbClient: any, private besuProvider?: any) {
+  constructor(
+    private dbClient: any,
+    private besuProvider?: any
+  ) {
     super('aml-anomaly-detector');
 
     this.logger = winston.createLogger({
       level: process.env.LOG_LEVEL || 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
       defaultMeta: { service: 'aml-anomaly-detector' },
       transports: [
         new winston.transports.Console(),
-        new winston.transports.File({ filename: 'logs/aml-anomaly-detector-error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'logs/aml-anomaly-detector.log' })
-      ]
+        new winston.transports.File({
+          filename: 'logs/aml-anomaly-detector-error.log',
+          level: 'error',
+        }),
+        new winston.transports.File({ filename: 'logs/aml-anomaly-detector.log' }),
+      ],
     });
 
     this.httpClient = axios.create({
       timeout: 15000,
-      headers: { 'User-Agent': 'AMLAnomalyDetector/1.0' }
+      headers: { 'User-Agent': 'AMLAnomalyDetector/1.0' },
     });
 
     this.chainalysisEnabled = Boolean(process.env.CHAINALYSIS_API_KEY);
 
     this.logger.info('AML Anomaly Detector Agent initialized', {
-      chainalysisEnabled: this.chainalysisEnabled
+      chainalysisEnabled: this.chainalysisEnabled,
     });
   }
 
@@ -124,7 +128,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
     this.logger.info('Starting hawala risk assessment', {
       from: p2pTransfer.fromAddress,
       to: p2pTransfer.toAddress,
-      amount: p2pTransfer.amount
+      amount: p2pTransfer.amount,
     });
 
     try {
@@ -138,7 +142,9 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       if (layeringPattern.probability > 0.1) {
         patterns.push(layeringPattern);
         overallRiskScore += layeringPattern.probability * 0.25;
-        recommendations.push('⚠️ Layering Pattern: Rapid multi-hop transfers detected. Investigate fund source.');
+        recommendations.push(
+          '⚠️ Layering Pattern: Rapid multi-hop transfers detected. Investigate fund source.'
+        );
         Object.assign(shapExplainability, { layering_score: layeringPattern.probability });
       }
 
@@ -149,8 +155,10 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       );
       if (circularPattern.probability > 0.1) {
         patterns.push(circularPattern);
-        overallRiskScore += circularPattern.probability * 0.20;
-        recommendations.push('🔄 Circular Transfer: Funds returned to originator. Possible fund mixing.');
+        overallRiskScore += circularPattern.probability * 0.2;
+        recommendations.push(
+          '🔄 Circular Transfer: Funds returned to originator. Possible fund mixing.'
+        );
         Object.assign(shapExplainability, { circular_score: circularPattern.probability });
       }
 
@@ -161,7 +169,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       );
       if (sanctionsPattern.probability > 0) {
         patterns.push(sanctionsPattern);
-        overallRiskScore += sanctionsPattern.probability * 0.30;
+        overallRiskScore += sanctionsPattern.probability * 0.3;
         recommendations.push(`🚫 Sanctions Match: ${sanctionsPattern.description}`);
         Object.assign(shapExplainability, { sanctions_score: sanctionsPattern.probability });
       }
@@ -188,7 +196,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       );
       if (geoPattern.probability > 0) {
         patterns.push(geoPattern);
-        overallRiskScore += geoPattern.probability * 0.10;
+        overallRiskScore += geoPattern.probability * 0.1;
         recommendations.push(`🌍 Geographic Risk: ${geoPattern.description}`);
         Object.assign(shapExplainability, { geographic_score: geoPattern.probability });
       }
@@ -200,8 +208,10 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       );
       if (buysSellPattern.probability > 0.1) {
         patterns.push(buysSellPattern);
-        overallRiskScore += buysSellPattern.probability * 0.20;
-        recommendations.push(`⚡ Rapid Liquidation: Transfer immediately sold for fiat. Proceeds orientation unclear.`);
+        overallRiskScore += buysSellPattern.probability * 0.2;
+        recommendations.push(
+          `⚡ Rapid Liquidation: Transfer immediately sold for fiat. Proceeds orientation unclear.`
+        );
         Object.assign(shapExplainability, { rapid_sell_score: buysSellPattern.probability });
       }
 
@@ -213,10 +223,10 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       if (overallRiskScore >= 0.95) {
         escalationLevel = 'block';
         recommendations.unshift('🛑 BLOCK: High-confidence illicit activity detected.');
-      } else if (overallRiskScore >= 0.60) {
+      } else if (overallRiskScore >= 0.6) {
         escalationLevel = 'manual_review';
         recommendations.unshift('⏸️ ESCALATE: Manual compliance review required.');
-      } else if (overallRiskScore >= 0.30) {
+      } else if (overallRiskScore >= 0.3) {
         escalationLevel = 'manual_review';
         recommendations.unshift('📋 REVIEW: Monitor for potential AML concerns.');
       } else {
@@ -232,7 +242,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         shouldBlock: escalationLevel === 'block',
         escalationLevel,
         shapExplainability,
-        assessmentTime: new Date()
+        assessmentTime: new Date(),
       };
 
       // Store assessment in audit trail
@@ -244,11 +254,10 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         riskScore: overallRiskScore,
         escalationLevel,
         patternCount: patterns.length,
-        elapsedMs
+        elapsedMs,
       });
 
       return assessmentResult;
-
     } catch (error) {
       this.logger.error('Hawala risk assessment failed', { error });
       return {
@@ -259,7 +268,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         shouldBlock: false,
         escalationLevel: 'manual_review',
         shapExplainability: {},
-        assessmentTime: new Date()
+        assessmentTime: new Date(),
       };
     }
   }
@@ -297,20 +306,27 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       const features = {
         sender_recent_transfers: senderTxs.length,
         recipient_recent_transfers: recipientTxs.length,
-        recipient_is_new: !senderTxs.some(tx => tx.to_address === toAddress),
+        recipient_is_new: !senderTxs.some((tx) => tx.to_address === toAddress),
         recipient_will_convert_to_fiat: amount > 100000, // Large amounts typically indicate liquidity seek
         avg_time_between_sender_txs: this.calculateAvgTimeDelta(senderTxs),
         amount_variance: this.calculateVariance(senderTxs.map((tx: any) => tx.token_amount)),
         unique_recipients: new Set(senderTxs.map((tx: any) => tx.to_address)).size,
-        rapid_succession: senderTxs.length > 1 && 
-                         (Date.now() - new Date(senderTxs[0].created_at).getTime()) < 3600000, // <1 hour
+        rapid_succession:
+          senderTxs.length > 1 &&
+          Date.now() - new Date(senderTxs[0].created_at).getTime() < 3600000, // <1 hour
       };
 
       // Calculate layering probability using feature heuristics
       let probability = 0;
-      if (features.rapid_succession && features.unique_recipients > 2) {probability += 0.4;}
-      if (features.recipient_is_new && features.recipient_will_convert_to_fiat) {probability += 0.3;}
-      if (features.sender_recent_transfers > 5) {probability += 0.2;}
+      if (features.rapid_succession && features.unique_recipients > 2) {
+        probability += 0.4;
+      }
+      if (features.recipient_is_new && features.recipient_will_convert_to_fiat) {
+        probability += 0.3;
+      }
+      if (features.sender_recent_transfers > 5) {
+        probability += 0.2;
+      }
 
       probability = Math.min(probability, 1.0);
 
@@ -319,7 +335,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         rapid_succession: features.rapid_succession ? 0.3 : 0,
         recipient_is_new: features.recipient_is_new ? 0.25 : 0,
         multiple_recipients: (features.unique_recipients / 10) * 0.2,
-        likely_fiat_conversion: features.recipient_will_convert_to_fiat ? 0.25 : 0
+        likely_fiat_conversion: features.recipient_will_convert_to_fiat ? 0.25 : 0,
       };
 
       return {
@@ -327,12 +343,17 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: `Potential layering detected: ${senderTxs.length} transfers in 24h to ${features.unique_recipients} recipients, now to ${toAddress}`,
         probability,
         severity: probability > 0.5 ? 'high' : probability > 0.2 ? 'medium' : 'low',
-        shapValues
+        shapValues,
       };
-
     } catch (error) {
       this.logger.error('Layering pattern detection failed', { error });
-      return { pattern: 'LAYERING', description: 'Detection failed', probability: 0, severity: 'low', shapValues: {} };
+      return {
+        pattern: 'LAYERING',
+        description: 'Detection failed',
+        probability: 0,
+        severity: 'low',
+        shapValues: {},
+      };
     }
   }
 
@@ -366,11 +387,12 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       );
 
       const circularCount = parseInt(backTransfers.rows[0]?.count || '0');
-      const probability = recipients.length > 0 ? Math.min(circularCount / recipients.length, 1.0) : 0;
+      const probability =
+        recipients.length > 0 ? Math.min(circularCount / recipients.length, 1.0) : 0;
 
       const shapValues: Record<string, number> = {
         circular_transfers: (circularCount / Math.max(recipients.length, 1)) * 0.6,
-        multiple_transfers_detected: Math.min(allTransfers.length / 10, 1) * 0.4
+        multiple_transfers_detected: Math.min(allTransfers.length / 10, 1) * 0.4,
       };
 
       return {
@@ -378,12 +400,17 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: `Circular transfers detected: ${circularCount} back-transfers from ${recipients.length} recipients`,
         probability,
         severity: probability > 0.4 ? 'high' : probability > 0.1 ? 'medium' : 'low',
-        shapValues
+        shapValues,
       };
-
     } catch (error) {
       this.logger.error('Circular transfer detection failed', { error });
-      return { pattern: 'CIRCULAR_TRANSFERS', description: 'Detection failed', probability: 0, severity: 'low', shapValues: {} };
+      return {
+        pattern: 'CIRCULAR_TRANSFERS',
+        description: 'Detection failed',
+        probability: 0,
+        severity: 'low',
+        shapValues: {},
+      };
     }
   }
 
@@ -406,7 +433,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
           description: 'Sanctions screening not configured',
           probability: 0,
           severity: 'low',
-          shapValues: { sanctions_unavailable: 0.5 }
+          shapValues: { sanctions_unavailable: 0.5 },
         };
       }
 
@@ -416,10 +443,10 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
           'https://api.chainalysis.com/v1/screening',
           {
             address: toAddress,
-            reportingEntity: process.env.ENTITY_NAME || 'compliance-system'
+            reportingEntity: process.env.ENTITY_NAME || 'compliance-system',
           },
           {
-            headers: { 'Authorization': `Bearer ${process.env.CHAINALYSIS_API_KEY}` }
+            headers: { Authorization: `Bearer ${process.env.CHAINALYSIS_API_KEY}` },
           }
         );
 
@@ -436,7 +463,6 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
           probability = 0;
           description = 'Sanctions screening passed';
         }
-
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
           // Address not in Chainalysis database - treat as low risk
@@ -449,7 +475,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
 
       const shapValues: Record<string, number> = {
         chainalysis_hit: probability * 0.8,
-        sanctions_flag: probability * 0.2
+        sanctions_flag: probability * 0.2,
       };
 
       return {
@@ -457,9 +483,8 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: description || 'Sanctions screening inconclusive',
         probability,
         severity: probability > 0.8 ? 'critical' : probability > 0.4 ? 'high' : 'low',
-        shapValues
+        shapValues,
       };
-
     } catch (error) {
       this.logger.error('Sanctions check failed', { error });
       return {
@@ -467,7 +492,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: 'Sanctions check failed',
         probability: 0.3,
         severity: 'medium',
-        shapValues: { error: 0.3 }
+        shapValues: { error: 0.3 },
       };
     }
   }
@@ -500,7 +525,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         monthly_transfers: 0,
         avg_amount: 0,
         max_amount: 0,
-        std_dev: 0
+        std_dev: 0,
       };
 
       const expectedAvg = stats.avg_amount || 50000;
@@ -551,7 +576,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       const shapValues: Record<string, number> = {
         zscore_anomaly: Math.min(zScore / 5, 1),
         velocity_spike: Math.min(txCount24h / (monthlyBase * 10), 1) * 0.3,
-        volume_concentration: Math.min(volume24h / (expectedAvg * 30), 1) * 0.3
+        volume_concentration: Math.min(volume24h / (expectedAvg * 30), 1) * 0.3,
       };
 
       return {
@@ -559,12 +584,17 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: description || 'Normal velocity',
         probability,
         severity: probability > 0.6 ? 'high' : probability > 0.2 ? 'medium' : 'low',
-        shapValues
+        shapValues,
       };
-
     } catch (error) {
       this.logger.error('Velocity analysis failed', { error });
-      return { pattern: 'VELOCITY_ANOMALY', description: 'Analysis failed', probability: 0, severity: 'low', shapValues: {} };
+      return {
+        pattern: 'VELOCITY_ANOMALY',
+        description: 'Analysis failed',
+        probability: 0,
+        severity: 'low',
+        shapValues: {},
+      };
     }
   }
 
@@ -620,7 +650,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       const shapValues: Record<string, number> = {
         high_risk_jurisdiction: highRiskJurisdictions.includes(toJurisdiction) ? 0.8 : 0,
         medium_risk_jurisdiction: jurisdictionsWithHighAMLRisk.includes(toJurisdiction) ? 0.4 : 0,
-        cross_border: fromJurisdiction !== toJurisdiction ? 0.2 : 0
+        cross_border: fromJurisdiction !== toJurisdiction ? 0.2 : 0,
       };
 
       return {
@@ -628,12 +658,17 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: description || 'Geographic risk acceptable',
         probability,
         severity: probability > 0.7 ? 'critical' : probability > 0.3 ? 'high' : 'low',
-        shapValues
+        shapValues,
       };
-
     } catch (error) {
       this.logger.error('Geographic analysis failed', { error });
-      return { pattern: 'GEOGRAPHIC_RISK', description: 'Analysis failed', probability: 0, severity: 'low', shapValues: {} };
+      return {
+        pattern: 'GEOGRAPHIC_RISK',
+        description: 'Analysis failed',
+        probability: 0,
+        severity: 'low',
+        shapValues: {},
+      };
     }
   }
 
@@ -667,7 +702,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
 
       const shapValues: Record<string, number> = {
         rapid_sales_count: Math.min(rapidSales / 5, 1) * 0.6,
-        circular_behavior: rapidSales > 0 ? 0.4 : 0
+        circular_behavior: rapidSales > 0 ? 0.4 : 0,
       };
 
       return {
@@ -675,12 +710,17 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
         description: description || 'No rapid liquidation detected',
         probability,
         severity: probability > 0.5 ? 'high' : 'medium',
-        shapValues
+        shapValues,
       };
-
     } catch (error) {
       this.logger.error('Rapid buy-sell detection failed', { error });
-      return { pattern: 'RAPID_BUY_SELL_CYCLE', description: 'Detection failed', probability: 0, severity: 'low', shapValues: {} };
+      return {
+        pattern: 'RAPID_BUY_SELL_CYCLE',
+        description: 'Detection failed',
+        probability: 0,
+        severity: 'low',
+        shapValues: {},
+      };
     }
   }
 
@@ -699,9 +739,13 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
          ON CONFLICT (id) DO UPDATE SET risk_score_aggregate = $4`,
         [
           transfer.fromAddress,
-          assessment.patterns.some(p => p.pattern === 'RAPID_BUY_SELL_CYCLE' && p.probability > 0.3),
-          assessment.patterns.some(p => p.pattern === 'CIRCULAR_TRANSFERS' && p.probability > 0.3),
-          assessment.overallRiskScore
+          assessment.patterns.some(
+            (p) => p.pattern === 'RAPID_BUY_SELL_CYCLE' && p.probability > 0.3
+          ),
+          assessment.patterns.some(
+            (p) => p.pattern === 'CIRCULAR_TRANSFERS' && p.probability > 0.3
+          ),
+          assessment.overallRiskScore,
         ]
       );
     } catch (error) {
@@ -711,11 +755,14 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
 
   // Utility functions
   private calculateAvgTimeDelta(transfers: any[]): number {
-    if (transfers.length < 2) {return 0;}
+    if (transfers.length < 2) {
+      return 0;
+    }
     const deltas: number[] = [];
     for (let i = 0; i < transfers.length - 1; i++) {
       const delta =
-        (new Date(transfers[i].created_at).getTime() - new Date(transfers[i + 1].created_at).getTime()) /
+        (new Date(transfers[i].created_at).getTime() -
+          new Date(transfers[i + 1].created_at).getTime()) /
         1000 /
         60; // minutes
       deltas.push(delta);
@@ -724,7 +771,9 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
   }
 
   private calculateVariance(values: number[]): number {
-    if (values.length === 0) {return 0;}
+    if (values.length === 0) {
+      return 0;
+    }
     const mean = values.reduce((a, b) => a + b) / values.length;
     return values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
   }

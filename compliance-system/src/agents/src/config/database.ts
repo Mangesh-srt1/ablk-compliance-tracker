@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/database.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/database.log' }),
+  ],
 });
 
 let pool: Pool;
@@ -33,7 +30,7 @@ export async function connectDatabase(maxRetries = 5, retryDelayMs = 2000): Prom
     ssl: process.env.NODE_ENV === 'production',
     max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
     idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-    connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000'),
   };
 
   let lastError: Error | null = null;
@@ -43,7 +40,7 @@ export async function connectDatabase(maxRetries = 5, retryDelayMs = 2000): Prom
       logger.info(`Database connection attempt ${attempt}/${maxRetries}`, {
         host: config.host,
         port: config.port,
-        database: config.database
+        database: config.database,
       });
 
       pool = new Pool(config);
@@ -53,16 +50,16 @@ export async function connectDatabase(maxRetries = 5, retryDelayMs = 2000): Prom
       logger.info('Database connection established successfully', {
         host: config.host,
         database: config.database,
-        attempt
+        attempt,
       });
 
       client.release();
 
       // Set up error handling
-      pool.on('error', (err) => {
+      pool.on('error', (err: any) => {
         logger.error('Unexpected database error', {
-          error: err.message,
-          code: err.code
+          error: err instanceof Error ? err.message : String(err),
+          code: err?.code || 'UNKNOWN',
         });
       });
 
@@ -75,17 +72,16 @@ export async function connectDatabase(maxRetries = 5, retryDelayMs = 2000): Prom
       });
 
       return; // Success
-
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
       logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries})`, {
         error: lastError.message,
-        nextRetryIn: attempt < maxRetries ? `${retryDelayMs}ms` : 'no retry'
+        nextRetryIn: attempt < maxRetries ? `${retryDelayMs}ms` : 'no retry',
       });
 
       if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
       }
     }
   }
@@ -93,7 +89,7 @@ export async function connectDatabase(maxRetries = 5, retryDelayMs = 2000): Prom
   // All retries exhausted
   logger.error('Failed to connect to database after all retry attempts', {
     maxRetries,
-    lastError: lastError?.message
+    lastError: lastError?.message,
   });
 
   throw new Error(
@@ -114,24 +110,19 @@ export function getPool(): Pool {
 /**
  * Execute a query with error handling
  */
-export async function executeQuery<T = any>(
-  query: string,
-  params: any[] = []
-): Promise<T[]> {
+export async function executeQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
   const client = await getPool().connect();
 
   try {
     const result = await client.query(query, params);
     return result.rows;
-
   } catch (error) {
     logger.error('Database query failed', {
       query: query.substring(0, 100) + (query.length > 100 ? '...' : ''),
       params: params.length,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
-
   } finally {
     client.release();
   }
@@ -140,9 +131,7 @@ export async function executeQuery<T = any>(
 /**
  * Execute a transaction
  */
-export async function executeTransaction<T>(
-  callback: (client: any) => Promise<T>
-): Promise<T> {
+export async function executeTransaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
   const client = await getPool().connect();
 
   try {
@@ -150,14 +139,12 @@ export async function executeTransaction<T>(
     const result = await callback(client);
     await client.query('COMMIT');
     return result;
-
   } catch (error) {
     await client.query('ROLLBACK');
     logger.error('Database transaction failed', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
-
   } finally {
     client.release();
   }
@@ -189,13 +176,12 @@ export async function checkDatabaseHealth(): Promise<{
     return {
       healthy: true,
       latency,
-      message: 'Database connection healthy'
+      message: 'Database connection healthy',
     };
-
   } catch (error) {
     return {
       healthy: false,
-      message: `Database health check failed: ${error instanceof Error ? error.message : String(error)}`
+      message: `Database health check failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

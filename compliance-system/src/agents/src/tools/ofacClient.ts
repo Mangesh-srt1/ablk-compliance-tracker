@@ -8,14 +8,11 @@ import winston from 'winston';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/ofac-client.log' })
-  ]
+    new winston.transports.File({ filename: 'logs/ofac-client.log' }),
+  ],
 });
 
 export interface OFACResult {
@@ -43,10 +40,10 @@ export class OFACClient {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
-      timeout: 30000
+      timeout: 30000,
     });
 
     // Add response interceptor for error handling
@@ -56,7 +53,7 @@ export class OFACClient {
         logger.error('OFAC API error', {
           status: error.response?.status,
           data: error.response?.data,
-          message: error.message
+          message: error.message,
         });
         throw error;
       }
@@ -77,27 +74,26 @@ export class OFACClient {
       logger.info('OFAC address check completed', {
         address,
         hit: result.hit,
-        matchType: result.matchType
+        matchType: result.matchType,
       });
 
       return {
         hit: result.hit || false,
         matchType: result.matchType || 'none',
         confidence: result.confidence || 0,
-        details: result.details
+        details: result.details,
       };
-
     } catch (error) {
       logger.error('Failed to check OFAC sanctions for address', {
         address,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return no hit on error to avoid false positives
       return {
         hit: false,
         matchType: 'none',
-        confidence: 0
+        confidence: 0,
       };
     }
   }
@@ -110,7 +106,9 @@ export class OFACClient {
       logger.info('Checking OFAC sanctions for entity', { name, country });
 
       const params: any = { name };
-      if (country) {params.country = country;}
+      if (country) {
+        params.country = country;
+      }
 
       const response = await this.client.get('/sanctions/entities', { params });
 
@@ -120,28 +118,27 @@ export class OFACClient {
         name,
         country,
         hit: result.hit,
-        matchType: result.matchType
+        matchType: result.matchType,
       });
 
       return {
         hit: result.hit || false,
         matchType: result.matchType || 'none',
         confidence: result.confidence || 0,
-        details: result.details
+        details: result.details,
       };
-
     } catch (error) {
       logger.error('Failed to check OFAC sanctions for entity', {
         name,
         country,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return no hit on error to avoid false positives
       return {
         hit: false,
         matchType: 'none',
-        confidence: 0
+        confidence: 0,
       };
     }
   }
@@ -152,38 +149,37 @@ export class OFACClient {
   async checkAddressesBatch(addresses: string[]): Promise<OFACResult[]> {
     try {
       logger.info('Checking OFAC sanctions for address batch', {
-        count: addresses.length
+        count: addresses.length,
       });
 
       const response = await this.client.post('/sanctions/addresses/batch', {
-        addresses
+        addresses,
       });
 
       const results = response.data.results || [];
 
       logger.info('OFAC address batch check completed', {
         requested: addresses.length,
-        results: results.length
+        results: results.length,
       });
 
       return results.map((result: any, index: number) => ({
         hit: result.hit || false,
         matchType: result.matchType || 'none',
         confidence: result.confidence || 0,
-        details: result.details
+        details: result.details,
       }));
-
     } catch (error) {
       logger.error('Failed to check OFAC sanctions for address batch', {
         count: addresses.length,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Return no hits on error
       return addresses.map(() => ({
         hit: false,
         matchType: 'none',
-        confidence: 0
+        confidence: 0,
       }));
     }
   }
@@ -197,7 +193,9 @@ export class OFACClient {
   }> {
     try {
       const params: any = {};
-      if (since) {params.since = since;}
+      if (since) {
+        params.since = since;
+      }
 
       const response = await this.client.get('/sanctions/updates', { params });
 
@@ -205,23 +203,22 @@ export class OFACClient {
 
       logger.info('OFAC sanctions updates retrieved', {
         updateCount: data.updates?.length || 0,
-        lastUpdated: data.lastUpdated
+        lastUpdated: data.lastUpdated,
       });
 
       return {
         updates: data.updates || [],
-        lastUpdated: data.lastUpdated || new Date().toISOString()
+        lastUpdated: data.lastUpdated || new Date().toISOString(),
       };
-
     } catch (error) {
       logger.error('Failed to get OFAC sanctions updates', {
         since,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return {
         updates: [],
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       };
     }
   }
@@ -234,28 +231,27 @@ export class OFACClient {
       logger.info('Performing OFAC fuzzy search', { query, threshold });
 
       const response = await this.client.get('/sanctions/search', {
-        params: { query, threshold }
+        params: { query, threshold },
       });
 
       const results = response.data.results || [];
 
       logger.info('OFAC fuzzy search completed', {
         query,
-        resultsCount: results.length
+        resultsCount: results.length,
       });
 
       return results.map((result: any) => ({
         hit: result.hit || false,
         matchType: result.matchType || 'fuzzy',
         confidence: result.confidence || 0,
-        details: result.details
+        details: result.details,
       }));
-
     } catch (error) {
       logger.error('Failed to perform OFAC fuzzy search', {
         query,
         threshold,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return [];
@@ -270,10 +266,9 @@ export class OFACClient {
       const response = await this.client.get('/sanctions/programs');
 
       return response.data.programs || [];
-
     } catch (error) {
       logger.error('Failed to get OFAC sanctions programs', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return [];
@@ -297,10 +292,9 @@ export class OFACClient {
       const latency = Date.now() - startTime;
 
       return { healthy: true, latency };
-
     } catch (error) {
       logger.error('OFAC health check failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       return { healthy: false };

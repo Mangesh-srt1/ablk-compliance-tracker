@@ -36,7 +36,7 @@ export class MockDatabaseClient {
 
     return {
       rows: result,
-      rowCount: result.length
+      rowCount: result.length,
     };
   }
 
@@ -48,7 +48,7 @@ export class MockDatabaseClient {
     return {
       query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
       release: jest.fn(),
-      end: jest.fn()
+      end: jest.fn(),
     } as unknown as PoolClient;
   }
 
@@ -60,7 +60,7 @@ export class MockDatabaseClient {
     return {
       query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
       release: jest.fn(),
-      end: jest.fn()
+      end: jest.fn(),
     } as unknown as PoolClient;
   }
 
@@ -81,7 +81,7 @@ export class MockDatabaseClient {
       query: ((sql: string, values?: any[]) => client.query(sql, values)) as any,
       connect: () => client.connect(),
       end: () => client.end(),
-      on: jest.fn()
+      on: jest.fn(),
     } as any;
   }
 }
@@ -143,7 +143,7 @@ export class TestResultBuilder {
       rowCount: this.rowCount,
       command: 'SELECT',
       fields: [],
-      oid: undefined
+      oid: undefined,
     };
   }
 }
