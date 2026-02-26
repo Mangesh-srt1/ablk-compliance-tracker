@@ -44,40 +44,42 @@ Return to User via REST API or WebSocket
 - Memory (PGVector + Redis) preserves context across sessions
 - Grok LLM provides explainable reasoning (output rationale for every decision)
 
-### Multi-Blockchain Support
+### Multi-Blockchain Support (Client-Initiated, No Infrastructure Setup)
 
-**Permissioned Blockchain (Hyperledger Besu) - DEFAULT for PE Funds:**
+**IMPORTANT:** ComplianceShield does NOT set up, deploy, or manage blockchain infrastructure. It only **monitors and interacts** with existing blockchains that clients provide and approve for monitoring.
+
+**Permissioned Blockchain (Hyperledger Besu) - When Client Provides Access:**
 ```typescript
+// Client must provide existing Besu RPC endpoints
 blockchainType: "permissioned"
 networkConfig: {
   rpc_endpoints: [
-    "https://validator-1.your-besu.internal:8545",
-    "https://validator-2.your-besu.internal:8545"
+    "https://validator-1.client-besu.internal:8545",  // CLIENT-PROVIDED
+    "https://validator-2.client-besu.internal:8545"   // CLIENT-PROVIDED
   ],
-  chain_id: 1337,  // Private network
-  validators: ["0xValidatorAddr1", "0xValidatorAddr2"],
+  chain_id: 1337,  // Client specifies
   internalCounterparties: {
-    // Known LP/GP addresses - no external checks needed
-    "0xDubaiFundMgr": { risk_profile: "low", role: "GP" },
-    "0xLP1": { risk_profile: "medium", role: "LP" }
+    // Client provides known addresses and risk profiles
+    "0xClientFundMgr": { risk_profile: "low", role: "GP" }
   }
 }
 
-// Cost: $0.01-0.05/TX, Speed: <300ms monitoring latency
+// ComplianceShield: Monitors only, does NOT manage validators
 ```
 
-**Public Blockchain (Ethereum/Solana) - Alternative:**
+**Public Blockchain (Ethereum/Solana) - When Client Enables Monitoring:**
 ```typescript
+// Client approves monitoring on public chains
 blockchainType: "public"
 networkConfig: {
-  rpc_endpoint: "https://mainnet.infura.io/v3/PROJECT_ID",
+  rpc_endpoint: "https://mainnet.infura.io/v3/CLIENT_PROJECT_ID",  // CLIENT-PROVIDED
   // or "https://api.mainnet-beta.solana.com"
   chain_id: 1,  // Ethereum mainnet
   requireChainalysis: true,
   requireOFAC: true
 }
 
-// Cost: $0.50-1.00/TX, Speed: <1 second monitoring latency
+// ComplianceShield: Read-only monitoring of transactions
 ```
 
 ### Jurisdiction Rules Engine (Pluggable YAML)
@@ -156,12 +158,15 @@ listener.on('transfer', async (tx) => {
 ### Build & Development
 ```bash
 npm run bootstrap          # Install all dependencies
-npm run dev              # Start API + agents + agents service in watch mode
+npm run dev              # Start API + agents service in watch mode
 npm run build            # Compile TypeScript
 npm run test             # Run all tests
 npm run lint             # ESLint everything
 docker-compose up        # Docker: start DB, Redis, API, agents service
 docker-compose logs -f   # View logs
+
+# NOTE: Blockchain RPC endpoints are CLIENT-PROVIDED in .env
+# ComplianceShield does NOT set up blockchain infrastructure
 ```
 
 ### Service Entry Points
@@ -191,19 +196,22 @@ API_HOST=localhost
 DATABASE_URL=postgresql://user:password@localhost:5432/compliance_db
 DB_POOL_MAX=20
 
-# Blockchain (PERMISSIONED - default)
+# Blockchain - CLIENT-PROVIDED RPC ENDPOINTS ONLY
+# ComplianceShield does NOT set up blockchain infrastructure
+# Client approves and provides these endpoints
 BLOCKCHAIN_TYPE=permissioned
-BESU_RPC_URL=http://localhost:8545
-BESU_BACKUP_RPC_URL=http://localhost:8546
+BESU_RPC_URL=https://client-validator-1.internal:8545  # CLIENT PROVIDES
+BESU_BACKUP_RPC_URL=https://client-validator-2.internal:8545  # CLIENT PROVIDES
 
-# Or PUBLIC blockchain (alternative)
+# Or PUBLIC blockchain (if client approves)
 # BLOCKCHAIN_TYPE=public
-# ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/PROJECT_ID
+# ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/PROJECT_ID  # CLIENT PROJECT/CREDENTIALS
+# SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 
 # External APIs
 BALLERINE_API_KEY=<your-key>
 MARBLE_API_KEY=<your-key>
-CHAINALYSIS_API_KEY=<your-key>
+CHAINALYSIS_API_KEY=<your-key>  # Only queried when client enables public blockchain monitoring
 GROK_API_KEY=<your-key>
 
 # Redis
@@ -213,6 +221,12 @@ REDIS_PORT=6379
 # Jurisdiction Rules
 JURISDICTION_RULES_PATH=./src/config/jurisdictions
 ```
+
+**Important Note:**
+- All blockchain RPC endpoints are **CLIENT-PROVIDED** in their `.env` files
+- ComplianceShield does **NOT** deploy, manage, or provision any blockchain infrastructure
+- Clients enable monitoring only for blockchains they already control/use
+- No blockchain setup or initialization required for ComplianceShield operation
 
 **Production:** Use `.env.production` with encrypted secrets (never commit)
 
@@ -418,6 +432,55 @@ if (currentDecision.riskScore >> average(similarCases.riskScores)) {
 }
 ```
 
+## Blockchain Integration Policy
+
+### Critical Principle: No Infrastructure Setup
+
+**ComplianceShield does NOT:**
+- Set up, deploy, or manage blockchain nodes/validators
+- Create blockchain infrastructure of any kind
+- Manage blockchain accounts, wallets, or private keys
+- Host blockchain data or services
+- Initialize any blockchain networks
+
+**ComplianceShield DOES (when client explicitly approves):**
+- Monitor transactions on client-provided blockchain networks
+- Query blockchain data via client-provided RPC endpoints
+- Perform compliance checks on blockchain transactions
+- Store compliance decisions in PostgreSQL + PGVector
+- Return monitoring alerts to client systems
+
+### Client Approval Requirement
+
+All blockchain monitoring MUST be:
+1. **Explicitly requested** by the client
+2. **Approved in writing** (compliance/legal review)
+3. **Client-provided** (RPC endpoints, credentials, network access)
+4. **Non-mandatory** for core compliance checking (API-only operation possible)
+
+```
+User Request: "Monitor my blockchain transactions"
+  ↓
+ComplianceShield: "Please provide:"
+  1. Blockchain type (permissioned/public)
+  2. RPC endpoint URLs (must be client-provided)
+  3. Approved wallet addresses to monitor
+  4. Compliance rules per jurisdiction
+  ↓
+No deployment, setup, or infrastructure provisioning happens
+```
+
+### Implementation Constraint
+
+In any code changes or features:
+- **Never assume** a blockchain is available or configured
+- **Always request** blockchain details from configuration/environment
+- **Gracefully degrade** if blockchain monitoring is not enabled
+- **Never provision** blockchain infrastructure as part of application startup
+- **Only interact** with blockchains when explicitly configured by client
+
+---
+
 ## Integration Points & Data Flows
 
 ### Flow 1: Initial KYC Check (Synchronous)
@@ -594,16 +657,19 @@ src/
 
 ## Gotchas & Non-Obvious Patterns
 
-1. **Jurisdiction Routes:** Always extract jurisdiction first; never hardcode rules in code
-2. **Blockchain Type Checking:** Validate `blockchainType` ('permissioned' or 'public') at every entry point
-3. **Cost Differences:** Permissioned = $0.01/TX, Public = $0.50-1.00/TX; warn clients on public deploys
-4. **LLM Output Parsing:** Grok may hallucinate; always validate LLM reasoning against tool results
-5. **Rate Limiting:** Public blockchain clients need higher limits (TX monitoring = high volume)
-6. **Redis Cache TTL:** Decisions cached for 24h; invalidate on rule updates via `/admin/invalidate-cache`
-7. **PGVector Embeddings:** Store decision vectors for pattern learning; monthly pruning of old vectors
-8. **Token Refresh:** JWT expiry 15 min; frontend must call `/auth/refresh-token` before timeout
-9. **Chainalysis Costs:** Only query on public deployments; permissioned uses internal counterparty DB
-10. **WebSocket Connections:** Persistent `/stream/monitoring` connections; implement heartbeat (30s) to detect stale clients
+1. **NO Blockchain Setup:** ComplianceShield never sets up, deploys, or initializes blockchain infrastructure. All blockchain RPC endpoints must be client-provided and pre-approved.
+2. **Jurisdiction Routes:** Always extract jurisdiction first; never hardcode rules in code
+3. **Blockchain Type Checking:** Validate `blockchainType` ('permissioned' or 'public') at every entry point; also verify client approval
+4. **Cost Differences:** Permissioned = $0.01/TX, Public = $0.50-1.00/TX; warn clients on public deploys
+5. **LLM Output Parsing:** Grok may hallucinate; always validate LLM reasoning against tool results
+6. **Rate Limiting:** Public blockchain clients need higher limits (TX monitoring = high volume)
+7. **Redis Cache TTL:** Decisions cached for 24h; invalidate on rule updates via `/admin/invalidate-cache`
+8. **PGVector Embeddings:** Store decision vectors for pattern learning; monthly pruning of old vectors
+9. **Token Refresh:** JWT expiry 15 min; frontend must call `/auth/refresh-token` before timeout
+10. **Chainalysis Costs:** Only query on public deployments; permissioned uses internal counterparty DB
+11. **WebSocket Connections:** Persistent `/stream/monitoring` connections; implement heartbeat (30s) to detect stale clients
+12. **Client Approval Database:** Maintain table of approved blockchain monitoring per wallet/client for audit trail
+13. **Graceful Degradation:** Core API (KYC/AML) works without blockchain. Blockchain monitoring is optional enhancement
 
 ## Implementation Guidelines
 
@@ -667,19 +733,45 @@ network:
 
 ### Blockchain Type Handling
 
-**Pattern: Check blockchain type at every entry point**
+**Pattern: Validate blockchain type AND client approval**
 ```typescript
-const validateBlockchainType = (type: string): 'permissioned' | 'public' => {
-  if (!['permissioned', 'public'].includes(type)) {
-    throw new Error(`Invalid blockchainType: ${type}`);
+const validateBlockchainMonitoring = async (req: Request) => {
+  const { wallet, blockchainType } = req.body;
+  
+  // Only proceed if client explicitly enabled monitoring
+  const isMonitoringEnabled = await db.query(
+    'SELECT * FROM client_approved_monitoring WHERE wallet = $1',
+    [wallet]
+  );
+  
+  if (!isMonitoringEnabled) {
+    throw new Error('Blockchain monitoring not approved for this wallet');
   }
-  return type as 'permissioned' | 'public';
+  
+  // Validate blockchain type
+  if (!['permissioned', 'public'].includes(blockchainType)) {
+    throw new Error(`Invalid blockchainType: ${blockchainType}`);
+  }
+  
+  // Load client-provided RPC endpoint (from .env or database)
+  const config = await getBlockchainConfig(blockchainType);
+  if (!config.rpc_endpoint) {
+    throw new Error(`No RPC endpoint configured for ${blockchainType} blockchain`);
+  }
+  
+  return config;
 };
 
 // Usage:
-const blockchainType = validateBlockchainType(req.body.blockchainType);
-const config = await getBlockchainConfig(blockchainType);
+const blockchainConfig = await validateBlockchainMonitoring(req);
+const monitoring = await startMonitoring(blockchainConfig);
 ```
+
+This ensures:
+- ✅ Client approval is checked before ANY blockchain interaction
+- ✅ No infrastructure is set up (only configuration used)
+- ✅ Blockchain monitoring is optional (core API works without it)
+- ✅ Client can enable/disable monitoring anytime
 
 ### Database and SQL Queries
 
