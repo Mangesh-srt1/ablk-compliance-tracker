@@ -110,7 +110,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]  # Internal port 3000
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]  # Internal port 3000, correct path
       interval: 10s
       timeout: 5s
       retries: 3
