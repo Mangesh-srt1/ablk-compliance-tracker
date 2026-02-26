@@ -1,8 +1,12 @@
 -- Initialize Ableka Lumina Compliance Database
 -- This SQL script creates all necessary tables and extensions
 
--- Enable pgvector extension for vector similarity search
-CREATE EXTENSION IF NOT EXISTS pgvector;
+-- Enable pgvector extension for vector similarity search (optional)
+-- Note: pgvector requires separate installation in Alpine-based PostgreSQL
+-- For development, we skip it. For production, use pgvector-enabled PostgreSQL image.
+-- CREATE EXTENSION IF NOT EXISTS pgvector;
+
+-- UUID extension is built-in
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
@@ -100,12 +104,14 @@ CREATE TABLE IF NOT EXISTS compliance_rules (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Decision Embeddings (for pattern learning with pgvector)
+-- Decision Embeddings (for pattern learning)
+-- Note: Using BYTEA instead of vector(384) since pgvector isn't available in Alpine PostgreSQL
+-- In production with pgvector enabled, change BYTEA to vector(384) for similarity search
 CREATE TABLE IF NOT EXISTS decision_vectors (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     check_id UUID NOT NULL,
     entity_id VARCHAR(255) NOT NULL,
-    embedding vector(384),  -- OpenAI embeddings are typically 1536 or smaller like 384
+    embedding BYTEA,  -- Store embeddings as bytes (can be converted to vector with pgvector)
     risk_score DECIMAL(5,2),
     flags TEXT[],
     decision_status check_status,
@@ -151,7 +157,8 @@ CREATE INDEX idx_cc_created_at ON compliance_checks(created_at DESC);
 -- Decision Vectors indexes
 CREATE INDEX idx_dv_check_id ON decision_vectors(check_id);
 CREATE INDEX idx_dv_entity_id ON decision_vectors(entity_id);
-CREATE INDEX idx_dv_embedding ON decision_vectors USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- pgvector index disabled - only available when pgvector extension is installed
+-- CREATE INDEX idx_dv_embedding ON decision_vectors USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- Audit Log indexes
 CREATE INDEX idx_audit_actor ON audit_logs(actor_id);
@@ -162,10 +169,11 @@ CREATE INDEX idx_audit_created_at ON audit_logs(created_at DESC);
 -- Sample Data (Optional - for testing)
 -- ============================================================================
 
--- Insert default admin user (password: admin123)
-INSERT INTO users (email, full_name, role, active) VALUES
-    ('admin@ableka.io', 'Admin User', 'admin', true)
-    ON CONFLICT DO NOTHING;
+-- Insert default admin user (DISABLED - seed via API in production)
+-- Uncomment and add password_hash when needed
+-- INSERT INTO users (email, full_name, role, active, password_hash) VALUES
+--     ('admin@ableka.io', 'Admin User', 'admin', true, 'hashed_password_here')
+--     ON CONFLICT DO NOTHING;
 
 -- Insert sample jurisdiction rules
 INSERT INTO compliance_rules (jurisdiction, rule_name, rule_category, rule_content, active) VALUES

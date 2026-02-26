@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-compliance_db}
-      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pgvector"
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=''"
       PGDATA: /var/lib/postgresql/data/pgdata
     # Internal only - API & Agents connect via docker network (postgres:5432)
     # Commented out to avoid port conflicts - use docker exec to access psql
@@ -95,7 +95,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       JWT_EXPIRY: 15m
     ports:
-      - "${API_PORT:-4000}:3000"  # External 4000 -> Internal 3000 (unique port)
+      - "${API_EXTERNAL_PORT:-4000}:3000"  # External port (default 4000) -> Internal port 3000
       - "9229:9229"  # Node debugger port
     volumes:
       - ./src/api/src:/app/src
@@ -136,7 +136,7 @@ services:
       GROK_API_KEY: ${GROK_API_KEY:-sk-placeholder}
       LOG_LEVEL: debug
     ports:
-      - "${AGENTS_PORT:-4002}:3002"  # External 4002 -> Internal 3002 (unique port)
+      - "${AGENTS_EXTERNAL_PORT:-4002}:3002"  # External port (default 4002) -> Internal port 3002
       - "9230:9229"  # Node debugger port
     volumes:
       - ./src/agents/src:/app/src

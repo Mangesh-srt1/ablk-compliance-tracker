@@ -12,6 +12,37 @@ A 100% **AI-driven RegTech SaaS platform** (Ableka Lumina) using LangChain.js ag
 - **Compliance:** Multi-jurisdiction rules engine (YAML-based), jurisdiction-specific flow routing
 - **Integrations:** Ballerine (KYC), Marble (AML), Chainalysis (blockchain sanctions), The Graph (subgraph queries)
 
+---
+
+## 🔄 Recent Updates (February 26, 2026 - Week 1 Tuesday)
+
+**Docker & Development Environment Finalized:**
+✅ Container naming standardized: `lumina-*` prefix (vs old `ableka-*`)
+✅ Unique port mappings to prevent Docker daemon conflicts:
+  - API: External 4000 → Internal 3000
+  - Agents: External 4002 → Internal 3002  
+  - Redis: External 6380 → Internal 6379 (avoids system Redis on 6379)
+  - PostgreSQL: Internal only (no external port)
+✅ Database initialization SQL fixed (pgvector → BYTEA for Alpine PostgreSQL)
+✅ Environment strategy clarified: 3 files (.env, .env.local, .env.example) for flexibility
+✅ Docker Compose strategy: 2 files (production + dev) for safety & configuration isolation
+
+**Why Keep 2 Docker Compose + 3 Env Files?**
+- Prevents accidental production deployment with development settings
+- Development file includes debug ports (9229, 9230), hot-reload volumes, and loose resource limits
+- Production file optimized for security, performance, and monitoring
+- Multi-file env strategy allows per-developer customization without git conflicts
+
+**Blockers Resolved:**
+✅ Port conflicts (6379 already in use) → Changed Redis external port to 6380
+✅ PostgreSQL pgvector not available in Alpine → Switched to BYTEA for development
+✅ Missing password_hash in users table → Commented out sample admin user
+✅ TypeScript deprecation warnings about importsNotUsedAsValues → Config updated
+
+**Git Commits This Session:**
+- 8d719e5: cleanup: Remove duplicate config files from root
+- e1a3df5: refactor: Update Docker naming prefix to lumina and use unique ports
+
 ## 📚 System Architecture Documentation References
 
 **All comprehensive system architecture documentation is located in:**
@@ -186,6 +217,53 @@ listener.on('transfer', async (tx) => {
 
 ## Developer Workflows
 
+### Docker & Environment Configuration (Updated Feb 26, 2026)
+
+**Container Naming & Ports (Unique per project to avoid conflicts):**
+- All containers prefixed with `lumina-` (vs old `ableka-`)
+- **API Service:** Port 4000 → Internal 3000 (unique external port)
+- **Agents Service:** Port 4002 → Internal 3002 (unique external port) 
+- **Redis Cache:** Port 6380 → Internal 6379 (unique external port, avoids collision with system Redis on 6379)
+- **PostgreSQL:** Internal only (port 5432, no external binding to avoid conflicts)
+
+**Container Naming Convention:**
+- Development: `lumina-api-dev`, `lumina-agents-dev`, `lumina-postgres-dev`, `lumina-redis-dev`
+- Image names: `lumina-api:latest`, `lumina-agents:latest`
+- Network: `lumina-network-dev`
+- Volumes: `lumina_postgres_data`, `lumina_redis_data`
+
+Rationale: Docker daemon may run multiple projects. Unique naming/ports prevent conflicts and allow parallel development.
+
+**Environment Files (Standard .env workflow):**
+```
+compliance-system/
+├── .env                  ← Base configuration (development defaults)
+├── .env.local            ← Local overrides (Git-ignored, for CI/CD secrets)
+└── .env.example          ← Template for new developers (root level backup)
+```
+Why 3 files?
+- `.env`: Tracked in Git, shared defaults for all developers
+- `.env.local`: Git-ignored, per-developer customizations (API keys, local ports)
+- `.env.example`: Root-level template (backup reference for setup)
+
+**Docker Compose Files (Keep both for production safety):**
+```
+compliance-system/
+├── docker-compose.yml           ← Production deployment (no hot-reload, no debug ports)
+└── docker-compose.dev.yml       ← Development (hot-reload via ts-node-dev, debug ports, volume mounts)
+```
+Why 2 files?
+- Production safety: Can't accidentally run dev config in production
+- Different container configurations: Debug ports (9229, 9230), volume mounts for hot-reload
+- Different resource limits and logging levels
+
+**Database Initialization (Feb 26 Notes):**
+- PostgreSQL: Alpine image (no pgvector preload) → Use BYTEA columns instead of vector type
+- Migration file: `compliance-system/config/sql/init-database.sql`
+- pgvector support: Disabled by default (requires special PostgreSQL build)
+  - For production: Use `pgvector/pgvector:latest` Docker image
+  - Development: Falls back to BYTEA for embeddings
+
 ### Build & Development
 ```bash
 npm run bootstrap          # Install all dependencies
@@ -193,26 +271,72 @@ npm run dev              # Start API + agents service in watch mode
 npm run build            # Compile TypeScript
 npm run test             # Run all tests
 npm run lint             # ESLint everything
-docker-compose up        # Docker: start DB, Redis, API, agents service
-docker-compose logs -f   # View logs
+
+# Docker Development (with hot-reload, debug ports, unique ports)
+npm run docker:dev:up    # Start all services (PostgreSQL, Redis, API:4000, Agents:4002)
+npm run docker:dev:logs  # View logs in real-time
+npm run docker:dev:down  # Stop all services
+
+# Docker Production (use external docker-compose.yml)
+docker-compose -f docker-compose.yml up -d  # Start with production config
 
 # NOTE: Blockchain RPC endpoints are CLIENT-PROVIDED in .env
 # Ableka Lumina does NOT set up blockchain infrastructure
 ```
 
-### Service Entry Points
-- **API Service:** `src/api/src/index.ts` (Express, port 3000)
-- **Agents Service:** `src/agents/src/index.ts` (LangChain orchestration, no port)
-- **Database:** PostgreSQL + PGVector (setup via migration)
+### Service Entry Points (Port Mappings for Development)
+- **API Service:** 
+  - External: http://localhost:4000 (dev mode)
+  - Internal: port 3000 (within container, env: API_PORT=3000)
+  - Entry: `src/api/src/index.ts` (Express.js)
+  - Debug: localhost:9229 (Node debugger)
 
-### Database Migrations
+- **Agents Service:** 
+  - External: http://localhost:4002 (dev mode) 
+  - Internal: port 3002 (within container, env: AGENTS_PORT=3002)
+  - Entry: `src/agents/src/index.ts` (LangChain.js orchestration)
+  - Debug: localhost:9230 (Node debugger)
 
+- **Database:** 
+  - PostgreSQL 16 (internal only, no external port for development safety)
+  - Connection: `postgresql://postgres:postgres@postgres:5432/compliance_db`
+  - Initialized by: `config/sql/init-database.sql`
+  - Tables: kyc_checks, aml_checks, compliance_checks, users, audit_logs, decision_vectors
+
+- **Cache:**
+  - Redis 7 on port 6380 (external) → 6379 (internal)
+  - Connection: `redis://redis:6380` (from outside Docker)
+  - Used for: Session caching, decision caching, rate limiting
+
+### Database Migrations & Initialization
+
+**Database Setup Steps (First Time):**
 ```bash
-cd src/api
-npm run migrate          # Run SQL migrations (Knex-style)
-npm run migrate:latest   # Run all pending migrations
+cd compliance-system
+docker-compose -f docker-compose.dev.yml up -d postgres redis
+# Wait for postgres to be healthy (check logs)
+docker-compose -f docker-compose.dev.yml up api agents  # Will run init script
+```
 
-# Connection: postgresql://user:password@localhost:5432/compliance_db
+**Database Features (Storage Layer):**
+- **pgvector Support (Production Only):**
+  - Development: Uses BYTEA columns (store embeddings as binary blobs)
+  - Production: Replace with `pgvector/pgvector:latest` image for vector similarity
+  - Embeddings can be migrated later without schema changes
+
+- **Tables Created:**
+  - `kyc_checks` - KYC verification records
+  - `aml_checks` - AML risk assessments
+  - `compliance_checks` - Aggregated compliance decisions
+  - `compliance_rules` - Jurisdiction-specific rules (loaded from YAML)
+  - `users` - Compliance officers & admins
+  - `audit_logs` - Compliance audit trail
+  - `decision_vectors` - Embeddings for pattern learning (BYTEA in dev, vector in prod)
+
+**Run Migrations:**
+```bash
+npm run db:migrate       # Apply pending migrations
+npm run db:seed          # Seed with sample jurisdiction rules
 ```
 
 ### Environment Configuration
