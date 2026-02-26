@@ -284,6 +284,36 @@ docker-compose -f docker-compose.yml up -d  # Start with production config
 # Ableka Lumina does NOT set up blockchain infrastructure
 ```
 
+### ⚡ CRITICAL: Code Compilation Check (Before Any Commit)
+
+**Every developer MUST run this sequence before committing:**
+```bash
+# Step 1: Build compilation (catches TypeScript errors)
+npm run build
+
+# Step 2: Code quality checks
+npm run lint              # ESLint style violations
+npm run typecheck         # TypeScript strict mode errors
+
+# Step 3: Test verification
+npm run test:ci           # Unit + integration tests with coverage
+
+# Step 4: Verify all passed
+echo "✅ All checks passed - safe to commit"
+```
+
+**Consequences of skipping npm run build:**
+- ❌ Code will fail in CI/CD pipeline
+- ❌ Other developers will encounter broken builds
+- ❌ Merge will be blocked by GitHub Actions checks
+- ❌ Unnecessary delays in deployment
+
+**If npm run build fails:**
+1. Read the error message carefully (shows file path + line number)
+2. Fix the TypeScript compilation error
+3. Run `npm run build` again until it passes
+4. Then proceed to lint/test/commit
+
 ### Git Hooks & Pre-commit Validation (Husky)
 
 **Automatic Code Quality Enforcement:**
@@ -785,14 +815,22 @@ describe('POST /v1/compliance/transfer-check', () => {
 
 ### Continuous Integration (CI) Requirements
 
-**Before Merge to Main:**
+**Before Merge to Main (CRITICAL - DO NOT SKIP):**
 ```bash
+✅ npm run build       # TypeScript compilation - MUST PASS
 ✅ npm run lint        # ESLint check
-✅ npm run typecheck   # TypeScript compilation
+✅ npm run typecheck   # TypeScript strict mode verification
 ✅ npm run test:ci     # All tests with coverage
 ✅ Coverage ≥ 80%      # Enforcement
-✅ No type errors      # Strict mode
+✅ No type errors      # Strict mode - zero tolerance
 ```
+
+**Why npm run build is critical:**
+- Validates TypeScript compilation (catches syntax errors, type mismatches)
+- Ensures no breaking changes in the codebase
+- Prevents "code works locally" but "fails in CI" scenarios
+- Must complete successfully before any code is merged
+- If build fails: FIX compilation errors before committing
 
 **GitHub Actions Example:**
 ```yaml
@@ -807,6 +845,7 @@ jobs:
         with:
           node-version: '20'
       - run: npm ci
+      - run: npm run build     # TypeScript compilation - FIRST step
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:ci
@@ -1481,15 +1520,32 @@ This ensures:
    - Always commit tests alongside code
    - Never commit code without tests
 
-### Step 4: Before Merge to Main
+### Step 4: Before Merge to Main (CRITICAL - DO NOT SKIP)
+
+**Run ALL checks in this order to ensure quality gated merge:**
 ```bash
-✅ npm run lint              # ESLint check
-✅ npm run typecheck        # TypeScript strict mode
-✅ npm run test:ci          # All tests + coverage
-✅ Coverage ≥ 80%           # Explicit check
-✅ No type errors           # Zero tolerance
-✅ Architecture alignment   # Reviewed by architect
+✅ npm run build             # FIRST: TypeScript compilation must pass
+✅ npm run lint              # Code style check
+✅ npm run typecheck         # TypeScript strict mode validation
+✅ npm run test:ci           # All tests + coverage report
+✅ Coverage ≥ 80%            # Code coverage threshold
+✅ No type errors            # Zero type safety violations
+✅ Architecture alignment    # Reviewed by architect
 ```
+
+**If any check fails:**
+- DO NOT merge
+- Fix the failing step (especially build)
+- Re-run all checks
+- Commit the fixes
+- Only then push/merge
+
+**Common build failures to fix:**
+- TypeScript errors: `npm run typecheck` shows exact line numbers
+- Import errors: Check that all files exist and paths are correct
+- Unused imports: `import X from 'y'` but never used → Remove
+- Type mismatches: Variable declared as `string` but assigned `number`
+- Missing dependencies: Use `npm install <package>` and commit package-lock.json
 
 ---
 
