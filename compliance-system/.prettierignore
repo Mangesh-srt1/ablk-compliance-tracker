@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+.next
+out
+.env*
+.git
+.gitignore
+*.lock
+*.log
+coverage
+.nyc_output
+.cache
+.turbo
+*.pem
+.DS_Store
