@@ -23,6 +23,12 @@ import { SEBIClient } from './tools/sebiClient';
 import { BSEClient } from './tools/bseClient';
 import { NSEClient } from './tools/nseClient';
 
+// Import agents
+import { ComplianceSupervisorAgent } from './agents/supervisorAgent';
+import { KYCAgent } from './agents/kycAgent';
+import { AMLAgent } from './agents/amlAgent';
+import { SEBIAgent } from './agents/sebiAgent';
+
 // Import services
 import { AgentOrchestrator } from './services/agentOrchestrator';
 import { EventProcessor } from './services/eventProcessor';
