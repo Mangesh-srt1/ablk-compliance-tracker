@@ -103,7 +103,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
       headers: { 'User-Agent': 'AMLAnomalyDetector/1.0' }
     });
 
-    this.chainalysisEnabled = !!process.env.CHAINALYSIS_API_KEY;
+    this.chainalysisEnabled = Boolean(process.env.CHAINALYSIS_API_KEY);
 
     this.logger.info('AML Anomaly Detector Agent initialized', {
       chainalysisEnabled: this.chainalysisEnabled
@@ -308,9 +308,9 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
 
       // Calculate layering probability using feature heuristics
       let probability = 0;
-      if (features.rapid_succession && features.unique_recipients > 2) probability += 0.4;
-      if (features.recipient_is_new && features.recipient_will_convert_to_fiat) probability += 0.3;
-      if (features.sender_recent_transfers > 5) probability += 0.2;
+      if (features.rapid_succession && features.unique_recipients > 2) {probability += 0.4;}
+      if (features.recipient_is_new && features.recipient_will_convert_to_fiat) {probability += 0.3;}
+      if (features.sender_recent_transfers > 5) {probability += 0.2;}
 
       probability = Math.min(probability, 1.0);
 
@@ -711,7 +711,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
 
   // Utility functions
   private calculateAvgTimeDelta(transfers: any[]): number {
-    if (transfers.length < 2) return 0;
+    if (transfers.length < 2) {return 0;}
     const deltas: number[] = [];
     for (let i = 0; i < transfers.length - 1; i++) {
       const delta =
@@ -724,7 +724,7 @@ export class AMLAnomalyDetectorAgent extends BaseAgent {
   }
 
   private calculateVariance(values: number[]): number {
-    if (values.length === 0) return 0;
+    if (values.length === 0) {return 0;}
     const mean = values.reduce((a, b) => a + b) / values.length;
     return values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
   }

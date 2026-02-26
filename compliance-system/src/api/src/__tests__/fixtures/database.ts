@@ -78,11 +78,11 @@ export class MockDatabaseClient {
     const client = new MockDatabaseClient();
 
     return {
-      query: (sql: string, values?: any[]) => client.query(sql, values),
+      query: ((sql: string, values?: any[]) => client.query(sql, values)) as any,
       connect: () => client.connect(),
       end: () => client.end(),
       on: jest.fn()
-    };
+    } as any;
   }
 }
 

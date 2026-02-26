@@ -315,7 +315,7 @@ export class ChainalysisClient {
    * Check if client is properly configured
    */
   isConfigured(): boolean {
-    return !!(this.apiKey && this.baseUrl);
+    return Boolean(this.apiKey && this.baseUrl);
   }
 
   /**

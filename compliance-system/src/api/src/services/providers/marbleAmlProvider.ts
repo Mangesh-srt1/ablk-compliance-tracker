@@ -101,7 +101,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         additionalInfo: request.additionalInfo
       };
 
-      let response;
+      let response: any;
       let attempt = 0;
       while (attempt < this.config.retries) {
         try {
@@ -120,8 +120,12 @@ export class MarbleAmlProvider implements IAmlProvider {
         }
       }
 
+      if (!response) {
+        throw new Error('Failed to get response from Marble API');
+      }
+
       const processingTime = Date.now() - startTime;
-      const data = response!.data;
+      const data = response.data;
 
       const matches = this.parseMarbleMatches(data.matches || []);
       const riskLevel = this.calculateRiskLevel(data.riskScore || 0, matches);
@@ -185,7 +189,7 @@ export class MarbleAmlProvider implements IAmlProvider {
         analysisPeriod: request.analysisPeriod
       };
 
-      let response;
+      let response: any;
       let attempt = 0;
       while (attempt < this.config.retries) {
         try {
@@ -204,8 +208,12 @@ export class MarbleAmlProvider implements IAmlProvider {
         }
       }
 
+      if (!response) {
+        throw new Error('Failed to get response from Marble API');
+      }
+
       const processingTime = Date.now() - startTime;
-      const data = response!.data;
+      const data = response.data;
 
       const riskIndicators = this.parseRiskIndicators(data.riskIndicators || []);
       const patterns = this.parsePatterns(data.patterns || []);
@@ -319,9 +327,9 @@ export class MarbleAmlProvider implements IAmlProvider {
   }
 
   private calculateRiskLevel(score: number, matches: AmlMatch[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-    if (matches.length > 0) return 'CRITICAL';
-    if (score >= 80) return 'HIGH';
-    if (score >= 60) return 'MEDIUM';
+    if (matches.length > 0) {return 'CRITICAL';}
+    if (score >= 80) {return 'HIGH';}
+    if (score >= 60) {return 'MEDIUM';}
     return 'LOW';
   }
 
@@ -330,9 +338,9 @@ export class MarbleAmlProvider implements IAmlProvider {
     const highIndicators = indicators.filter(i => i.severity === 'HIGH').length;
     const criticalPatterns = patterns.filter(p => p.confidence > 0.9).length;
 
-    if (criticalIndicators > 0 || criticalPatterns > 0) return 'CRITICAL';
-    if (highIndicators > 2 || patterns.length > 3) return 'HIGH';
-    if (indicators.length > 0 || patterns.length > 0) return 'MEDIUM';
+    if (criticalIndicators > 0 || criticalPatterns > 0) {return 'CRITICAL';}
+    if (highIndicators > 2 || patterns.length > 3) {return 'HIGH';}
+    if (indicators.length > 0 || patterns.length > 0) {return 'MEDIUM';}
     return 'LOW';
   }
 }

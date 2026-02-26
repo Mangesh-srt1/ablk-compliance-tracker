@@ -277,7 +277,7 @@ export class JurisdictionRulesEngine extends EventEmitter {
           this.rulesCache.delete(jurisdictionCode);
           
           // Debounce reload (prevent multiple triggers)
-          if (this.cacheTimeout) clearTimeout(this.cacheTimeout);
+          if (this.cacheTimeout) {clearTimeout(this.cacheTimeout);}
           this.cacheTimeout = setTimeout(async () => {
             try {
               await this.loadJurisdiction(jurisdictionCode);
@@ -317,9 +317,9 @@ export class JurisdictionRulesEngine extends EventEmitter {
 
     for (const field of requiredFields) {
       const [section, key] = field.split('.');
-      const sectionData = config[section as keyof JurisdictionConfig] as any;
+      const sectionData = config[section as keyof JurisdictionConfig];
       
-      if (!sectionData || !sectionData[key]) {
+      if (!sectionData?.[key]) {
         throw new Error(
           `Required field missing: ${field} in ${code}.yaml`
         );

@@ -653,7 +653,7 @@ export class SEBIAgent extends BaseAgent {
    * Calculate overall compliance score
    */
   private calculateComplianceScore(findings: any[]): number {
-    if (findings.length === 0) return 1.0;
+    if (findings.length === 0) {return 1.0;}
 
     const severityWeights = {
       low: 0.1,

@@ -125,17 +125,17 @@ export class BallerineKycProvider implements IKycProvider {
       const processingTime = Date.now() - startTime;
 
       // Parse the response and create flags
-      const flags = this.parseFlags(response!.data);
-      const verified = response!.data.verified && flags.filter(f => f.severity === 'CRITICAL').length === 0;
+      const flags = this.parseFlags(response.data);
+      const verified = response.data.verified && flags.filter(f => f.severity === 'CRITICAL').length === 0;
 
       const result: KycVerificationResult = {
         provider: this.name,
         verified,
-        confidence: response!.data.confidence || 0.95,
+        confidence: response.data.confidence || 0.95,
         flags,
-        extractedData: response!.data.extractedData,
+        extractedData: response.data.extractedData,
         processingTime,
-        rawResponse: response!.data
+        rawResponse: response.data
       };
 
       logger.info('Ballerine KYC verification completed', {
@@ -208,7 +208,7 @@ export class BallerineKycProvider implements IKycProvider {
   private parseFlags(responseData: any): KycFlag[] {
     const flags: KycFlag[] = [];
 
-    if (!responseData) return flags;
+    if (!responseData) {return flags;}
 
     // Parse document validation flags
     if (responseData.documentValidation) {

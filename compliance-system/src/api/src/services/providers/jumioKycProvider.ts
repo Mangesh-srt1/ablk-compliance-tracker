@@ -120,7 +120,7 @@ export class JumioKycProvider implements IKycProvider {
       };
 
       // Make the API call with retry logic
-      let response;
+      let response: any;
       let attempt = 0;
       while (attempt < this.config.retries) {
         try {
@@ -139,21 +139,25 @@ export class JumioKycProvider implements IKycProvider {
         }
       }
 
+      if (!response) {
+        throw new Error('Failed to get response from Jumio API');
+      }
+
       const processingTime = Date.now() - startTime;
 
       // For Jumio, we typically get a transaction reference and need to poll for results
       // For this implementation, we'll simulate the result based on the response
-      const flags = this.parseJumioFlags(response!.data);
-      const verified = response!.data.verified && flags.filter(f => f.severity === 'CRITICAL').length === 0;
+      const flags = this.parseJumioFlags(response.data);
+      const verified = response.data.verified && flags.filter(f => f.severity === 'CRITICAL').length === 0;
 
       const result: KycVerificationResult = {
         provider: this.name,
         verified,
-        confidence: response!.data.confidence || 0.98, // Jumio typically has higher accuracy
+        confidence: response.data.confidence || 0.98, // Jumio typically has higher accuracy
         flags,
-        extractedData: response!.data.extractedData,
+        extractedData: response.data.extractedData,
         processingTime,
-        rawResponse: response!.data
+        rawResponse: response.data
       };
 
       logger.info('Jumio KYC verification completed', {
@@ -250,7 +254,7 @@ export class JumioKycProvider implements IKycProvider {
   private parseJumioFlags(responseData: any): KycFlag[] {
     const flags: KycFlag[] = [];
 
-    if (!responseData) return flags;
+    if (!responseData) {return flags;}
 
     // Parse Jumio-specific rejection reasons
     if (responseData.rejectionReason) {

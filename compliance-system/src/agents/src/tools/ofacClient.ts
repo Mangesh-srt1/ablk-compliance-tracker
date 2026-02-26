@@ -110,7 +110,7 @@ export class OFACClient {
       logger.info('Checking OFAC sanctions for entity', { name, country });
 
       const params: any = { name };
-      if (country) params.country = country;
+      if (country) {params.country = country;}
 
       const response = await this.client.get('/sanctions/entities', { params });
 
@@ -197,7 +197,7 @@ export class OFACClient {
   }> {
     try {
       const params: any = {};
-      if (since) params.since = since;
+      if (since) {params.since = since;}
 
       const response = await this.client.get('/sanctions/updates', { params });
 
@@ -284,7 +284,7 @@ export class OFACClient {
    * Check if client is properly configured
    */
   isConfigured(): boolean {
-    return !!(this.apiKey && this.baseUrl);
+    return Boolean(this.apiKey && this.baseUrl);
   }
 
   /**

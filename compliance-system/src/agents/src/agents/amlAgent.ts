@@ -497,7 +497,7 @@ export class AMLAgent extends BaseAgent {
    * Calculate average transaction amount
    */
   private calculateAverageAmount(transactions: any[]): number {
-    if (transactions.length === 0) return 0;
+    if (transactions.length === 0) {return 0;}
     const sum = transactions.reduce((acc, tx) => acc + (tx.amount || 0), 0);
     return sum / transactions.length;
   }

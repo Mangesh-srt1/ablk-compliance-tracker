@@ -17,6 +17,7 @@ import { AMLAnomalyDetectorAgent, P2PTransfer } from '../agents/amlAnomalyDetect
 export interface FiatRampRequest {
   walletAddress: string;
   tokenAmount: number;
+  tokenSymbol?: string; // Token/asset symbol (ETH, USDC, etc.)
   assetId: string;
   fiatCurrency: string;
   bankAccount: string;
@@ -121,8 +122,11 @@ export class ComplianceGatewayService {
         fromAddress: req.walletAddress,
         toAddress: req.bankAccount,
         amount: req.tokenAmount,
-        timestamp: new Date(),
-        assetId: req.assetId
+        tokenSymbol: req.tokenSymbol || 'UNKNOWN',
+        assetId: req.assetId,
+        transactionHash: '', // Will be populated after on-chain tx
+        chainId: 1, // Default to Ethereum mainnet
+        timestamp: new Date()
       };
 
       const amlAssessment = await this.amlDetector.assessHawalaRisk(p2pTransfer);
@@ -139,14 +143,16 @@ export class ComplianceGatewayService {
           requestId,
           walletAddress: req.walletAddress,
           riskScore: amlAssessment.overallRiskScore,
-          patterns: amlAssessment.patterns.map(p => p.pattern)
+          patterns: amlAssessment.patterns?.map(p => typeof p === 'string' ? p : p.pattern) || []
         });
 
         await this.logGatewayDecision(
           requestId,
           'AML_BLOCK',
           amlAssessment.overallRiskScore,
-          amlAssessment.recommendations.join('; ')
+          Array.isArray(amlAssessment.recommendations)
+            ? amlAssessment.recommendations.join('; ')
+            : (amlAssessment.recommendations || '')
         );
 
         return {
@@ -169,7 +175,9 @@ export class ComplianceGatewayService {
           requestId,
           'AML_ESCALATE',
           amlAssessment.overallRiskScore,
-          amlAssessment.recommendations.join('; ')
+          Array.isArray(amlAssessment.recommendations)
+            ? amlAssessment.recommendations.join('; ')
+            : (amlAssessment.recommendations || '')
         );
 
         // Create escalation ticket for compliance team

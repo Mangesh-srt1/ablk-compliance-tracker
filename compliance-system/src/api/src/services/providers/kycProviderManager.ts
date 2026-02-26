@@ -125,7 +125,7 @@ export class KycProviderManager {
   private selectProvider(request: KycVerificationRequest): IKycProvider | null {
     // First, try the primary provider if it supports the jurisdiction
     const primary = this.providers.get(this.primaryProvider);
-    if (primary && primary.supportedJurisdictions.includes(request.jurisdiction)) {
+    if (primary?.supportedJurisdictions.includes(request.jurisdiction)) {
       return primary;
     }
 

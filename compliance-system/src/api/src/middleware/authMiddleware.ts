@@ -54,7 +54,7 @@ export const authenticateToken = (
 ): void => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader?.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
       logger.warn('No token provided', {
@@ -185,7 +185,7 @@ export const requirePermission = (requiredPermission: string) => {
       return;
     }
 
-    if (!req.user.permissions || !req.user.permissions.includes(requiredPermission)) {
+    if (!req.user.permissions?.includes(requiredPermission)) {
       logger.warn('Insufficient permission access', {
         userId: req.user.id,
         userPermissions: req.user.permissions,

@@ -87,7 +87,7 @@ function mapErrorToResponse(error: any, requestId: string): ErrorResponse {
   }
 
   // Handle database errors
-  if (error.code && error.code.startsWith('42')) { // PostgreSQL syntax/schema errors
+  if (error.code?.startsWith('42')) { // PostgreSQL syntax/schema errors
     return createErrorResponse(
       ErrorCode.DATABASE_ERROR,
       ErrorCategory.INTERNAL,
@@ -125,7 +125,7 @@ function mapErrorToResponse(error: any, requestId: string): ErrorResponse {
   }
 
   // Handle rate limiting
-  if (error.message && error.message.includes('rate limit')) {
+  if (error.message?.includes('rate limit')) {
     return createErrorResponse(
       ErrorCode.RATE_LIMIT_EXCEEDED,
       ErrorCategory.RATE_LIMIT,

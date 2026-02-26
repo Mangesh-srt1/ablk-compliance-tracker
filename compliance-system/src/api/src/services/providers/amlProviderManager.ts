@@ -215,7 +215,7 @@ export class AmlProviderManager {
       tx.description?.toLowerCase().includes('ethereum')
     )) {
       const chainalysis = this.providers.get('chainalysis');
-      if (chainalysis) return chainalysis;
+      if (chainalysis) {return chainalysis;}
     }
 
     // First, try the primary provider
@@ -278,7 +278,7 @@ export class AmlProviderManager {
   private selectProviderForJurisdiction(jurisdiction: Jurisdiction): IAmlProvider | null {
     // Try primary provider first if it supports the jurisdiction
     const primary = this.providers.get(this.primaryProvider);
-    if (primary && primary.supportedJurisdictions.includes(jurisdiction)) {
+    if (primary?.supportedJurisdictions.includes(jurisdiction)) {
       return primary;
     }
 

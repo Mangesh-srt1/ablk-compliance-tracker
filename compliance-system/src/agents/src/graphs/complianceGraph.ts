@@ -510,10 +510,10 @@ export class ComplianceGraph {
   private getAgentsUsed(kycResult: any, amlResult: any, sebiResult: any, supervisorDecision: any): string[] {
     const agents = [];
 
-    if (kycResult) agents.push('kyc');
-    if (amlResult) agents.push('aml');
-    if (sebiResult) agents.push('sebi');
-    if (supervisorDecision) agents.push('supervisor');
+    if (kycResult) {agents.push('kyc');}
+    if (amlResult) {agents.push('aml');}
+    if (sebiResult) {agents.push('sebi');}
+    if (supervisorDecision) {agents.push('supervisor');}
 
     return agents;
   }

@@ -171,13 +171,11 @@ router.get('/ready', async (req: Request, res: Response) => {
     const agents = req.app.locals.agents;
 
     // Check if all required components are ready
-    const isReady = !!(
-      agents?.orchestrator &&
+    const isReady = Boolean(agents?.orchestrator &&
       agents?.supervisorAgent &&
       agents?.kycAgent &&
       agents?.amlAgent &&
-      agents?.sebiAgent
-    );
+      agents?.sebiAgent);
 
     if (isReady) {
       res.json({

@@ -174,7 +174,7 @@ export class EventProcessor {
    * Start processing events from queue
    */
   private startProcessing(): void {
-    if (this.isRunning) return;
+    if (this.isRunning) {return;}
 
     this.isRunning = true;
     logger.info('Starting event processing loop');
@@ -194,7 +194,7 @@ export class EventProcessor {
    * Stop processing events
    */
   private stopProcessing(): void {
-    if (!this.isRunning) return;
+    if (!this.isRunning) {return;}
 
     this.isRunning = false;
     if (this.processingInterval) {

@@ -137,7 +137,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
       }
 
       const processingTime = Date.now() - startTime;
-      const data = response!.data;
+      const data = response.data;
 
       const matches = this.parseChainalysisMatches(data.matches || []);
       const riskLevel = this.calculateRiskLevel(data.riskScore || 0, matches);
@@ -246,7 +246,7 @@ export class ChainalysisAmlProvider implements IAmlProvider {
       }
 
       const processingTime = Date.now() - startTime;
-      const data = response!.data;
+      const data = response.data;
 
       const riskIndicators = this.parseCryptoRiskIndicators(data.riskIndicators || []);
       const patterns = this.parseCryptoPatterns(data.patterns || []);
@@ -367,9 +367,9 @@ export class ChainalysisAmlProvider implements IAmlProvider {
   }
 
   private calculateRiskLevel(score: number, matches: AmlMatch[]): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-    if (matches.length > 0) return 'CRITICAL';
-    if (score >= 80) return 'HIGH';
-    if (score >= 60) return 'MEDIUM';
+    if (matches.length > 0) {return 'CRITICAL';}
+    if (score >= 80) {return 'HIGH';}
+    if (score >= 60) {return 'MEDIUM';}
     return 'LOW';
   }
 
@@ -378,9 +378,9 @@ export class ChainalysisAmlProvider implements IAmlProvider {
     const highIndicators = indicators.filter(i => i.severity === 'HIGH').length;
     const highConfidencePatterns = patterns.filter(p => p.confidence > 0.9).length;
 
-    if (criticalIndicators > 0 || highConfidencePatterns > 0) return 'CRITICAL';
-    if (highIndicators > 1 || patterns.length > 2) return 'HIGH';
-    if (indicators.length > 0 || patterns.length > 0) return 'MEDIUM';
+    if (criticalIndicators > 0 || highConfidencePatterns > 0) {return 'CRITICAL';}
+    if (highIndicators > 1 || patterns.length > 2) {return 'HIGH';}
+    if (indicators.length > 0 || patterns.length > 0) {return 'MEDIUM';}
     return 'LOW';
   }
 
@@ -401,10 +401,10 @@ export class ChainalysisAmlProvider implements IAmlProvider {
     // Simple blockchain detection based on transaction details
     const description = transaction.description?.toLowerCase() || '';
 
-    if (description.includes('bitcoin') || description.includes('btc')) return 'bitcoin';
-    if (description.includes('ethereum') || description.includes('eth')) return 'ethereum';
-    if (description.includes('polygon') || description.includes('matic')) return 'polygon';
-    if (description.includes('bnb') || description.includes('binance')) return 'bsc';
+    if (description.includes('bitcoin') || description.includes('btc')) {return 'bitcoin';}
+    if (description.includes('ethereum') || description.includes('eth')) {return 'ethereum';}
+    if (description.includes('polygon') || description.includes('matic')) {return 'polygon';}
+    if (description.includes('bnb') || description.includes('binance')) {return 'bsc';}
 
     return 'unknown';
   }

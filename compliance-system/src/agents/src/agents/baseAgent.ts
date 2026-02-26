@@ -117,7 +117,7 @@ export abstract class BaseAgent {
    * Calculate risk score based on findings
    */
   protected calculateRiskScore(findings: any[]): number {
-    if (findings.length === 0) return 0;
+    if (findings.length === 0) {return 0;}
 
     const severityWeights = {
       low: 0.1,
@@ -136,8 +136,8 @@ export abstract class BaseAgent {
    * Determine status based on risk score
    */
   protected determineStatus(riskScore: number): 'approved' | 'escalated' | 'rejected' {
-    if (riskScore >= 0.8) return 'rejected';
-    if (riskScore >= 0.4) return 'escalated';
+    if (riskScore >= 0.8) {return 'rejected';}
+    if (riskScore >= 0.4) {return 'escalated';}
     return 'approved';
   }
 }
