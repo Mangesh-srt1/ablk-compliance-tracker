@@ -197,7 +197,7 @@ docker-compose up        # Docker: start DB, Redis, API, agents service
 docker-compose logs -f   # View logs
 
 # NOTE: Blockchain RPC endpoints are CLIENT-PROVIDED in .env
-# ComplianceShield does NOT set up blockchain infrastructure
+# Ableka Lumina does NOT set up blockchain infrastructure
 ```
 
 ### Service Entry Points
@@ -228,7 +228,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/compliance_db
 DB_POOL_MAX=20
 
 # Blockchain - CLIENT-PROVIDED RPC ENDPOINTS ONLY
-# ComplianceShield does NOT set up blockchain infrastructure
+# Ableka Lumina does NOT set up blockchain infrastructure
 # Client approves and provides these endpoints
 BLOCKCHAIN_TYPE=permissioned
 BESU_RPC_URL=https://client-validator-1.internal:8545  # CLIENT PROVIDES
@@ -255,7 +255,7 @@ JURISDICTION_RULES_PATH=./src/config/jurisdictions
 
 **Important Note:**
 - All blockchain RPC endpoints are **CLIENT-PROVIDED** in their `.env` files
-- ComplianceShield does **NOT** deploy, manage, or provision any blockchain infrastructure
+- Ableka Lumina does **NOT** deploy, manage, or provision any blockchain infrastructure
 - Clients enable monitoring only for blockchains they already control/use
 - No blockchain setup or initialization required for Ableka Lumina operation
 
@@ -1155,7 +1155,7 @@ src/
 
 3. **Study Codebase** — Read:
    - MASTER_IMPLEMENTATION_PLAN.md (overall project scope)
-   - ComplianceShield_Option_B_Architecture.md (blockchain + AI architecture)
+   - AbekeLumina_Option_B_Architecture.md (blockchain + AI architecture)
    - Multi-Jurisdiction Implementation Guide (rules engine patterns)
    - PE Tokenization Quick Start (domain-specific guidance if PE focus)
 
@@ -1243,10 +1243,10 @@ This ensures:
 ## 🚀 CRITICAL CHECKLIST: Before Implementing Any Feature
 
 ### Step 1: Architecture Review
-- [ ] Read relevant section in `Planning docs/System Architecture/ComplianceShield_RWA_Enterprise_Implementation.md`
-- [ ] Review system diagram in `ComplianceShield_Enterprise_Architecture_Diagram.md`
-- [ ] Check open source tech stack in `ComplianceShield_Open_Source_Tech_Stack.md`
-- [ ] Verify deployment approach in `ComplianceShield_Deployment_Operations.md`
+- [ ] Read relevant section in `Planning docs/System Architecture/AbekeLumina_RWA_Enterprise_Implementation.md`
+- [ ] Review system diagram in `AbekeLumina_Enterprise_Architecture_Diagram.md`
+- [ ] Check open source tech stack in `AbekeLumina_Open_Source_Tech_Stack.md`
+- [ ] Verify deployment approach in `AbekeLumina_Deployment_Operations.md`
 - [ ] Understand data model from ERD (12 tables, relationships, indices)
 - [ ] Confirm API endpoint specification and latency SLOs
 - [ ] Verify jurisdiction-specific compliance rules apply
@@ -1328,16 +1328,16 @@ When implementing features, always reference the appropriate architecture docume
    - Understanding: System layers, component relationships, data flows
 
 2. **Week 2: Technical Depth**
-   - Read: `Planning docs/System Architecture/ComplianceShield_RWA_Enterprise_Implementation.md`
+   - Read: `Planning docs/System Architecture/AbekeLumina_RWA_Enterprise_Implementation.md`
    - Focus: Database schema, API specifications, integration flows
    - Task: Map existing code to architecture components
 
 3. **Week 3: Technology Stack**
-   - Read: `Planning docs/System Architecture/ComplianceShield_Open_Source_Tech_Stack.md`
+   - Read: `Planning docs/System Architecture/AbekeLumina_Open_Source_Tech_Stack.md`
    - Understanding: Open source components, global platform features, deployment options
 
 4. **Week 4: Advanced Patterns**
-   - Read: `Planning docs/System Architecture/ComplianceShield_Option_B_Architecture.md`
+   - Read: `Planning docs/System Architecture/AbekeLumina_Option_B_Architecture.md`
    - Understanding: Real-time monitoring, AI/ML patterns, LangChain agent orchestration
 
 5. **Week 5+: Implementation**
@@ -1353,13 +1353,13 @@ When implementing features, always reference the appropriate architecture docume
 When you need to implement something:
 
 **1. What to build?**
-→ Check: `ComplianceShield_RWA_Enterprise_Implementation.md` (ERD section)
+→ Check: `AbekeLumina_RWA_Enterprise_Implementation.md` (ERD section)
 
 **2. How does it fit in the system?**
-→ Check: `ComplianceShield_Enterprise_Architecture_Diagram.md` (10 layers)
+→ Check: `AbekeLumina_Enterprise_Architecture_Diagram.md` (10 layers)
 
 **3. What are the API specs?**
-→ Check: `ComplianceShield_RWA_Enterprise_Implementation.md` (API Specifications section)
+→ Check: `AbekeLumina_RWA_Enterprise_Implementation.md` (API Specifications section)
 
 **4. How to test it?**
 → Check: This document (Unit Testing section)
@@ -1368,10 +1368,10 @@ When you need to implement something:
 → Check: `Planning docs/Deployment_Operations.md` (Kubernetes/AWS CDK)
 
 **6. What tech should I use?**
-→ Check: `ComplianceShield_Open_Source_Tech_Stack.md` (approved libraries)
+→ Check: `AbekeLumina_Open_Source_Tech_Stack.md` (approved libraries)
 
 **7. What about global/compliance?**
-→ Check: `ComplianceShield_Open_Source_Tech_Stack.md` (global platform & SEBI checklist in RWA Implementation)
+→ Check: `AbekeLumina_Open_Source_Tech_Stack.md` (global platform & SEBI checklist in RWA Implementation)
 
 ---
 
