@@ -21,55 +21,84 @@ const logger = winston.createLogger({
 let pool: Pool;
 
 /**
- * Create database connection pool
+ * Create database connection pool with retry logic
  */
-export async function connectDatabase(): Promise<void> {
-  try {
-    const config = {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME || 'compliance_db',
-      user: process.env.DB_USER || 'compliance_user',
-      password: process.env.DB_PASSWORD || '',
-      ssl: process.env.NODE_ENV === 'production',
-      max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
-      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-      connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
-    };
+export async function connectDatabase(maxRetries = 5, retryDelayMs = 2000): Promise<void> {
+  const config = {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'compliance_db',
+    user: process.env.DB_USER || 'compliance_user',
+    password: process.env.DB_PASSWORD || '',
+    ssl: process.env.NODE_ENV === 'production',
+    max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
+  };
 
-    pool = new Pool(config);
+  let lastError: Error | null = null;
 
-    // Test connection
-    const client = await pool.connect();
-    logger.info('Database connection established', {
-      host: config.host,
-      database: config.database
-    });
-
-    client.release();
-
-    // Set up error handling
-    pool.on('error', (err) => {
-      logger.error('Unexpected database error', {
-        error: err.message,
-        code: err.code
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`Database connection attempt ${attempt}/${maxRetries}`, {
+        host: config.host,
+        port: config.port,
+        database: config.database
       });
-    });
 
-    pool.on('connect', () => {
-      logger.debug('New database connection established');
-    });
+      pool = new Pool(config);
 
-    pool.on('remove', () => {
-      logger.debug('Database connection removed');
-    });
+      // Test connection
+      const client = await pool.connect();
+      logger.info('Database connection established successfully', {
+        host: config.host,
+        database: config.database,
+        attempt
+      });
 
-  } catch (error) {
-    logger.error('Failed to connect to database', {
-      error: error instanceof Error ? error.message : String(error)
-    });
-    throw error;
+      client.release();
+
+      // Set up error handling
+      pool.on('error', (err) => {
+        logger.error('Unexpected database error', {
+          error: err.message,
+          code: err.code
+        });
+      });
+
+      pool.on('connect', () => {
+        logger.debug('New database connection established');
+      });
+
+      pool.on('remove', () => {
+        logger.debug('Database connection removed');
+      });
+
+      return; // Success
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries})`, {
+        error: lastError.message,
+        nextRetryIn: attempt < maxRetries ? `${retryDelayMs}ms` : 'no retry'
+      });
+
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      }
+    }
   }
+
+  // All retries exhausted
+  logger.error('Failed to connect to database after all retry attempts', {
+    maxRetries,
+    lastError: lastError?.message
+  });
+
+  throw new Error(
+    `Failed to connect to database after ${maxRetries} attempts: ${lastError?.message}`
+  );
 }
 
 /**

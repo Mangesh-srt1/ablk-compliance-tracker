@@ -23,63 +23,96 @@ class DatabaseConnection {
   private isConnected: boolean = false;
 
   /**
-   * Initialize database connection pool
+   * Initialize database connection pool with retry logic
    */
-  async connect(): Promise<void> {
-    try {
-      if (this.pool) {
-        logger.warn('Database pool already exists');
-        return;
-      }
-
-      // Validate required environment variables
-      const dbHost = process.env.DB_HOST;
-      const dbPort = Number.parseInt(process.env.DB_PORT || '5432', 10);
-      const dbName = process.env.DB_NAME;
-      const dbUser = process.env.DB_USER;
-      const dbPassword = process.env.DB_PASSWORD;
-
-      if (!dbHost || !dbName || !dbUser || !dbPassword) {
-        throw new Error('Missing required database environment variables');
-      }
-
-      // Create connection pool
-      this.pool = new Pool({
-        host: dbHost,
-        port: dbPort,
-        database: dbName,
-        user: dbUser,
-        password: dbPassword,
-        max: Number.parseInt(process.env.DB_MAX_CONNECTIONS || '20', 10),
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      });
-
-      // Handle pool events
-      this.pool.on('connect', (client: PoolClient) => {
-        logger.debug('New client connected to database');
-      });
-
-      this.pool.on('error', (err: Error, client: PoolClient) => {
-        logger.error('Unexpected error on idle client', err);
-      });
-
-      // Test connection
-      const client = await this.pool.connect();
-      logger.info('Database connection established successfully');
-      client.release();
-
-      this.isConnected = true;
-
-    } catch (error) {
-      logger.error('Failed to connect to database:', error);
-      // Don't throw error in development, just log it
-      if (process.env.NODE_ENV === 'production') {
-        throw error;
-      }
-      this.isConnected = false;
+  async connect(maxRetries: number = 5, retryDelayMs: number = 2000): Promise<void> {
+    if (this.pool) {
+      logger.warn('Database pool already exists');
+      return;
     }
+
+    // Validate required environment variables
+    const dbHost = process.env.DB_HOST;
+    const dbPort = Number.parseInt(process.env.DB_PORT || '5432', 10);
+    const dbName = process.env.DB_NAME;
+    const dbUser = process.env.DB_USER;
+    const dbPassword = process.env.DB_PASSWORD;
+
+    if (!dbHost || !dbName || !dbUser || !dbPassword) {
+      throw new Error('Missing required database environment variables');
+    }
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info(`Database connection attempt ${attempt}/${maxRetries}`, {
+          host: dbHost,
+          port: dbPort,
+          database: dbName
+        });
+
+        // Create connection pool
+        this.pool = new Pool({
+          host: dbHost,
+          port: dbPort,
+          database: dbName,
+          user: dbUser,
+          password: dbPassword,
+          max: Number.parseInt(process.env.DB_MAX_CONNECTIONS || '20', 10),
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        });
+
+        // Handle pool events
+        this.pool.on('connect', (client: PoolClient) => {
+          logger.debug('New client connected to database');
+        });
+
+        this.pool.on('error', (err: Error, client: PoolClient) => {
+          logger.error('Unexpected error on idle client', err);
+        });
+
+        // Test connection
+        const client = await this.pool.connect();
+        logger.info('Database connection established successfully', { attempt });
+        client.release();
+
+        this.isConnected = true;
+        return; // Success
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries})`, {
+          error: lastError.message,
+          nextRetryIn: attempt < maxRetries ? `${retryDelayMs}ms` : 'no retry'
+        });
+
+        // Reset pool for next attempt
+        this.pool = null;
+
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        }
+      }
+    }
+
+    // All retries exhausted
+    logger.error('Failed to connect to database after all retry attempts', {
+      maxRetries,
+      lastError: lastError?.message
+    });
+
+    // In development, allow operation without database
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        `Failed to connect to database after ${maxRetries} attempts: ${lastError?.message}`
+      );
+    }
+
+    this.isConnected = false;
   }
 
   /**
