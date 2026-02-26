@@ -41,7 +41,7 @@
     "declarationMap": true,
     "removeComments": false,
     "importHelpers": true,
-    "importsNotUsedAsValues": "error",
+    "verbatimModuleSyntax": true,
     
     // Interop Constraints
     "skipLibCheck": true,

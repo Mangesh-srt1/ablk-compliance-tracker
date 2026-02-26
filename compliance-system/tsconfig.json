@@ -41,7 +41,7 @@
     "outDir": "./dist",
     "removeComments": false,
     "importHelpers": true,
-    "importsNotUsedAsValues": "error",
+    "verbatimModuleSyntax": true,
 
     // Interop Constraints
     "forceConsistentCasingInFileNames": true,
