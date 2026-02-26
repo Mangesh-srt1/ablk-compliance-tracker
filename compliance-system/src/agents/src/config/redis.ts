@@ -25,16 +25,35 @@ let redisClient: RedisClientType;
  */
 export async function configureRedis(): Promise<void> {
   try {
-    const config = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      db: parseInt(process.env.REDIS_DB || '0'),
-      keyPrefix: process.env.REDIS_KEY_PREFIX || 'compliance:',
-      lazyConnect: true
-    };
+    const redisHost = process.env.REDIS_HOST || 'localhost';
+    const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+    const redisPassword = process.env.REDIS_PASSWORD || undefined;
+    const redisDb = parseInt(process.env.REDIS_DB || '0', 10);
+    const redisKeyPrefix = process.env.REDIS_KEY_PREFIX || 'compliance:';
 
-    redisClient = createClient(config);
+    logger.info('Configuring Redis client', {
+      host: redisHost,
+      port: redisPort,
+      db: redisDb
+    });
+
+    // Create Redis client with proper v4+ API
+    redisClient = createClient({
+      socket: {
+        host: redisHost,
+        port: redisPort,
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            logger.error('Redis connection failed after 10 retries');
+            return new Error('Max retries exceeded');
+          }
+          return retries * 100; // Exponential backoff
+        }
+      },
+      password: redisPassword,
+      db: redisDb,
+      legacyMode: false
+    });
 
     // Set up event handlers
     redisClient.on('error', (err) => {
@@ -50,9 +69,9 @@ export async function configureRedis(): Promise<void> {
 
     redisClient.on('ready', () => {
       logger.info('Redis client ready', {
-        host: config.host,
-        port: config.port,
-        db: config.db
+        host: redisHost,
+        port: redisPort,
+        db: redisDb
       });
     });
 
@@ -63,7 +82,7 @@ export async function configureRedis(): Promise<void> {
     // Connect to Redis
     await redisClient.connect();
 
-    logger.info('Redis configuration completed');
+    logger.info('Redis configuration completed successfully');
 
   } catch (error) {
     logger.error('Failed to configure Redis', {
