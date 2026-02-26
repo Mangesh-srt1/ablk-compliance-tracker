@@ -1,4 +1,4 @@
-# ComplianceShield: Enterprise RWA Tokenization System
+# Ableka Lumina: Enterprise RWA Tokenization System
 ## Complete Architecture, Infrastructure & Compliance Implementation Guide
 
 **Document Version**: 2.0  
@@ -1720,19 +1720,19 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 
-export class ComplianceShieldStack extends cdk.Stack {
+export class AbekeLuminaStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // ====== KMS Encryption Keys ======
     const encryptionKey = new kms.Key(this, 'EncryptionKey', {
-      description: 'Master encryption key for ComplianceShield',
+      description: 'Master encryption key for Ableka Lumina',
       enableKeyRotation: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // ====== VPC & Networking ======
-    const vpc = new ec2.Vpc(this, 'ComplianceVpc', {
+    const vpc = new ec2.Vpc(this, 'AbekeLuminaVpc', {
       cidr: '10.0.0.0/16',
       maxAzs: 3,
       natGateways: 3,
@@ -2089,15 +2089,15 @@ export class ComplianceShieldStack extends cdk.Stack {
 
 // cdk/bin/app.ts
 import * as cdk from 'aws-cdk-lib';
-import { ComplianceShieldStack } from '../lib/compliance-shield-stack';
+import { AbekeLuminaStack } from '../lib/ableka-lumina-stack';
 
 const app = new cdk.App();
 
-new ComplianceShieldStack(app, 'ComplianceShieldProd', {
+new AbekeLuminaStack(app, 'AbekeLuminaProd', {
   env: {
     region: 'us-east-1',
   },
-  description: 'ComplianceShield RWA Tokenization Platform - Production',
+  description: 'Ableka Lumina RWA Tokenization Platform - Production',
 });
 
 app.synth();
@@ -2592,7 +2592,7 @@ Status: 🔄 IN PROGRESS (Pre-production)
 **Effective Date**: Date of system launch  
 
 **Compliance Statement**:
-> "ComplianceShield RWA Tokenization Platform complies with SEBI Real World Asset 
+> "Ableka Lumina RWA Tokenization Platform complies with SEBI Real World Asset 
 > (RWA) tokenization guidelines, PMLA 2002, DPDP Act 2023, RBI payment system 
 > regulations, and international standards for AML/CFT. All mandatory controls are 
 > implemented, tested, and monitored. Non-conformances are documented with remediation 

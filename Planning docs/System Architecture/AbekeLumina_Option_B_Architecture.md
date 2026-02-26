@@ -1,4 +1,4 @@
-# ComplianceShield Option B Architecture
+# Ableka Lumina Option B Architecture
 ## PE Tokenization + AI-Powered Real-Time Blockchain Monitoring
 
 **Document Version**: 1.0  
@@ -18,7 +18,7 @@ graph TB
         PE_API["PE API<br/>stake, transfer, redeem"]
     end
 
-    subgraph ComplianceShield["🛡️ ComplianceShield Compliance Engine"]
+    subgraph AbekeLumina["🛡️ Ableka Lumina Compliance Engine"]
         API_Layer["REST API Layer<br/>POST /kyc-check<br/>POST /aml-score<br/>POST /monitor/enable<br/>WS /stream/monitoring"]
         
         subgraph InitialCheck["Initial Compliance Check (Sync)"]
@@ -134,7 +134,7 @@ graph TB
     classDef ai fill:#fff9c4,stroke:#f57c00,stroke-width:2px
 
     class PE pe
-    class ComplianceShield,API_Layer,InitialCheck,ContinuousMonitor,AIAgent,Database compliance
+    class AbekeLumina,API_Layer,InitialCheck,ContinuousMonitor,AIAgent,Database compliance
     class Blockchain,Ethereum,Solana blockchain
     class ExternalSources,Chainalysis,Marble,OFAC,TheGraph,Ballerine external
     class AlertSystem,WebsocketStream,Notifications alert
@@ -163,7 +163,7 @@ Request:
   "fundType": "PE"
 }
 
-// ComplianceShield Agent activates:
+// Ableka Lumina Agent activates:
 ❶ Calls KYC Tool
    └─ Ballerine API: Verify ID, address, PEP status
    
@@ -223,7 +223,7 @@ Request:
   "callback_webhook": "https://your-pe-system/webhook/compliance"
 }
 
-// ComplianceShield actions:
+// Ableka Lumina actions:
 ✓ Register wallet in Wallets Registry DB
   ├─ Store wallet address
   ├─ Create baseline (0.5 ETH avg tx, once/day frequency)
@@ -286,7 +286,7 @@ Ethereum Block #19,234,567:
 
 
 ═══════════════════════════════════════════════════════════════
-COMPLIANCESHIELD - IMMEDIATE ANALYSIS (Sub-second response)
+ABLEKA LUMINA - IMMEDIATE ANALYSIS (Sub-second response)
 ═══════════════════════════════════════════════════════════════
 
 ⏱️ T+0ms: DETECTION
@@ -454,12 +454,12 @@ Ahmed's Options:
 Option A️⃣ - Verify Transaction:
   Ahmed clicks: "Confirm Transaction"
   → Reason: "I'm executing business deal with 0xXYZ"
-  → ComplianceShield updates: Risk → 25/100 (explained)
+  → Ableka Lumina updates: Risk → 25/100 (explained)
   → PE System: Resume operations ✅
 
 Option B️⃣ - Dispute Transaction:
   Ahmed clicks: "I didn't authorize this!"
-  → ComplianceShield: Mark as FRAUD
+  → Ableka Lumina: Mark as FRAUD
   → PE System: Freeze wallet
   → Action: Full AML investigation
   → Potential: Account closure
@@ -537,13 +537,13 @@ No further monitoring
 ```
 Your PE System
     ↓
-POST /kyc-check → ComplianceShield Agent → {APPROVED}
+POST /kyc-check → Ableka Lumina Agent → {APPROVED}
     ↓
 POST /monitor/enable → Start 24/7 AI surveillance
     ↓
 Blockchain detects TX
     ↓
-ComplianceShield AI:
+Ableka Lumina AI:
 ├─ ML pattern analysis (87% anomalous)
 ├─ Grok LLM reasoning (context analysis)
 ├─ Chainalysis check (flagged counterparty)
@@ -575,7 +575,7 @@ User verifies or dispute → Clear or investigate
 
 ## Option B for Different Blockchain Types
 
-ComplianceShield Option B works for **both public and permissioned blockchains**, but monitoring adapts to your network type:
+Ableka Lumina Option B works for **both public and permissioned blockchains**, but monitoring adapts to your network type:
 
 ### Public Blockchain (Ethereum, Solana)
 ```
@@ -887,7 +887,7 @@ Cost: $0.01 instead of $0.50 per TX
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│        COMPLIANCESHIELD OPTION B - BOTH BLOCKCHAIN TYPES    │
+│        ABLEKA LUMINA OPTION B - BOTH BLOCKCHAIN TYPES    │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  PUBLIC BLOCKCHAIN (Ethereum, Solana, Polygon)              │
@@ -1111,7 +1111,7 @@ async function sendNotification(wallet: string, message: string) {
 
 async function triggerReKYC(wallet: string) {
   console.log(`🔄 Triggering re-KYC for ${wallet}`);
-  // Call ComplianceShield again with full KYC
+  // Call Ableka Lumina again with full KYC
 }
 ```
 

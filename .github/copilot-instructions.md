@@ -1,8 +1,8 @@
-# ComplianceShield - AI Compliance Engine Instructions
+# Ableka Lumina - AI Compliance Engine Instructions
 
 ## Project Overview
 
-A 100% **AI-driven RegTech SaaS platform** using LangChain.js agents for automated KYC/AML/fraud detection across blockchains and jurisdictions. Designed for PE tokenization, real estate RWA compliance, and multi-chain regulatory enforcement.
+A 100% **AI-driven RegTech SaaS platform** (Ableka Lumina) using LangChain.js agents for automated KYC/AML/fraud detection across blockchains and jurisdictions. Designed for PE tokenization, real estate RWA compliance, and multi-chain regulatory enforcement.
 
 **Architecture:** Node.js + LangChain.js with:
 - **Frontend:** React.js dashboard (Vite, TypeScript, Recharts, Tailwind CSS)
@@ -17,26 +17,26 @@ A 100% **AI-driven RegTech SaaS platform** using LangChain.js agents for automat
 **All comprehensive system architecture documentation is located in:**
 ```
 Planning docs/System Architecture/
-├── ComplianceShield_RWA_Enterprise_Implementation.md (CORE - 700+ lines)
+├── AbekeLumina_RWA_Enterprise_Implementation.md (CORE - 700+ lines)
 │   └─ Complete system design, ERD, API specs, workflows, K8s manifests, AWS CDK
-├── ComplianceShield_Enterprise_Architecture_Diagram.md
+├── AbekeLumina_Enterprise_Architecture_Diagram.md
 │   └─ 10-layer system architecture, all components & data flows
-├── ComplianceShield_Open_Source_Tech_Stack.md
+├── AbekeLumina_Open_Source_Tech_Stack.md
 │   └─ 100% open source stack, global platform (multi-region, i18n, currencies)
-├── ComplianceShield_Option_B_Architecture.md
+├── AbekeLumina_Option_B_Architecture.md
 │   └─ Real-time monitoring architecture, AI/LLM integration
 └── architecture-overview.md
     └─ High-level architecture overview
 ```
 
 **Every Agent Task Should Reference:**
-1. **ComplianceShield_RWA_Enterprise_Implementation.md** - For system design & data models
-2. **ComplianceShield_Enterprise_Architecture_Diagram.md** - For component relationships
-3. **ComplianceShield_Open_Source_Tech_Stack.md** - For technology choices & global platform details
+1. **AbekeLumina_RWA_Enterprise_Implementation.md** - For system design & data models
+2. **AbekeLumina_Enterprise_Architecture_Diagram.md** - For component relationships
+3. **AbekeLumina_Open_Source_Tech_Stack.md** - For technology choices & global platform details
 4. **MASTER_IMPLEMENTATION_PLAN.md** - For project phases & timelines
 
 **Before implementing any feature:**
-- Review relevant section in ComplianceShield_RWA_Enterprise_Implementation.md
+- Review relevant section in AbekeLumina_RWA_Enterprise_Implementation.md
 - Verify alignment with architecture diagrams
 - Check open source tech stack for approved libraries
 - Ensure compliance requirements met (see SEBI checklist in implementation guide)
@@ -77,7 +77,7 @@ Return to User via REST API or WebSocket
 
 ### Multi-Blockchain Support (Client-Initiated, No Infrastructure Setup)
 
-**IMPORTANT:** ComplianceShield does NOT set up, deploy, or manage blockchain infrastructure. It only **monitors and interacts** with existing blockchains that clients provide and approve for monitoring.
+**IMPORTANT:** Ableka Lumina does NOT set up, deploy, or manage blockchain infrastructure. It only **monitors and interacts** with existing blockchains that clients provide and approve for monitoring.
 
 **Permissioned Blockchain (Hyperledger Besu) - When Client Provides Access:**
 ```typescript
@@ -95,7 +95,7 @@ networkConfig: {
   }
 }
 
-// ComplianceShield: Monitors only, does NOT manage validators
+// Ableka Lumina: Monitors only, does NOT manage validators
 ```
 
 **Public Blockchain (Ethereum/Solana) - When Client Enables Monitoring:**
@@ -110,7 +110,7 @@ networkConfig: {
   requireOFAC: true
 }
 
-// ComplianceShield: Read-only monitoring of transactions
+// Ableka Lumina: Read-only monitoring of transactions
 ```
 
 ### Jurisdiction Rules Engine (Pluggable YAML)
@@ -257,7 +257,7 @@ JURISDICTION_RULES_PATH=./src/config/jurisdictions
 - All blockchain RPC endpoints are **CLIENT-PROVIDED** in their `.env` files
 - ComplianceShield does **NOT** deploy, manage, or provision any blockchain infrastructure
 - Clients enable monitoring only for blockchains they already control/use
-- No blockchain setup or initialization required for ComplianceShield operation
+- No blockchain setup or initialization required for Ableka Lumina operation
 
 **Production:** Use `.env.production` with encrypted secrets (never commit)
 
@@ -901,14 +901,14 @@ if (currentDecision.riskScore >> average(similarCases.riskScores)) {
 
 ### Critical Principle: No Infrastructure Setup
 
-**ComplianceShield does NOT:**
+**Ableka Lumina does NOT:**
 - Set up, deploy, or manage blockchain nodes/validators
 - Create blockchain infrastructure of any kind
 - Manage blockchain accounts, wallets, or private keys
 - Host blockchain data or services
 - Initialize any blockchain networks
 
-**ComplianceShield DOES (when client explicitly approves):**
+**Ableka Lumina DOES (when client explicitly approves):**
 - Monitor transactions on client-provided blockchain networks
 - Query blockchain data via client-provided RPC endpoints
 - Perform compliance checks on blockchain transactions
@@ -926,7 +926,7 @@ All blockchain monitoring MUST be:
 ```
 User Request: "Monitor my blockchain transactions"
   ↓
-ComplianceShield: "Please provide:"
+Ableka Lumina: "Please provide:"
   1. Blockchain type (permissioned/public)
   2. RPC endpoint URLs (must be client-provided)
   3. Approved wallet addresses to monitor
@@ -1013,7 +1013,7 @@ Return: { status: "monitoring_enabled", listeningOn: [...], connectedAt: "..." }
 Blockchain: Detected TX from monitored wallet
   { from: 0x1234..., to: 0xXYZ, amount: 100 ETH, hash: 0xabc... }
   ↓
-ethers.js Listener → ComplianceShield ingests TX
+ethers.js Listener → Ableka Lumina ingests TX
   ↓
 SupervisorAgent analyzes in parallel:
   ├─ ML Pattern Engine: 200x baseline = ANOMALOUS (87/100)
@@ -1122,7 +1122,7 @@ src/
 
 ## Gotchas & Non-Obvious Patterns
 
-1. **NO Blockchain Setup:** ComplianceShield never sets up, deploys, or initializes blockchain infrastructure. All blockchain RPC endpoints must be client-provided and pre-approved.
+1. **NO Blockchain Setup:** Ableka Lumina never sets up, deploys, or initializes blockchain infrastructure. All blockchain RPC endpoints must be client-provided and pre-approved.
 2. **Jurisdiction Routes:** Always extract jurisdiction first; never hardcode rules in code
 3. **Blockchain Type Checking:** Validate `blockchainType` ('permissioned' or 'public') at every entry point; also verify client approval
 4. **Cost Differences:** Permissioned = $0.01/TX, Public = $0.50-1.00/TX; warn clients on public deploys
