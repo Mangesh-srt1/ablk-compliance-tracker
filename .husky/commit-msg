@@ -1,0 +1,29 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Validate commit message follows convention:
+# type(scope): subject
+# Where type is one of: feat, fix, docs, style, refactor, perf, test, ci, chore
+
+COMMIT_MSG=$(cat "$1")
+
+echo "🔍 Validating commit message format..."
+echo "Message: $COMMIT_MSG"
+echo ""
+
+# Pattern: type(scope): message or type: message
+if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|ci|chore)(\(.+\))?!?: .{1,}'; then
+  echo "❌ Commit message does not follow convention!"
+  echo ""
+  echo "Expected format:"
+  echo "  feat(scope): Add new feature"
+  echo "  fix: Resolve critical bug"
+  echo "  docs(api): Update API documentation"
+  echo "  refactor(agents): Simplify agent logic"
+  echo ""
+  echo "Valid types: feat, fix, docs, style, refactor, perf, test, ci, chore"
+  echo "Use '!' before ':' for breaking changes: feat!: Breaking change"
+  exit 1
+fi
+
+echo "✅ Commit message is valid!"

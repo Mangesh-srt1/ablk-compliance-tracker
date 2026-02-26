@@ -1,25 +1,24 @@
 {
   "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "module": "commonjs",
+    // Language and Environment
     "target": "ES2020",
     "lib": ["ES2020"],
-    "jsx": "react",
-    
+    "module": "commonjs",
+    "jsx": "react-jsx",
+
     // Module Resolution
     "moduleResolution": "node",
-    "baseUrl": "./src",
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"],
+      "@api/*": ["./compliance-system/src/api/src/*"],
+      "@agents/*": ["./compliance-system/src/agents/src/*"]
     },
-    "types": ["node", "jest"],
-    "typeRoots": ["./node_modules/@types", "../../node_modules/@types"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
 
-    // STRICT MODE (MANDATORY FOR COMPLIANCE CODE)
+    // Strict Type-Checking Options (MANDATORY)
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -35,25 +34,27 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
 
-    // Output
-    "sourceMap": true,
+    // Code Emit
     "declaration": true,
     "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
     "removeComments": false,
     "importHelpers": true,
     "importsNotUsedAsValues": "error",
-    
+
     // Interop Constraints
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"],
-  "ts-node": {
-    "compilerOptions": {
-      "module": "commonjs"
-    },
-    "transpileOnly": true,
-    "files": true
-  }
+  "include": [
+    "compliance-system/src/**/*.ts",
+    "compliance-system/src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }

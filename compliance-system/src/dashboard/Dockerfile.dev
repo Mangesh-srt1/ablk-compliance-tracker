@@ -1,0 +1,32 @@
+# Development Dockerfile for Dashboard service
+# Enables hot-reload with Vite dev server
+# Build: docker build -f Dockerfile.dev -t ableka-dashboard-dev .
+# Run: docker-compose -f docker-compose.dev.yml up dashboard
+
+FROM node:20.11-alpine
+
+WORKDIR /app
+
+# Install dependencies for build tools
+RUN apk add --no-cache curl
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY src ./src
+COPY public ./public
+COPY index.html vite.config.ts tsconfig.json ./
+
+# Expose port for Vite dev server
+EXPOSE 5173
+
+# Health check
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=30s \
+  CMD curl -f http://localhost:5173 || exit 1
+
+# Run Vite dev server with host binding for Docker access
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

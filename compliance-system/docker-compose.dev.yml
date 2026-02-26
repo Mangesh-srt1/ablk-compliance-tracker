@@ -1,0 +1,198 @@
+version: "3.8"
+
+# Development environment: Fast iteration, hot-reload, live debugging
+# Run: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # PostgreSQL Database (Development)
+  postgres:
+    image: postgres:16-alpine
+    container_name: ableka-postgres-dev
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-compliance_db}
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pgvector"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./config/sql/init-database.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ableka-network-dev
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-compliance_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Redis Cache (Development)
+  redis:
+    image: redis:7-alpine
+    container_name: ableka-redis-dev
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes --loglevel notice
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - ableka-network-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Hyperledger Besu (Optional - permissioned blockchain for testing)
+  # Disabled by default; enable if testing blockchain integration
+  # besu:
+  #   image: hyperledger/besu:latest
+  #   container_name: ableka-besu-dev
+  #   command:
+  #     - --data-path=/data
+  #     - --genesis-file=/data/genesis.json
+  #     - --rpc-http-enabled=true
+  #     - --rpc-http-host=0.0.0.0
+  #     - --rpc-http-port=8545
+  #     - --rpc-http-api=ETH,NET,QBFT
+  #   ports:
+  #     - "8545:8545"
+  #   volumes:
+  #     - besu_data_dev:/data
+  #   networks:
+  #     - ableka-network-dev
+  #   healthcheck:
+  #     test: ["CMD", "test", "-f", "/data/genesis.json"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+
+  # API Service (Express.js + ts-node-dev hot-reload)
+  api:
+    build:
+      context: ./compliance-system/src/api
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_ENV: development
+    container_name: ableka-api-dev
+    env_file:
+      - .env
+      - .env.local
+    environment:
+      NODE_ENV: development
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-compliance_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LOG_LEVEL: debug
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      JWT_EXPIRY: 15m
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Node debugger port
+    volumes:
+      - ./compliance-system/src/api/src:/app/src
+      - ./compliance-system/src/api/package.json:/app/package.json
+      - ./compliance-system/src/api/tsconfig.json:/app/tsconfig.json
+      - /app/node_modules  # Prevent host node_modules from shadowing container
+    networks:
+      - ableka-network-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Agents Service (LangChain.js agents + ts-node-dev hot-reload)
+  agents:
+    build:
+      context: ./compliance-system/src/agents
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_ENV: development
+    container_name: ableka-agents-dev
+    env_file:
+      - .env
+      - .env.local
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-compliance_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GROK_API_KEY: ${GROK_API_KEY:-sk-placeholder}
+      LOG_LEVEL: debug
+    ports:
+      - "3002:3002"
+      - "9230:9229"  # Node debugger port
+    volumes:
+      - ./compliance-system/src/agents/src:/app/src
+      - ./compliance-system/src/agents/package.json:/app/package.json
+      - ./compliance-system/src/agents/tsconfig.json:/app/tsconfig.json
+      - /app/node_modules  # Prevent host node_modules from shadowing container
+    networks:
+      - ableka-network-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Dashboard (React + Vite hot-reload)
+  dashboard:
+    build:
+      context: ./compliance-system/src/dashboard
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_ENV: development
+    container_name: ableka-dashboard-dev
+    env_file:
+      - .env
+      - .env.local
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:3000
+      VITE_WS_URL: ws://localhost:3000
+    ports:
+      - "3001:5173"  # Vite dev server
+    volumes:
+      - ./compliance-system/src/dashboard/src:/app/src
+      - ./compliance-system/src/dashboard/public:/app/public
+      - ./compliance-system/src/dashboard/index.html:/app/index.html
+      - /app/node_modules
+    networks:
+      - ableka-network-dev
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5173 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+
+networks:
+  ableka-network-dev:
+    driver: bridge
