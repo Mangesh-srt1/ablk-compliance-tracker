@@ -3,16 +3,16 @@
  * Tests KYC verification logic, scoring, and database operations
  */
 
-import { KycService } from '../../services/kycService';
-import { Jurisdiction, KycStatus, KycFlagType } from '../../types/kyc';
-import { AppError, ErrorCode } from '../../types/errors';
-import * as mockData from '../fixtures/mockData';
-import { MockDatabaseClient } from '../fixtures/database';
+import { KycService } from '../../../services/kycService';
+import { Jurisdiction, KycStatus, KycFlagType } from '../../../types/kyc';
+import { AppError, ErrorCode } from '../../../types/errors';
+import * as mockData from '../../fixtures/mockData';
+import { MockDatabaseClient } from '../../fixtures/database';
 
 // Mock dependencies
-jest.mock('../../config/database');
-jest.mock('../../utils/sqlLoader');
-jest.mock('../../services/providers/kycProviderManager');
+jest.mock('../../../config/database');
+jest.mock('../../../utils/sqlLoader');
+jest.mock('../../../services/providers/kycProviderManager');
 
 describe('KycService', () => {
   let service: KycService;

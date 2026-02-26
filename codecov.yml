@@ -1,0 +1,53 @@
+# Codecov Configuration
+# Aggregates coverage reports from CI/CD pipeline
+
+version: "v0"
+
+codecov:
+  require_ci_to_pass: true
+  strict_yaml_branch: main
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+ignore:
+  - "node_modules"
+  - "**/__tests__"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/fixtures"
+  - "dist/**"
+  - "coverage/**"
+
+flags:
+  api:
+    paths:
+      - src/api/src
+    carryforward: true
+  agents:
+    paths:
+      - src/agents/src
+    carryforward: true
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Thresholds for CI to pass/fail
+threshold:
+  - type: absolute
+    target: 75
+    branches:
+      - main
+      - develop
+
+# PR checks
+pr:
+  require_ci_to_pass: true
+  allowed_drops:
+    - 1.0  # Allow 1% drop in coverage for PRs

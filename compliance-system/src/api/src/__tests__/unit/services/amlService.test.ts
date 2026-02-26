@@ -3,14 +3,14 @@
  * Tests AML risk scoring, sanctions screening, and anomaly detection
  */
 
-import { AmlService } from '../../services/amlService';
-import { Jurisdiction, AmlRiskLevel, AmlFlagType } from '../../types/aml';
-import { AppError, ErrorCode } from '../../types/errors';
-import * as mockData from '../fixtures/mockData';
+import { AmlService } from '../../../services/amlService';
+import { Jurisdiction, AmlRiskLevel, AmlFlagType } from '../../../types/aml';
+import { AppError, ErrorCode } from '../../../types/errors';
+import * as mockData from '../../fixtures/mockData';
 
-jest.mock('../../config/database');
-jest.mock('../../utils/sqlLoader');
-jest.mock('../../services/providers/amlProviderManager');
+jest.mock('../../../config/database');
+jest.mock('../../../utils/sqlLoader');
+jest.mock('../../../services/providers/amlProviderManager');
 
 describe('AmlService', () => {
   let service: AmlService;

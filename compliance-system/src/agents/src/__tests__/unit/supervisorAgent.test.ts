@@ -3,12 +3,12 @@
  * Tests supervisor agent workflow, state transitions, and multi-agent coordination
  */
 
-import { ComplianceSupervisorAgent, ComplianceCheck, ComplianceResult } from '../../agents/supervisorAgent';
-import { KYCAgent } from '../../agents/kycAgent';
-import { AMLAgent } from '../../agents/amlAgent';
-import { SEBIAgent } from '../../agents/sebiAgent';
+import { ComplianceSupervisorAgent, ComplianceCheck, ComplianceResult } from '../../../agents/supervisorAgent';
+import { KYCAgent } from '../../../agents/kycAgent';
+import { AMLAgent } from '../../../agents/amlAgent';
+import { SEBIAgent } from '../../../agents/sebiAgent';
 
-jest.mock('../../config/database');
+jest.mock('../../../config/database');
 jest.mock('@langchain/anthropic');
 jest.mock('winston');
 
