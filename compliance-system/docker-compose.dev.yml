@@ -7,21 +7,22 @@ services:
   # PostgreSQL Database (Development)
   postgres:
     image: postgres:16-alpine
-    container_name: ableka-postgres-dev
+    container_name: lumina-postgres-dev
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-compliance_db}
       POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pgvector"
-    ports:
-      - "${DB_PORT:-5432}:5432"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # Internal only - API & Agents connect via docker network (postgres:5432)
+    # Commented out to avoid port conflicts - use docker exec to access psql
+    # ports:
+    #   - "${DB_PORT:-5433}:5432"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      - lumina_postgres_data:/var/lib/postgresql/data
       - ./config/sql/init-database.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - ableka-network-dev
-    environment:
-      PGDATA: /var/lib/postgresql/data/pgdata
+      - lumina-network-dev
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-compliance_db}"]
       interval: 10s
@@ -32,14 +33,14 @@ services:
   # Redis Cache (Development)
   redis:
     image: redis:7-alpine
-    container_name: ableka-redis-dev
+    container_name: lumina-redis-dev
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"  # Use 6380 to avoid conflicts with default Redis (6379)
     command: redis-server --appendonly yes --loglevel notice
     volumes:
-      - redis_data_dev:/data
+      - lumina_redis_data:/data
     networks:
-      - ableka-network-dev
+      - lumina-network-dev
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -74,11 +75,12 @@ services:
   # API Service (Express.js + ts-node-dev hot-reload)
   api:
     build:
-      context: ./compliance-system/src/api
+      context: ./src/api
       dockerfile: Dockerfile.dev
       args:
         NODE_ENV: development
-    container_name: ableka-api-dev
+    container_name: lumina-api-dev
+    image: lumina-api:latest
     env_file:
       - .env
       - .env.local
@@ -88,27 +90,27 @@ services:
       API_PORT: 3000
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-compliance_db}
       REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_PORT: 6380
       LOG_LEVEL: debug
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       JWT_EXPIRY: 15m
     ports:
-      - "3000:3000"
+      - "${API_PORT:-4000}:3000"  # External 4000 -> Internal 3000 (unique port)
       - "9229:9229"  # Node debugger port
     volumes:
-      - ./compliance-system/src/api/src:/app/src
-      - ./compliance-system/src/api/package.json:/app/package.json
-      - ./compliance-system/src/api/tsconfig.json:/app/tsconfig.json
+      - ./src/api/src:/app/src
+      - ./src/api/package.json:/app/package.json
+      - ./src/api/tsconfig.json:/app/tsconfig.json
       - /app/node_modules  # Prevent host node_modules from shadowing container
     networks:
-      - ableka-network-dev
+      - lumina-network-dev
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]  # Internal port 3000
       interval: 10s
       timeout: 5s
       retries: 3
@@ -117,11 +119,12 @@ services:
   # Agents Service (LangChain.js agents + ts-node-dev hot-reload)
   agents:
     build:
-      context: ./compliance-system/src/agents
+      context: ./src/agents
       dockerfile: Dockerfile.dev
       args:
         NODE_ENV: development
-    container_name: ableka-agents-dev
+    container_name: lumina-agents-dev
+    image: lumina-agents:latest
     env_file:
       - .env
       - .env.local
@@ -129,70 +132,71 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-compliance_db}
       REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_PORT: 6380
       GROK_API_KEY: ${GROK_API_KEY:-sk-placeholder}
       LOG_LEVEL: debug
     ports:
-      - "3002:3002"
+      - "${AGENTS_PORT:-4002}:3002"  # External 4002 -> Internal 3002 (unique port)
       - "9230:9229"  # Node debugger port
     volumes:
-      - ./compliance-system/src/agents/src:/app/src
-      - ./compliance-system/src/agents/package.json:/app/package.json
-      - ./compliance-system/src/agents/tsconfig.json:/app/tsconfig.json
+      - ./src/agents/src:/app/src
+      - ./src/agents/package.json:/app/package.json
+      - ./src/agents/tsconfig.json:/app/tsconfig.json
       - /app/node_modules  # Prevent host node_modules from shadowing container
     networks:
-      - ableka-network-dev
+      - lumina-network-dev
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]  # Internal port 3002
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
-  # Dashboard (React + Vite hot-reload)
-  dashboard:
-    build:
-      context: ./compliance-system/src/dashboard
-      dockerfile: Dockerfile.dev
-      args:
-        NODE_ENV: development
-    container_name: ableka-dashboard-dev
-    env_file:
-      - .env
-      - .env.local
-    environment:
-      NODE_ENV: development
-      VITE_API_URL: http://localhost:3000
-      VITE_WS_URL: ws://localhost:3000
-    ports:
-      - "3001:5173"  # Vite dev server
-    volumes:
-      - ./compliance-system/src/dashboard/src:/app/src
-      - ./compliance-system/src/dashboard/public:/app/public
-      - ./compliance-system/src/dashboard/index.html:/app/index.html
-      - /app/node_modules
-    networks:
-      - ableka-network-dev
-    depends_on:
-      - api
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5173 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+  # Dashboard (React + Vite hot-reload) - DISABLED until src files exist
+  # Scheduled for Week 4: Dashboard & MVP Launch
+  # lumina-dashboard:
+  #   build:
+  #     context: ./src/dashboard
+  #     dockerfile: Dockerfile.dev
+  #     args:
+  #       NODE_ENV: development
+  #   container_name: lumina-dashboard-dev
+  #   env_file:
+  #     - .env
+  #     - .env.local
+  #   environment:
+  #     NODE_ENV: development
+  #     VITE_API_URL: http://localhost:3000
+  #     VITE_WS_URL: ws://localhost:3000
+  #   ports:
+  #     - "3001:5173"  # Vite dev server
+  #   volumes:
+  #     - ./src/dashboard/src:/app/src
+  #     - ./src/dashboard/public:/app/public
+  #     - ./src/dashboard/index.html:/app/index.html
+  #     - /app/node_modules
+  #   networks:
+  #     - lumina-network-dev
+  #   depends_on:
+  #     - api
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -f http://localhost:5173 || exit 1"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 30s
 
 volumes:
-  postgres_data_dev:
+  lumina_postgres_data:
     driver: local
-  redis_data_dev:
+  lumina_redis_data:
     driver: local
 
 networks:
-  ableka-network-dev:
+  lumina-network-dev:
     driver: bridge
