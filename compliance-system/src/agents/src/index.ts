@@ -29,6 +29,9 @@ import { KYCAgent } from './agents/kycAgent';
 import { AMLAgent } from './agents/amlAgent';
 import { SEBIAgent } from './agents/sebiAgent';
 
+// Import graphs
+import { ComplianceGraph } from './graphs/complianceGraph';
+
 // Import services
 import { AgentOrchestrator } from './services/agentOrchestrator';
 import { EventProcessor } from './services/eventProcessor';
