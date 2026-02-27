@@ -1,0 +1,148 @@
+{
+  "language": "Español",
+  "languageCode": "es",
+  "region": "España",
+  "dateFormat": "DD/MM/YYYY",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "€",
+  "decimalSeparator": ",",
+  "thousandsSeparator": ".",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "Parámetros de solicitud inválidos",
+      "MISSING_JURISDICTION": "La jurisdicción es requerida",
+      "INVALID_JURISDICTION": "Código de jurisdicción inválido",
+      "AUTHENTICATION_FAILED": "Falló la autenticación",
+      "INSUFFICIENT_PERMISSIONS": "Permisos insuficientes para esta operación",
+      "RATE_LIMIT_EXCEEDED": "Límite de velocidad excedido. Intenta más tarde",
+      "INTERNAL_SERVER_ERROR": "Ocurrió un error interno del servidor",
+      "SERVICE_UNAVAILABLE": "El servicio no está disponible actualmente",
+      "TIMEOUT": "Tiempo de espera agotado",
+      "INVALID_DOCUMENT_TYPE": "Tipo de documento inválido para la jurisdicción",
+      "MISSING_REQUIRED_FIELDS": "Faltan campos requeridos",
+      "INVALID_EMAIL_FORMAT": "Formato de correo inválido",
+      "INVALID_PHONE_FORMAT": "Formato de teléfono inválido",
+      "ENTITY_NOT_FOUND": "Entidad no encontrada",
+      "RECORD_NOT_FOUND": "Registro no encontrado",
+      "DUPLICATE_ENTITY": "La entidad ya existe",
+      "DATABASE_ERROR": "Error en la operación de base de datos"
+    },
+    "success": {
+      "KYC_VERIFIED": "Verificación KYC exitosa",
+      "KYC_PENDING_REVIEW": "Verificación KYC pendiente de revisión",
+      "KYC_REJECTED": "Verificación KYC rechazada",
+      "AML_CHECK_PASSED": "Verificación AML aprobada",
+      "AML_CHECK_FLAGGED": "Verificación AML detectó riesgos",
+      "COMPLIANCE_CHECK_APPROVED": "Verificación de cumplimiento aprobada",
+      "COMPLIANCE_CHECK_ESCALATED": "Verificación de cumplimiento escalada para revisión",
+      "COMPLIANCE_CHECK_REJECTED": "Verificación de cumplimiento rechazada"
+    },
+    "messages": {
+      "PROCESSING": "Procesando tu solicitud...",
+      "TRANSACTION_SUBMITTED": "Transacción enviada exitosamente",
+      "DATA_SAVED": "Datos guardados exitosamente",
+      "RECORD_CREATED": "Registro creado exitosamente",
+      "RECORD_UPDATED": "Registro actualizado exitosamente",
+      "RECORD_DELETED": "Registro eliminado exitosamente"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "Conoce a tu Cliente (KYC)",
+      "description": "Proceso de verificación de identidad del cliente",
+      "document_types": {
+        "PASSPORT": "Pasaporte",
+        "GOVERNMENT_ID": "Documento de Identidad Gubernamental",
+        "DRIVERS_LICENSE": "Licencia de Conducir",
+        "ID_CARD": "Tarjeta de Identidad",
+        "AADHAAR": "Aadhaar",
+        "PAN": "Tarjeta PAN",
+        "NATIONAL_ID": "Identificación Nacional"
+      },
+      "proof_of_address": "Comprobante de Domicilio",
+      "source_of_funds": "Declaración de Origen de Fondos",
+      "beneficial_ownership": "Certificación de Beneficiario final",
+      "liveness_check": "Verificación de Vivacidad",
+      "face_match": "Verificación de Coincidencia Facial",
+      "status": {
+        "PENDING": "Pendiente",
+        "IN_PROGRESS": "En Progreso",
+        "VERIFIED": "Verificado",
+        "REJECTED": "Rechazado",
+        "EXPIRED": "Expirado"
+      }
+    },
+    "aml": {
+      "title": "Lucha contra el Lavado de Dinero (AML)",
+      "description": "Monitoreo de transacciones y evaluación de riesgos",
+      "risk_level": {
+        "LOW": "Riesgo Bajo",
+        "MEDIUM": "Riesgo Medio",
+        "HIGH": "Riesgo Alto",
+        "CRITICAL": "Riesgo Crítico"
+      },
+      "sanctions_screening": "Cribado de Lista de Sanciones",
+      "pep_screening": "Cribado de Personas Políticamente Expuestas",
+      "adverse_media": "Cribado de Medios Adversos",
+      "velocity_check": "Verificación de Velocidad de Transacción"
+    },
+    "status": {
+      "APPROVED": "Aprobado",
+      "REJECTED": "Rechazado",
+      "ESCALATED": "Escalado para Revisión",
+      "PENDING": "Pendiente de Revisión"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "Emiratos Árabes Unidos",
+      "regulator": "DFSA",
+      "requirements": "Autorización DFSA Requerida",
+      "aml_report": "Presentación SAR Requerida",
+      "refresh_interval": "Anual"
+    },
+    "US": {
+      "name": "Estados Unidos",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "Registro SEC/FINRA",
+      "aml_report": "Presentación SAR Requerida",
+      "refresh_interval": "Anual"
+    },
+    "EU": {
+      "name": "Unión Europea",
+      "regulator": "ESMA / EBA",
+      "requirements": "Autorización AIFM/UCITS",
+      "aml_report": "Presentación FIU Requerida",
+      "refresh_interval": "Anual"
+    },
+    "IN": {
+      "name": "India",
+      "regulator": "SEBI / RBI",
+      "requirements": "Registro SEBI Requerido",
+      "aml_report": "Presentación FIU-IND Requerida",
+      "refresh_interval": "Bienal"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "Token JWT inválido",
+    "AUTH002": "Token expirado",
+    "AUTH003": "Permisos insuficientes",
+    "KYC001": "Falló la verificación KYC",
+    "KYC002": "Falló la verificación de documento",
+    "KYC003": "Falló la verificación de vivacidad",
+    "AML001": "Coincidencia de sanciones detectada",
+    "AML002": "Coincidencia de PEP detectada",
+    "AML003": "Medios adversos detectados",
+    "AML004": "Velocidad de transacción excedida",
+    "COMP001": "Falló la verificación de cumplimiento",
+    "COMP002": "Reglas de jurisdicción violadas",
+    "DB001": "Error de conexión de base de datos",
+    "EXT001": "Error de API externa",
+    "EXT002": "Tiempo de espera de API externa",
+    "RATE001": "Límite de velocidad excedido"
+  }
+}

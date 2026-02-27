@@ -1,0 +1,148 @@
+{
+  "language": "हिन्दी",
+  "languageCode": "hi",
+  "region": "India",
+  "dateFormat": "DD/MM/YYYY",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "₹",
+  "decimalSeparator": ".",
+  "thousandsSeparator": ",",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "अमान्य अनुरोध पैरामीटर",
+      "MISSING_JURISDICTION": "न्यायक्षेत्र आवश्यक है",
+      "INVALID_JURISDICTION": "अमान्य न्यायक्षेत्र कोड",
+      "AUTHENTICATION_FAILED": "प्रमाणीकरण विफल",
+      "INSUFFICIENT_PERMISSIONS": "इस ऑपरेशन के लिए अपर्याप्त अनुमतियां",
+      "RATE_LIMIT_EXCEEDED": "दर सीमा अतिक्रमित। कृपया बाद में प्रयास करें",
+      "INTERNAL_SERVER_ERROR": "एक आंतरिक सर्वर त्रुटि हुई",
+      "SERVICE_UNAVAILABLE": "सेवा वर्तमान में उपलब्ध नहीं है",
+      "TIMEOUT": "अनुरोध समय समाप्त",
+      "INVALID_DOCUMENT_TYPE": "न्यायक्षेत्र के लिए अमान्य दस्तावेज़ प्रकार",
+      "MISSING_REQUIRED_FIELDS": "आवश्यक फ़ील्ड गायब हैं",
+      "INVALID_EMAIL_FORMAT": "अमान्य ईमेल प्रारूप",
+      "INVALID_PHONE_FORMAT": "अमान्य फोन नंबर प्रारूप",
+      "ENTITY_NOT_FOUND": "इकाई नहीं मिली",
+      "RECORD_NOT_FOUND": "रिकॉर्ड नहीं मिला",
+      "DUPLICATE_ENTITY": "इकाई पहले से मौजूद है",
+      "DATABASE_ERROR": "डेटाबेस ऑपरेशन विफल"
+    },
+    "success": {
+      "KYC_VERIFIED": "KYC सत्यापन सफल",
+      "KYC_PENDING_REVIEW": "KYC सत्यापन समीक्षा के लिए लंबित",
+      "KYC_REJECTED": "KYC सत्यापन अस्वीकृत",
+      "AML_CHECK_PASSED": "AML जांच पास",
+      "AML_CHECK_FLAGGED": "AML जांच ने जोखिम का पता लगाया",
+      "COMPLIANCE_CHECK_APPROVED": "अनुपालन जांच अनुमोदित",
+      "COMPLIANCE_CHECK_ESCALATED": "अनुपालन जांच समीक्षा के लिए बढ़ाई गई",
+      "COMPLIANCE_CHECK_REJECTED": "अनुपालन जांच अस्वीकृत"
+    },
+    "messages": {
+      "PROCESSING": "आपके अनुरोध को संसाधित किया जा रहा है...",
+      "TRANSACTION_SUBMITTED": "लेनदेन सफलतापूर्वक जमा किया गया",
+      "DATA_SAVED": "डेटा सफलतापूर्वक सहेजा गया",
+      "RECORD_CREATED": "रिकॉर्ड सफलतापूर्वक बनाया गया",
+      "RECORD_UPDATED": "रिकॉर्ड सफलतापूर्वक अपडेट किया गया",
+      "RECORD_DELETED": "रिकॉर्ड सफलतापूर्वक हटाया गया"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "अपने ग्राहक को जानें (KYC)",
+      "description": "ग्राहक पहचान सत्यापन प्रक्रिया",
+      "document_types": {
+        "PASSPORT": "पासपोर्ट",
+        "GOVERNMENT_ID": "सरकारी पहचान",
+        "DRIVERS_LICENSE": "ड्राइविंग लाइसेंस",
+        "ID_CARD": "पहचान पत्र",
+        "AADHAAR": "आधार",
+        "PAN": "PAN कार्ड",
+        "NATIONAL_ID": "राष्ट्रीय पहचान"
+      },
+      "proof_of_address": "पता का प्रमाण",
+      "source_of_funds": "धन के स्रोत की घोषणा",
+      "beneficial_ownership": "लाभकारी मालिक प्रमाणपत्र",
+      "liveness_check": "जीवन्तता जांच",
+      "face_match": "चेहरे मिलान सत्यापन",
+      "status": {
+        "PENDING": "लंबित",
+        "IN_PROGRESS": "प्रगति में",
+        "VERIFIED": "सत्यापित",
+        "REJECTED": "अस्वीकृत",
+        "EXPIRED": "समाप्त"
+      }
+    },
+    "aml": {
+      "title": "मनी लॉन्ड्रिंग निरोधक (AML)",
+      "description": "लेनदेन निगरानी और जोखिम मूल्यांकन",
+      "risk_level": {
+        "LOW": "कम जोखिम",
+        "MEDIUM": "मध्यम जोखिम",
+        "HIGH": "उच्च जोखिम",
+        "CRITICAL": "गंभीर जोखिम"
+      },
+      "sanctions_screening": "प्रतिबंध सूची स्क्रीनिंग",
+      "pep_screening": "राजनीतिक रूप से प्रभावशाली व्यक्ति स्क्रीनिंग",
+      "adverse_media": "प्रतिकूल मीडिया स्क्रीनिंग",
+      "velocity_check": "लेनदेन गति जांच"
+    },
+    "status": {
+      "APPROVED": "अनुमोदित",
+      "REJECTED": "अस्वीकृत",
+      "ESCALATED": "समीक्षा के लिए बढ़ाया गया",
+      "PENDING": "समीक्षा की प्रतीक्षा में"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "संयुक्त अरब अमीरात",
+      "regulator": "DFSA",
+      "requirements": "DFSA प्राधिकरण आवश्यक",
+      "aml_report": "SAR फाइलिंग आवश्यक",
+      "refresh_interval": "वार्षिक"
+    },
+    "US": {
+      "name": "संयुक्त राज्य अमेरिका",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "SEC/FINRA पंजीकरण",
+      "aml_report": "SAR फाइलिंग आवश्यक",
+      "refresh_interval": "वार्षिक"
+    },
+    "EU": {
+      "name": "यूरोपीय संघ",
+      "regulator": "ESMA / EBA",
+      "requirements": "AIFM/UCITS प्राधिकरण",
+      "aml_report": "FIU रिपोर्टिंग आवश्यक",
+      "refresh_interval": "वार्षिक"
+    },
+    "IN": {
+      "name": "भारत",
+      "regulator": "SEBI / RBI",
+      "requirements": "SEBI पंजीकरण आवश्यक",
+      "aml_report": "FIU-IND रिपोर्टिंग आवश्यक",
+      "refresh_interval": "द्विवार्षिक"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "अमान्य JWT टोकन",
+    "AUTH002": "टोकन समाप्त",
+    "AUTH003": "अपर्याप्त अनुमतियां",
+    "KYC001": "KYC सत्यापन विफल",
+    "KYC002": "दस्तावेज़ सत्यापन विफल",
+    "KYC003": "जीवन्तता जांच विफल",
+    "AML001": "प्रतिबंध मेल पहचाना गया",
+    "AML002": "PEP मेल पहचाना गया",
+    "AML003": "प्रतिकूल मीडिया पहचाना गया",
+    "AML004": "लेनदेन वेग अतिक्रमित",
+    "COMP001": "अनुपालन जांच विफल",
+    "COMP002": "न्यायक्षेत्र नियम उल्लंघन",
+    "DB001": "डेटाबेस कनेक्शन त्रुटि",
+    "EXT001": "बाहरी API त्रुटि",
+    "EXT002": "बाहरी API समय समाप्त",
+    "RATE001": "दर सीमा अतिक्रमित"
+  }
+}

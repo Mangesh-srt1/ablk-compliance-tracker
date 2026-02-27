@@ -1,0 +1,148 @@
+{
+  "language": "English",
+  "languageCode": "en",
+  "region": "global",
+  "dateFormat": "MM/DD/YYYY",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "$",
+  "decimalSeparator": ".",
+  "thousandsSeparator": ",",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "Invalid request parameters",
+      "MISSING_JURISDICTION": "Jurisdiction is required",
+      "INVALID_JURISDICTION": "Invalid jurisdiction code",
+      "AUTHENTICATION_FAILED": "Authentication failed",
+      "INSUFFICIENT_PERMISSIONS": "Insufficient permissions for this operation",
+      "RATE_LIMIT_EXCEEDED": "Rate limit exceeded. Please try again later",
+      "INTERNAL_SERVER_ERROR": "An internal server error occurred",
+      "SERVICE_UNAVAILABLE": "Service is currently unavailable",
+      "TIMEOUT": "Request timeout",
+      "INVALID_DOCUMENT_TYPE": "Invalid document type for jurisdiction",
+      "MISSING_REQUIRED_FIELDS": "Missing required fields",
+      "INVALID_EMAIL_FORMAT": "Invalid email format",
+      "INVALID_PHONE_FORMAT": "Invalid phone number format",
+      "ENTITY_NOT_FOUND": "Entity not found",
+      "RECORD_NOT_FOUND": "Record not found",
+      "DUPLICATE_ENTITY": "Entity already exists",
+      "DATABASE_ERROR": "Database operation failed"
+    },
+    "success": {
+      "KYC_VERIFIED": "KYC verification successful",
+      "KYC_PENDING_REVIEW": "KYC verification pending review",
+      "KYC_REJECTED": "KYC verification rejected",
+      "AML_CHECK_PASSED": "AML check passed",
+      "AML_CHECK_FLAGGED": "AML check detected risks",
+      "COMPLIANCE_CHECK_APPROVED": "Compliance check approved",
+      "COMPLIANCE_CHECK_ESCALATED": "Compliance check escalated for review",
+      "COMPLIANCE_CHECK_REJECTED": "Compliance check rejected"
+    },
+    "messages": {
+      "PROCESSING": "Processing your request...",
+      "TRANSACTION_SUBMITTED": "Transaction submitted successfully",
+      "DATA_SAVED": "Data saved successfully",
+      "RECORD_CREATED": "Record created successfully",
+      "RECORD_UPDATED": "Record updated successfully",
+      "RECORD_DELETED": "Record deleted successfully"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "Know Your Customer (KYC)",
+      "description": "Customer identity verification process",
+      "document_types": {
+        "PASSPORT": "Passport",
+        "GOVERNMENT_ID": "Government ID",
+        "DRIVERS_LICENSE": "Driver's License",
+        "ID_CARD": "ID Card",
+        "AADHAAR": "Aadhaar",
+        "PAN": "PAN Card",
+        "NATIONAL_ID": "National ID"
+      },
+      "proof_of_address": "Proof of Address",
+      "source_of_funds": "Source of Funds Declaration",
+      "beneficial_ownership": "Beneficial Ownership Certification",
+      "liveness_check": "Liveness Check",
+      "face_match": "Face Matching Verification",
+      "status": {
+        "PENDING": "Pending",
+        "IN_PROGRESS": "In Progress",
+        "VERIFIED": "Verified",
+        "REJECTED": "Rejected",
+        "EXPIRED": "Expired"
+      }
+    },
+    "aml": {
+      "title": "Anti-Money Laundering (AML)",
+      "description": "Transaction monitoring and risk assessment",
+      "risk_level": {
+        "LOW": "Low Risk",
+        "MEDIUM": "Medium Risk",
+        "HIGH": "High Risk",
+        "CRITICAL": "Critical Risk"
+      },
+      "sanctions_screening": "Sanctions List Screening",
+      "pep_screening": "Politically Exposed Person Screening",
+      "adverse_media": "Adverse Media Screening",
+      "velocity_check": "Transaction Velocity Check"
+    },
+    "status": {
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "ESCALATED": "Escalated for Review",
+      "PENDING": "Pending Review"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "United Arab Emirates",
+      "regulator": "DFSA",
+      "requirements": "DFSA Authorization Required",
+      "aml_report": "SAR Filing Required",
+      "refresh_interval": "Annual"
+    },
+    "US": {
+      "name": "United States",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "SEC/FINRA Registration",
+      "aml_report": "SAR Filing Required",
+      "refresh_interval": "Annual"
+    },
+    "EU": {
+      "name": "European Union",
+      "regulator": "ESMA / EBA",
+      "requirements": "AIFM/UCITS Authorization",
+      "aml_report": "FIU Reporting Required",
+      "refresh_interval": "Annual"
+    },
+    "IN": {
+      "name": "India",
+      "regulator": "SEBI / RBI",
+      "requirements": "SEBI Registration Required",
+      "aml_report": "FIU-IND Reporting Required",
+      "refresh_interval": "Biennial"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "Invalid JWT token",
+    "AUTH002": "Token expired",
+    "AUTH003": "Insufficient permissions",
+    "KYC001": "KYC verification failed",
+    "KYC002": "Document verification failed",
+    "KYC003": "Liveness check failed",
+    "AML001": "Sanctions match detected",
+    "AML002": "PEP match detected",
+    "AML003": "Adverse media detected",
+    "AML004": "Transaction velocity exceeded",
+    "COMP001": "Compliance check failed",
+    "COMP002": "Jurisdiction rules violated",
+    "DB001": "Database connection error",
+    "EXT001": "External API error",
+    "EXT002": "External API timeout",
+    "RATE001": "Rate limit exceeded"
+  }
+}

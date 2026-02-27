@@ -19,6 +19,10 @@ import logger from './config/logger';
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
+import { localizationMiddleware } from './middleware/localizationMiddleware';
+
+// Import localization service
+import { initializeLocalizationService } from './services/localizationService';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -95,6 +99,20 @@ async function initializeApp(): Promise<void> {
 
     // Request logging
     app.use(requestLogger);
+
+    // Localization/i18n middleware
+    logger.info('Initializing localization service...');
+    try {
+      const localesPath = process.env.LOCALES_PATH || './src/locales';
+      initializeLocalizationService(localesPath);
+      app.use(localizationMiddleware());
+      logger.info('Localization service initialized');
+    } catch (i18nError) {
+      logger.warn(
+        'Localization service initialization failed, continuing with defaults:',
+        i18nError instanceof Error ? i18nError.message : String(i18nError)
+      );
+    }
 
     // Rate limiting
     const limiter = rateLimit({
