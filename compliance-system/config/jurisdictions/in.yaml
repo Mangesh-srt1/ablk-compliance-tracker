@@ -1,0 +1,258 @@
+jurisdiction:
+  code: IN
+  name: 'India'
+  region: SOUTH_ASIA
+  launchDate: '2026-02-15'
+  timeZone: 'Asia/Kolkata'
+  currencyCode: 'INR'
+  currencySymbol: '₹'
+
+regulatoryFramework:
+  primaryRegulator: 'SEBI'
+  secondaryRegulator: 'RBI'
+  applicableLaws:
+    - SEBI_ACT_1992
+    - SECURITIES_CONTRACTS_REGULATION_ACT_1956
+    - PREVENTION_OF_MONEY_LAUNDERING_ACT_2002
+    - DIGITAL_PERSONAL_DATA_PROTECTION_ACT_2023
+    - FOREIGN_EXCHANGE_MANAGEMENT_ACT_1999
+
+regulatoryBodies:
+  - id: SEBI
+    name: 'Securities and Exchange Board of India'
+    jurisdiction: NATIONAL
+    website: 'https://www.sebi.gov.in'
+    reportingEmail: 'aml@sebi.gov.in'
+    contactPhone: '+91-22-2631-8000'
+    reportingFormats: [ONLINE_PORTAL, EMAIL, PHYSICAL_SUBMISSION]
+    reportingLanguages: [EN, HI]
+
+  - id: RBI
+    name: 'Reserve Bank of India'
+    jurisdiction: NATIONAL
+    website: 'https://www.rbi.org.in'
+    reportingEmail: 'aml.rbi@rbi.org.in'
+    reportingFormats: [ONLINE_PORTAL, EMAIL]
+
+  - id: FIU_IND
+    name: 'Financial Intelligence Unit - India'
+    jurisdiction: NATIONAL
+    website: 'https://www.fiu.gov.in'
+    reportingEmail: 'aml@fiu.gov.in'
+    reportingDeadline: 7 # Days from detection
+
+  - id: DPB
+    name: 'Data Protection Board of India (DPDP)'
+    jurisdiction: NATIONAL
+    website: 'https://www.meity.gov.in'
+    reportingEmail: 'dpdp@meity.gov.in'
+    dataBreachReportingDeadline: 72 # Hours
+
+fundStructure:
+  requiredLegalEntity: 'SEBI_REGISTERED_MUTUAL_FUND_OR_AIF'
+  minFundSize: 500000000 # INR (~6 million USD)
+  maxInvestors: UNLIMITED
+  minInvestors: 2
+  allowedFundTypes:
+    - CATEGORY_I_AIF
+    - CATEGORY_II_AIF
+    - CATEGORY_III_AIF
+    - MUTUAL_FUND
+
+  lpEligibility:
+    - QUALIFIED_INSTITUTIONAL_BUYER
+    - HIGH_NET_WORTH_INDIVIDUAL_MIN_INR_2CR
+    - CORPORATE_INVESTOR
+    - NRI_OVERSEAS_CITIZEN_OF_INDIA
+    - FPI_FOREIGN_PORTFOLIO_INVESTOR
+
+  minInvestmentAmount: 10000000 # INR (1 crore) for institutions
+
+kyc:
+  providerIntegration: 'ballerine'
+  livenessCheck: true
+  faceMatch: true
+  docLanguages: [EN, HI, LOCAL]
+
+  docRequirements:
+    individual:
+      - PAN_CARD_MANDATORY
+      - AADHAAR_OR_GOVERNMENT_ID
+      - PASSPORT_OR_DRIVING_LICENSE
+      - ADDRESS_PROOF_RECENT
+      - BANK_STATEMENT_OR_UTILITY_BILL
+      - DPDP_CONSENT_FORM
+
+    corporate:
+      - CERTIFICATE_OF_INCORPORATION
+      - PAN_OF_COMPANY
+      - MOA_AND_AOA
+      - BOARD_RESOLUTION
+      - AUDITED_BALANCE_SHEET
+      - GST_REGISTRATION_CERTIFICATE
+      - DPDP_CONSENT_FORM
+
+    nri_or_fpi:
+      - PASSPORT
+      - PAN_OR_APPLICATION_FOR_PAN
+      - OECD_CRS_FORM
+      - SELF_DECLARATION
+      - BENEFICIAL_OWNERSHIP_FORM
+
+  sanctionsList:
+    - OFAC_SDN_LIST
+    - UN_SECURITY_COUNCIL_LIST
+    - EU_CONSOLIDATED_LIST
+    - RBI_BANNED_ENTITIES
+    - SEBI_BANNED_PERSONS
+    - INTERPOL_RED_NOTICES
+    - NIA_WANTED_PERSONS
+
+  pepDefinition: 'Public servants holding any position in central or state government, judiciary, or public sector undertakings'
+  pepCheck: true
+  pepRelativeCheck: true
+  pepRelativeLevels: 1
+
+  adverseMediaScreening: true
+  aml_flagged_check: true
+
+  kycRefreshInterval: 365 # Annual
+  kycExpiryNotification: 60 # Days before expiry
+
+  enhancedDueDigence:
+    high_risk_countries: [PAKISTAN, BANGLADESH, NEPAL_PARTIALLY, AFGHANISTAN]
+    transaction_threshold_for_edd: 2500000 # INR (~30000 USD)
+    structuring_detection: MANDATORY
+    source_of_funds_clarity_required: true
+
+aml:
+  reportingThreshold: 2500000 # INR (Suspicious transaction report to FIU)
+  reportingDeadline: 7 # Days
+  ctr_threshold: 1000000 # Currency transaction report (cash)
+  ctr_reporting_deadline: 30 # Days
+
+  suspiciousActivityIndicators:
+    - STRUCTURING_BELOW_THRESHOLD
+    - CASH_DEPOSITS_WITHOUT_SOURCE
+    - RAPID_REMITTANCES_ABROAD
+    - ROUND_AMOUNT_TRANSACTIONS
+    - MISMATCHED_CUSTOMER_PROFILE
+    - CIRCULAR_TRADING_PATTERNS
+    - SHELL_COMPANY_INDICATORS
+    - SHAM_INVOICE_TRADING
+
+  velocityLimits:
+    individual_daily_volume: 5000000 # INR per person per day
+    individual_monthly_volume: 25000000 # INR per person per month
+    corporate_daily_volume: 50000000
+    corporate_monthly_volume: 250000000
+    nri_daily_limit: 2500000 # Stricter for NRI
+
+  riskScoring:
+    high_risk_threshold: 70
+    medium_risk_threshold: 40
+    sanctions_match_score: 100 # Automatic blocking
+    pep_match_score: 75
+    adverse_media_score: 60
+    structuring_score: 80
+    high_risk_jurisdiction_score: 85
+
+governance:
+  majorChangesRequireVote: true
+  gpVotingThreshold: 50
+  lpVotingThreshold: 50
+  distributionsAllowed: true
+  earlyWithdrawal: true
+
+  majorChangeDefinitions:
+    - CHANGE_IN_FUND_STRATEGY
+    - CHANGE_OF_FUND_MANAGER
+    - SIGNIFICANT_FEE_INCREASE
+    - CHANGE_OF_CUSTODIAN
+    - FUND_CLOSURE_OR_MERGER
+
+reporting:
+  annualReportRequired: true
+  sebiFilingDeadline: 120 # Days after fiscal year end (March 31)
+  quarterlyReportFrequency: REQUIRED
+  kycCheckFrequency: BIENNIAL # Every 2 years under SEBI AIF rules
+  complianceAuditFrequency: ANNUAL
+
+dataResidency:
+  allowedCountries: [IN]
+  customerDataMustStayInIndia: true
+  encryptionRequired: true
+  dpdpCompliance: MANDATORY
+
+dpdp:
+  consentRequired: true
+  purposeOfProcessingClear: true
+  dataminimization: true
+  storageLocationIndia: true
+  rightToAccessRequired: true
+  dataDeletionAfterTermination: true
+  dataRetentionPeriod: 6 # Years for financial records
+  dataBreachNotificationRequired: true
+  dataBreachNotificationDeadline: 72 # Hours to register with DPB
+
+femalpa:
+  foreignExchangeCompliance: true
+  remittanceStackRules: true
+  liberalized_remittance_scheme: true
+  fpi_registration_required: true
+  fdi_route_compliance: true
+
+tax_compliance:
+  tds_deduction_required: true
+  tds_rate: 0.10 # 10% on payment/credit
+  gst_registration_required: true
+  gst_rate: 0.18 # Standard rate, may vary
+  income_tax_filings: true
+  quarterly_filing: true
+
+expansion:
+  multiStateAllowed: true
+  internationalFundingAllowed: RESTRICTED # Requires FEMA approval
+  redomestication: ALLOWED_WITH_SEBI_APPROVAL
+  offshore_fund_structure: ALLOWED_UNDER_CATEGORIES
+
+advancedFeatures:
+  secondaryMarketAllowed: true
+  leverageAllowed: RESTRICTED # Categories I & III
+  cryptocurrencyAllowed: false # Still evolving regulatory position
+  derivativesAllowed: true
+  shortSellingAllowed: true
+
+restrictedEntities:
+  banned_entities: ['Specific entities banned by SEBI/RBI/GOI']
+  shell_companies: PROHIBITED
+  politically_connected_entities: ENHANCED_DUE_DILIGENCE
+
+errorCodeMapping:
+  IN001: 'Sanctions match detected - transaction blocked'
+  IN002: 'PEP detected - enhanced screening required'
+  IN003: 'Suspicious activity reported to FIU-IND'
+  IN004: 'DPDP violation detected - data handling non-compliant'
+  IN005: 'High-risk country transaction detected'
+  IN006: 'Structuring/layering pattern detected'
+  IN007: 'Adverse media match - manual review required'
+  IN008: 'PAN verification failed - KYC incomplete'
+  IN009: 'Aadhaar verification failed'
+  IN010: 'Source of funds unclear - EDD required'
+  IN011: 'Fund remittance restrictions apply'
+  IN012: 'NRI transaction limits exceeded'
+
+sebiAifCompliance:
+  categoryI: 'Venture funds, infrastructure funds, SME funds'
+  categoryII: 'Mid-market/buyout funds, debt funds'
+  categoryIII: 'RE, RE-AIF, hedge funds'
+  regulatoryCapital: 'Minimum investment by sponsor/manager'
+  lockInPeriod: 'Min 4 years for Category I & III'
+
+notes:
+  - 'SEBI AIF rules supersede general FEMA rules for registered AIFs'
+  - 'NRI and FPI regulations evolve frequently - check SEBI website'
+  - 'DPDP Act compliance mandatory from Nov 2024 onwards'
+  - 'Crypto regulations still evolving - check latest RBI circulars'
+  - 'Common Man s Taxation is PAN-based for individuals'
+

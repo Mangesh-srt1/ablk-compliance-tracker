@@ -1,0 +1,216 @@
+jurisdiction:
+  code: US
+  name: 'United States of America'
+  region: NORTH_AMERICA
+  launchDate: '2026-04-01'
+  timeZone: 'America/New_York'
+  currencyCode: 'USD'
+  currencySymbol: '$'
+
+regulatoryFramework:
+  primaryRegulator: 'FinCEN'
+  secondaryRegulator: 'OFAC'
+  applicableLaws:
+    - BSA_AML_ACT
+    - OFAC_EXECUTIVE_ORDERS
+    - KYC_RULE_31_CFR_1010
+    - SAR_REPORTING_31_CFR_1020
+    - CDD_RULE_31_CFR_1010
+
+regulatoryBodies:
+  - id: FinCEN
+    name: 'Financial Crimes Enforcement Network'
+    jurisdiction: FEDERAL
+    website: 'https://www.fincen.gov'
+    reportingEmail: 'reports@fincen.treasury.gov'
+    contactPhone: '+1-800-949-2736'
+    reportingFormats: [BSA_E_FILING, SAR_E_FILING]
+    sarsDeadline: 30 # Days from suspected transaction
+
+  - id: OFAC
+    name: 'Office of Foreign Assets Control'
+    jurisdiction: FEDERAL
+    website: 'https://home.treasury.gov/ofac'
+    reportingEmail: 'ofac.report@treasury.gov'
+    contactPhone: '+1-202-622-2490'
+    reportingFormats: [EMAIL, FORM_ELSE]
+    blockingDeadline: IMMEDIATE
+
+  - id: FINRA
+    name: 'Financial Industry Regulatory Authority'
+    jurisdiction: FEDERAL
+    website: 'https://www.finra.org'
+    reportingEmail: 'regulations@finra.org'
+    reportingFormats: [ONLINE_PORTAL, EMAIL]
+
+  - id: SEC
+    name: 'Securities and Exchange Commission'
+    jurisdiction: FEDERAL
+    website: 'https://www.sec.gov'
+    reportingEmail: 'tip@sec.gov'
+    reportingFormats: [ONLINE_WHISTLEBLOWER, EMAIL]
+
+fundStructure:
+  requiredLegalEntity: 'SEC_REGISTERED_ADVISER_OR_BROKER_DEALER'
+  minFundSize: 1000000 # USD (no Reg D minimum)
+  maxInvestors: UNLIMITED
+  minInvestors: 1
+  allowedFundTypes:
+    - REG_D_506B
+    - REG_D_506C
+    - REG_A_PLUS
+    - REG_S
+
+  lpEligibility:
+    - ACCREDITED_INVESTOR
+    - QUALIFIED_CLIENT
+    - INSTITUTIONAL_INVESTOR
+    - SOVEREIGN_WEALTH_FUND
+    - FAMILY_OFFICE
+
+  accreditedInvestorDefinition: 'Individual income >$200k/year or net worth >$1M (excluding primary residence)'
+  minInvestmentAmount: 0 # No minimum for Reg D 506B; 100000 for 506C
+
+kyc:
+  providerIntegration: 'ballerine'
+  livenessCheck: true
+  faceMatch: true
+  docLanguages: [EN]
+
+  docRequirements:
+    individual:
+      - PASSPORT
+      - DRIVERS_LICENSE
+      - GOVERNMENT_ISSUED_ID
+      - PROOF_OF_ADDRESS
+      - FORM_W9
+      - BENEFICIAL_OWNERSHIP_CERTIFICATION
+
+    corporate:
+      - CERTIFICATE_OF_INCORPORATION
+      - EIN_LETTER_IRS
+      - BOARD_RESOLUTION_FOR_INVESTMENT
+      - ARTICLES_OF_ORGANIZATION
+      - OPERATING_AGREEMENT
+      - FORM_W9
+      - BENEFICIAL_OWNERSHIP_CERTIFICATION_FOR_CORPORATIONS
+
+    trust_estate:
+      - TRUST_DOCUMENT
+      - TRUST_EIN
+      - CERTIFICATE_OF_AUTHORITY
+      - TRUSTEES_IDENTIFICATION
+      - FORM_W9
+
+  sanctionsList:
+    - OFAC_SDN_LIST
+    - OFAC_CONSOLIDATED_SANCTIONS
+    - BIS_DENIED_PARTY_LIST
+    - BIS_ENTITY_LIST
+    - INTERPOL_RED_NOTICES
+    - FBI_MOST_WANTED
+
+  pepDefinition: 'Government official with high net worth or access to government resources'
+  pepCheck: true
+  pepRelativeCheck: true
+  pepRelativeLevels: 2
+
+  adverseMediaScreening: true
+  lep_definition: 'Legal, executive, political leadership at federal/state/local level'
+
+  kycRefreshInterval: 365 # Annual refresh required by BSA
+  kycExpiryNotification: 60 # Warn before expiry
+
+  enhancedDueDigence:
+    high_risk_countries: [IRAN, NORTH_KOREA, SYRIA, CUBA]
+    transaction_threshold_for_edd: 50000 # USD
+
+aml:
+  sarThreshold: 5000 # USD for SAR filing
+  ctrThreshold: 10000 # USD for CTR filing
+  sarFilingDeadline: 30 # Days
+  ctrFilingDeadline: 15 # Days
+
+  suspiciousActivityIndicators:
+    - SUDDEN_ACCOUNT_ACTIVITY_CHANGE
+    - MULTIPLE_RAPID_TRANSFERS
+    - STRUCTURING_TRANSACTIONS
+    - CASH_HEAVY_OPERATIONS
+    - RAPID_DEPOSIT_WITHDRAWAL
+    - UNUSUAL_COUNTERPARTIES
+    - MISMATCHED_PROFILE
+
+  velocityLimits:
+    individual_daily_volume: 100000 # USD per person per day
+    individual_monthly_volume: 500000 # USD per person per month
+    corporate_daily_volume: 1000000
+    corporate_monthly_volume: 5000000
+
+  riskScoring:
+    high_risk_threshold: 70
+    medium_risk_threshold: 40
+    sanctions_match_score: 100 # Automatic rejection
+    pep_match_score: 75
+    adverse_media_score: 60
+
+governance:
+  majorChangesRequireVote: false
+  gpCanInitiateMajorChanges: true
+  distributionsAllowed: true
+  earlyWithdrawal: true
+
+  majorChangeDefinitions:
+    - FUND_CLOSURE
+    - STRATEGY_CHANGE
+    - FEE_INCREASE_ABOVE_2_PERCENT
+    - CHANGE_OF_ADMINISTRATOR
+    - CHANGE_OF_CUSTODIAN
+
+reporting:
+  annualReportRequired: true
+  quarterlyReportFrequency: OPTIONAL
+  kycCheckFrequency: ANNUAL
+  complianceAuditFrequency: ANNUAL
+  regulatoryReportingDeadline: 90 # Days after fiscal year end
+
+dataResidency:
+  allowedCountries: [US]
+  customerDataInUS: true
+  encryptionRequired: true
+  gdprCompliance: NOT_APPLICABLE
+
+compliance:
+  regulatoryContact: 'Must have AML/Compliance officer'
+  licenseRequired: 'SEC Investment Adviser registration if managing assets'
+  insuranceRequired: 'Errors & Omissions insurance recommended'
+  auditingRequired: 'Annual independent audit'
+
+taxCompliance:
+  formRequired: [FORM_W9, FORM_1099_DIV, FORM_1099_INT]
+  quarterlyEstimatedTaxes: true
+  backupWithholdingRate: 0.24
+
+expansion:
+  multiStateAllowed: true
+  internationalFundingAllowed: false
+  redomestication: ALLOWED_WITH_APPROVAL
+
+advancedFeatures:
+  secondaryMarketAllowed: true
+  leverageAllowed: false
+  cryptocurrencyAllowed: false
+  derivativesAllowed: false
+  shortSellingAllowed: false
+
+errorCodeMapping:
+  US001: 'Sanctions match detected - transaction blocked'
+  US002: 'Entity on BIS Denied Party List'
+  US003: 'SAR threshold exceeded - reporting required'
+  US004: 'Enhanced due diligence required for high-risk country'
+  US005: 'PEP detected - enhanced screening required'
+  US006: 'Structured transactions detected - SAR required'
+  US007: 'Adverse media match - manual review required'
+  US008: 'Missing required beneficial ownership certification'
+  US009: 'Investment amount below accredited investor threshold'
+  US010: 'Suspicious activity pattern detected'
+

@@ -1,0 +1,232 @@
+jurisdiction:
+  code: EU
+  name: 'European Union'
+  region: EUROPE
+  launchDate: '2026-03-20'
+  timeZone: 'Europe/Brussels'
+  currencyCode: 'EUR'
+  currencySymbol: '€'
+
+regulatoryFramework:
+  primaryRegulator: 'ESMA'
+  secondaryRegulator: 'FINANCIAL_INTELLIGENCE_UNITS'
+  applicableLaws:
+    - GDPR_2016_679
+    - PSD2_2015_2366
+    - AMLD5_2018_843
+    - MiFID_II_2014_65
+    - UCITS_DIRECTIVE_2009_65
+
+regulatoryBodies:
+  - id: ESMA
+    name: 'European Securities and Markets Authority'
+    jurisdiction: EUROPEAN_UNION_WIDE
+    website: 'https://www.esma.europa.eu'
+    reportingEmail: 'compliance@esma.europa.eu'
+    contactPhone: '+33-1-4504-4500'
+    reportingFormats: [ONLINE_PORTAL, EMAIL]
+    reportingLanguages: [EN, FR, DE]
+
+  - id: EBA
+    name: 'European Banking Authority'
+    jurisdiction: EUROPEAN_UNION_WIDE
+    website: 'https://www.eba.europa.eu'
+    reportingEmail: 'aml@eba.europa.eu'
+    reportingFormats: [ONLINE_PORTAL, EMAIL]
+
+  - id: EIOPA
+    name: 'European Insurance and Occupational Pensions Authority'
+    jurisdiction: EUROPEAN_UNION_WIDE
+    website: 'https://www.eiopa.europa.eu'
+    reportingFormats: [ONLINE_PORTAL]
+
+  - id: FATF
+    name: 'Financial Action Task Force (EU Representative)'
+    jurisdiction: INTERNATIONAL
+    website: 'https://www.fatf-gafi.org'
+    reportingEmail: 'secretariat@fatf-gafi.org'
+
+fundStructure:
+  requiredLegalEntity: 'UCITS_FUND_OR_AIF'
+  minFundSize: 300000 # EUR (UCITS minimum)
+  maxInvestors: UNLIMITED
+  minInvestors: 1
+  allowedFundTypes:
+    - UCITS_IV_DIRECTIVE
+    - AIF_DIRECTIVE
+    - PEPP_PERSONAL_PENSION_PRODUCT
+    - STRUCTURED_PRODUCTS
+
+  lpEligibility:
+    - INSTITUTIONAL_INVESTOR
+    - PROFESSIONAL_INVESTOR
+    - RETAIL_INVESTOR_WITH_APPROVAL
+    - SOPHISTICATED_INVESTOR
+    - ACCREDITED_INVESTOR_EQUIVALENT
+
+  minInvestmentAmount: 0 # No minimum for UCITS; varies by fund
+
+kyc:
+  providerIntegration: 'ballerine'
+  livenessCheck: true
+  faceMatch: true
+  docLanguages: [EN, DE, FR, IT, ES]
+
+  docRequirements:
+    individual:
+      - ID_CARD_OR_PASSPORT
+      - PROOF_OF_ADDRESS_NOT_OLDER_THAN_3_MONTHS
+      - SOURCE_OF_FUNDS_DECLARATION
+      - BENEFICIAL_OWNERSHIP_DECLARATION
+      - CUSTOMER_DUE_DILIGENCE_FORM
+
+    corporate:
+      - CERTIFICATE_OF_INCORPORATION
+      - ARTICLES_OF_ASSOCIATION
+      - REGISTER_OF_DIRECTORS
+      - PROOF_OF_ADDRESS_OF_OFFICE
+      - BENEFICIAL_OWNERSHIP_DECLARATION_FOR_ENTITIES
+      - AUDITED_FINANCIAL_STATEMENTS
+
+    pep_defined_entity:
+      - ADDITIONAL_VERIFICATION_OF_SOURCE_OF_WEALTH
+      - DECLARATION_OF_BENEFICIAL_OWNER
+      - COPY_OF_BENEFICIAL_OWNER_IDENTIFICATION
+
+  sanctionsList:
+    - UN_SECURITY_COUNCIL_LIST
+    - EU_CONSOLIDATED_SANCTIONS_LIST
+    - OFAC_SDN_LIST
+    - INTERPOL_RED_NOTICES
+    - EU_PERSONS_LIST_AMLD5
+
+  pepDefinition: 'Persons who are entrusted with prominent public functions in EU member states or internationally'
+  pepCheck: true
+  pepRelativeCheck: true
+  pepRelativeLevels: 1
+  pepAssociateCheck: true
+
+  adverseMediaScreening: true
+  lep_definition: 'Domestic or international legal, executive, political leadership'
+
+  kycRefreshInterval: 365 # Annual
+  kycExpiryNotification: 90 # Days before expiry
+
+  enhancedDueDigence:
+    high_risk_countries: [IRAN, NORTH_KOREA, SYRIA, IRAQ, AFGHANISTAN]
+    politically_exposed_persons_threshold: STANDARD
+    transaction_threshold_for_edd: 15000 # EUR
+
+aml:
+  reportingThreshold: 10000 # EUR for reporting to FIU
+  reportingDeadline: 5 # Business days
+  reportingLanguage: 'Official EU language of member state'
+
+  suspiciousActivityIndicators:
+    - STRUCTURING_TRANSACTIONS
+    - RAPID_MOVEMENT_OF_FUNDS
+    - CASH_INTENSIVE_BUSINESS
+    - ROUND_AMOUNT_TRANSACTIONS
+    - UNUSUAL_CUSTOMER_PROFILE
+    - WIRE_TRANSFERS_TO_HIGH_RISK_COUNTRIES
+    - BENEFICIAL_OWNER_MISMATCH
+
+  velocityLimits:
+    individual_daily_volume: 50000 # EUR per person per day
+    individual_monthly_volume: 250000 # EUR per person per month
+    corporate_daily_volume: 500000
+    corporate_monthly_volume: 2500000
+
+  riskScoring:
+    high_risk_threshold: 70
+    medium_risk_threshold: 40
+    sanctions_match_score: 100 # Automatic blocking
+    pep_match_score: 75
+    adverse_media_score: 60
+    high_risk_country_score: 80
+
+governance:
+  majorChangesRequireVote: true
+  gpVotingThreshold: 50 # Percent
+  lpVotingThreshold: 50
+  distributionsAllowed: true
+  earlyWithdrawal: true
+
+  majorChangeDefinitions:
+    - FUND_MERGER_OR_CLOSURE
+    - CHANGE_OF_INVESTMENT_POLICY
+    - CHANGE_OF_CUSTODIAN_OR_ADMINISTRATOR
+    - INCREASE_OF_FEES_ABOVE_2_PERCENT
+    - TRANSFER_TO_DIFFERENT_JURISDICTION
+
+reporting:
+  annualReportRequired: true
+  quarterlyReportFrequency: REQUIRED_FOR_AIF
+  kycCheckFrequency: ANNUAL
+  complianceAuditFrequency: ANNUAL
+  regulatoryReportingDeadline: 120 # Days after fiscal year end
+
+dataResidency:
+  allowedCountries: [EU_MEMBER_STATES, EEA_COUNTRIES]
+  customerDataInEU: true
+  encryptionRequired: true
+  gdprCompliance: REQUIRED
+
+compliance:
+  regulatoryContact: 'Must have AIFM/UCITS compliance officer'
+  licenseRequired: 'AIFM authorization or UCITS registration'
+  insuranceRequired: 'Professional indemnity insurance'
+  auditingRequired: 'Annual independent audit mandatory'
+
+gdpr:
+  dataProcessingRequired: true
+  dpaNotificationRequired: true
+  dataBreachNotificationRequired: true
+  dataBreachNotificationDeadline: 72 # Hours
+  rightToAccessRequired: true
+  rightToBeForgettenRequired: true
+  dataRetentionPeriod: 6 # Years for financial records
+
+psd2:
+  strongCustomerAuthenticationRequired: true
+  openBankingSupported: true
+  apiAvailabilityRequired: true
+  transactionAuthenticationRequired: true
+
+taxCompliance:
+  estatutoryReporting: true
+  reporting_entities: [EU_MEMBER_STATES]
+  reportingDeadline: 31_MARCH # Following tax year
+  automaticExchangeOfInformation: true
+
+expansion:
+  multiCountryAllowed: true
+  internationalFundingAllowed: true
+  redomestication: ALLOWED
+  passportingRight: AVAILABLE # Via AIFM/UCITS directives
+
+advancedFeatures:
+  secondaryMarketAllowed: true
+  leverageAllowed: true
+  cryptocurrencyAllowed: RESTRICTED # With ECB approval
+  derivativesAllowed: true
+  shortSellingAllowed: true
+
+errorCodeMapping:
+  EU001: 'Sanctions match detected - transaction blocked'
+  EU002: 'PEP screening flagged - enhanced due diligence required'
+  EU003: 'Suspicious activity reported to Financial Intelligence Unit'
+  EU004: 'GDPR violation detected - data handling non-compliant'
+  EU005: 'Enhanced due diligence required for high-risk jurisdiction'
+  EU006: 'Structured transactions pattern detected'
+  EU007: 'Adverse media match - manual review required'
+  EU008: 'Missing required beneficial ownership certification'
+  EU009: 'Customer profile inconsistent with transaction patterns'
+  EU010: 'Strong customer authentication required for this transaction'
+
+memberStateVariations:
+  # Note: Some rules vary by specific EU member state
+  # This config represents harmonized EU-wide minimum standards
+  # Individual state requirements checked in jurisdictionRulesTool
+  highestStandardApplies: true
+
