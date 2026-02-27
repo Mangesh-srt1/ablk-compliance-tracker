@@ -173,12 +173,12 @@ describe('Agent → API Integration Tests', () => {
       await apiClient.post('/api/v1/entity-check', complexPayload);
 
       const callArgs = mockedAxios.post.mock.calls[0];
-      const serializedData = callArgs[1];
+      const serializedData = callArgs[1] as any;
 
       // Verify serialization preserved structure
-      expect(serializedData.entity.type).toBe('individual');
-      expect(serializedData.entity.metadata.scores.aml).toBe(80);
-      expect(serializedData.timestamp).toBeTruthy();
+      expect(serializedData?.entity?.type).toBe('individual');
+      expect(serializedData?.entity?.metadata?.scores?.aml).toBe(80);
+      expect(serializedData?.timestamp).toBeTruthy();
     });
 
     it('should properly deserialize response with nested objects', async () => {
@@ -234,12 +234,12 @@ describe('Agent → API Integration Tests', () => {
       await apiClient.post('/api/v1/batch-check', payloadWithArrays);
 
       const callArgs = mockedAxios.post.mock.calls[0];
-      const data = callArgs[1];
+      const data = callArgs[1] as any;
 
-      expect(Array.isArray(data.wallets)).toBe(true);
-      expect(data.wallets.length).toBe(3);
-      expect(Array.isArray(data.transactions)).toBe(true);
-      expect(data.transactions[0].status).toBe('pending');
+      expect(Array.isArray(data?.wallets)).toBe(true);
+      expect(data?.wallets?.length).toBe(3);
+      expect(Array.isArray(data?.transactions)).toBe(true);
+      expect(data?.transactions?.[0]?.status).toBe('pending');
     });
 
     it('should handle null and undefined values correctly', async () => {
@@ -257,10 +257,10 @@ describe('Agent → API Integration Tests', () => {
       await apiClient.post('/api/v1/test', payloadWithNulls);
 
       const callArgs = mockedAxios.post.mock.calls[0];
-      const data = callArgs[1];
+      const data = callArgs[1] as any;
 
-      expect(data.requiredField).toBe('value');
-      expect(data.optionalField).toBeNull();
+      expect(data?.requiredField).toBe('value');
+      expect(data?.optionalField).toBeNull();
     });
   });
 
@@ -342,7 +342,7 @@ describe('Agent → API Integration Tests', () => {
       let attemptCount = 0;
 
       const mockRetryableAxios = {
-        post: jest.fn(async () => {
+        post: jest.fn(async (url?: string, data?: any) => {
           attemptCount++;
           if (attemptCount < 3) {
             throw new Error('Service temporarily unavailable');
@@ -355,8 +355,8 @@ describe('Agent → API Integration Tests', () => {
       let lastError: Error | null = null;
       for (let i = 0; i < 3; i++) {
         try {
-          const result = await mockRetryableAxios.post('/api/v1/test', {});
-          expect(result.status).toBe(200);
+          const result = await mockRetryableAxios.post?.('/api/v1/test', {});
+          expect(result?.status).toBe(200);
           break;
         } catch (error) {
           lastError = error as Error;
