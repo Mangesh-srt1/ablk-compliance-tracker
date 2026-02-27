@@ -1,0 +1,696 @@
+{
+  "info": {
+    "_postman_id": "ableka-lumina-api",
+    "name": "Ableka Lumina - Compliance API",
+    "description": "Complete API collection for Ableka Lumina Compliance System\n\nIncludes:\n- Authentication flows\n- KYC/AML operations\n- Compliance checks\n- RWA transfers and velocity\n- SAR filings\n- Real-time monitoring\n- Reports",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "123456"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"access_token\", jsonData.access_token);",
+                  "    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+                  "    console.log(\"Token set successfully\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"compliance@ableka.ae\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh-token"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "KYC Operations",
+      "item": [
+        {
+          "name": "Submit KYC Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ahmed Al Maktoum\",\n  \"email\": \"ahmed@example.ae\",\n  \"jurisdiction\": \"AE\",\n  \"documentType\": \"PASSPORT\",\n  \"documentNumber\": \"A12345678\",\n  \"entityType\": \"individual\",\n  \"dateOfBirth\": \"1990-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/kyc-check",
+              "host": ["{{base_url}}"],
+              "path": ["api", "kyc-check"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get KYC Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/kyc/{{kyc_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "kyc", "{{kyc_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve KYC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"KYC verification completed successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/kyc/{{kyc_id}}/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "kyc", "{{kyc_id}}", "approve"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "AML Screening",
+      "item": [
+        {
+          "name": "Submit AML Score",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet\": \"0x1234567890abcdef1234567890abcdef12345678\",\n  \"amount\": 100000,\n  \"currency\": \"USD\",\n  \"transactionType\": \"transfer\",\n  \"jurisdiction\": \"AE\",\n  \"counterparty\": \"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/aml-score",
+              "host": ["{{base_url}}"],
+              "path": ["api", "aml-score"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get AML Results",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/aml/{{aml_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "aml", "{{aml_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Compliance Checks",
+      "item": [
+        {
+          "name": "List Compliance Checks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/compliance/checks?page=1&limit=20&status=PENDING&jurisdiction=AE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "checks"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "AE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Compliance Check Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/compliance/checks/{{check_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "checks", "{{check_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Compliance Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approvedBy\": \"officer-123\",\n  \"approvalNotes\": \"All compliance requirements met\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/compliance/approve/{{check_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "approve", "{{check_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Compliance Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Failed AML screening - sanction match detected\",\n  \"approvedBy\": \"officer-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/compliance/reject/{{check_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "reject", "{{check_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "RWA Compliance",
+      "item": [
+        {
+          "name": "Transfer Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAddress\": \"0x1234567890abcdef1234567890abcdef12345678\",\n  \"toAddress\": \"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd\",\n  \"amount\": 500000,\n  \"currency\": \"USD\",\n  \"jurisdiction\": \"AE\",\n  \"entityType\": \"fund\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/compliance/transfer-check",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "transfer-check"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Velocity Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-123\",\n  \"amount\": 50000,\n  \"timeframeMinutes\": 60,\n  \"transactionType\": \"transfer\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/compliance/velocity-check",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "velocity-check"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SAR Filings",
+      "item": [
+        {
+          "name": "Submit SAR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-123\",\n  \"transactionIds\": [\"tx-123\", \"tx-124\"],\n  \"jurisdiction\": \"AE\",\n  \"reason\": \"Multiple transactions from wallet flagged as OFAC sanctioned entity\",\n  \"transactionAmount\": 75000,\n  \"suspicionType\": \"sanctions\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/filing/submit-sar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "filing", "submit-sar"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List SAR Filings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/filing/list?jurisdiction=AE&status=SUBMITTED",
+              "host": ["{{base_url}}"],
+              "path": ["api", "filing", "list"],
+              "query": [
+                {
+                  "key": "jurisdiction",
+                  "value": "AE"
+                },
+                {
+                  "key": "status",
+                  "value": "SUBMITTED"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get SAR Filing Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/filing/{{sar_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "filing", "{{sar_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "Get Monitoring Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/monitoring/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "monitoring", "stats"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get System Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/monitoring/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "monitoring", "health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet\": \"0x1234567890abcdef1234567890abcdef12345678\",\n  \"alertType\": \"HIGH_RISK_TRANSACTION\",\n  \"severity\": \"HIGH\",\n  \"message\": \"High-risk transaction detected\",\n  \"riskScore\": 87\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/monitoring/alert",
+              "host": ["{{base_url}}"],
+              "path": ["api", "monitoring", "alert"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Wallet Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/monitoring/wallets/{{wallet_address}}/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "monitoring", "wallets", "{{wallet_address}}", "stats"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Compliance Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/compliance?startDate=2026-01-01&endDate=2026-02-27&jurisdiction=AE&format=json",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reports", "compliance"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-02-27"
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "AE"
+                },
+                {
+                  "key": "format",
+                  "value": "json"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Audit Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/audit?startDate=2026-01-01&endDate=2026-02-27",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reports", "audit"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-02-27"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "API Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-refresh token if expired",
+          "if (pm.environment.get('token_expiry')) {",
+          "    var expiryTime = new Date(pm.environment.get('token_expiry')).getTime();",
+          "    var currentTime = new Date().getTime();",
+          "    if (currentTime > expiryTime) {",
+          "        console.log('Token expired, refreshing...');",
+          "        // Token refresh logic would go here",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aml_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "check_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sar_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "wallet_address",
+      "value": "0x1234567890abcdef1234567890abcdef12345678",
+      "type": "string"
+    }
+  ]
+}

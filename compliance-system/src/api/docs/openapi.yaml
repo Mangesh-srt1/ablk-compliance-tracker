@@ -1,0 +1,1074 @@
+openapi: 3.0.3
+info:
+  title: Ableka Lumina - AI Compliance Engine API
+  description: |
+    Comprehensive compliance API for KYC/AML screening, jurisdiction-specific rules enforcement,
+    and real-time blockchain monitoring with WebSocket support.
+    
+    **Authentication**: All endpoints require Bearer JWT token in Authorization header
+    **Rate Limiting**: 100 requests per minute per API key
+    **Webhooks**: Supported for compliance events via registered webhook endpoints
+  version: 1.0.0
+  contact:
+    name: Ableka Lumina Support
+    email: support@ableka-lumina.com
+  license:
+    name: Proprietary
+    url: https://ableka-lumina.com/license
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.ableka-lumina.com/api
+    description: Production server
+  - url: https://staging.api.ableka-lumina.com/api
+    description: Staging server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+
+  schemas:
+    # Common Schemas
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request parameters"
+        details:
+          type: object
+          description: Optional details about the error
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+
+    # KYC Schemas
+    KYCDocument:
+      type: object
+      required:
+        - type
+        - data
+        - metadata
+      properties:
+        type:
+          type: string
+          enum: [aadhaar, passport, drivers_license, national_id, utility_bill, bank_statement]
+          description: Document type
+        data:
+          type: string
+          format: base64
+          description: Base64-encoded document data
+        metadata:
+          type: object
+          required:
+            - filename
+            - contentType
+          properties:
+            filename:
+              type: string
+              example: "passport.jpg"
+            contentType:
+              type: string
+              example: "image/jpeg"
+            size:
+              type: integer
+              example: 2048
+
+    KYCRequest:
+      type: object
+      required:
+        - entityId
+        - jurisdiction
+        - documents
+        - entityData
+      properties:
+        entityId:
+          type: string
+          maxLength: 255
+          example: "entity-12345"
+        jurisdiction:
+          type: string
+          enum: [AE, US, EU, IN]
+          example: "AE"
+        documents:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/KYCDocument'
+        entityData:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              maxLength: 255
+              example: "Ahmed Al Maktoum"
+            dateOfBirth:
+              type: string
+              format: date
+              example: "1980-01-15"
+            nationality:
+              type: string
+              example: "AE"
+            address:
+              type: string
+              example: "Dubai, UAE"
+
+    KYCResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        checkId:
+          type: string
+          example: "kyc-chk-abc123"
+        entityId:
+          type: string
+          example: "entity-12345"
+        status:
+          type: string
+          enum: [APPROVED, REJECTED, ESCALATED, PENDING]
+          example: "APPROVED"
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 15
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.98
+        jurisdictionRules:
+          type: array
+          items:
+            type: object
+            properties:
+              rule:
+                type: string
+              passed:
+                type: boolean
+        reasoning:
+          type: string
+          example: "Entity passed basic verification. Document verified. No sanctions matches."
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-27T10:30:00Z"
+
+    # AML Schemas
+    Transaction:
+      type: object
+      required:
+        - id
+        - amount
+        - currency
+        - counterparty
+        - timestamp
+        - type
+      properties:
+        id:
+          type: string
+          example: "tx-xyz789"
+        amount:
+          type: number
+          example: 50000
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: "USD"
+        counterparty:
+          type: string
+          example: "John Doe"
+        counterpartyId:
+          type: string
+          example: "entity-456"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-27T09:00:00Z"
+        type:
+          type: string
+          enum: [deposit, withdrawal, transfer, payment, exchange]
+          example: "transfer"
+        description:
+          type: string
+          example: "Payment for services"
+
+    AMLRequest:
+      type: object
+      required:
+        - entityId
+        - jurisdiction
+        - transactions
+        - entityData
+      properties:
+        entityId:
+          type: string
+          maxLength: 255
+          example: "entity-12345"
+        jurisdiction:
+          type: string
+          enum: [AE, US, EU, IN]
+          example: "AE"
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        entityData:
+          type: object
+          required:
+            - name
+            - country
+          properties:
+            name:
+              type: string
+              maxLength: 255
+              example: "Ahmed Al Maktoum"
+            country:
+              type: string
+              example: "AE"
+            businessType:
+              type: string
+              example: "Trading"
+
+    AMLResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        checkId:
+          type: string
+          example: "aml-chk-xyz789"
+        entityId:
+          type: string
+          example: "entity-12345"
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 45
+        flags:
+          type: array
+          items:
+            type: string
+          example: ["UNUSUAL_VELOCITY", "SANCTIONED_JURISDICTION"]
+        sanctionsMatch:
+          type: boolean
+          example: false
+        pepMatch:
+          type: boolean
+          example: false
+        reasoning:
+          type: string
+          example: "Medium risk detected due to unusual transaction velocity"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-27T10:30:00Z"
+
+    # Compliance Schemas
+    ComplianceCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        entityId:
+          type: string
+          example: "entity-12345"
+        jurisdiction:
+          type: string
+          enum: [AE, US, EU, IN]
+          example: "AE"
+        status:
+          type: string
+          enum: [APPROVED, REJECTED, ESCALATED, PENDING]
+          example: "APPROVED"
+        kycStatus:
+          type: string
+          enum: [APPROVED, REJECTED, ESCALATED, PENDING]
+        amlStatus:
+          type: string
+          enum: [APPROVED, REJECTED, ESCALATED, PENDING]
+        overallRiskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 30
+        approvedBy:
+          type: string
+          example: "officer-123"
+        approvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-27T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Monitoring Schemas
+    ComplianceAlert:
+      type: object
+      required:
+        - wallet
+        - alertType
+        - severity
+      properties:
+        alertId:
+          type: string
+          example: "alert-1709029200000-abc123def"
+        wallet:
+          type: string
+          pattern: "^0x[a-fA-F0-9]{40}$"
+          example: "0xabcd1234567890abcd1234567890abcd12345678"
+        entityId:
+          type: string
+          example: "entity-12345"
+        jurisdiction:
+          type: string
+          enum: [AE, US, EU, IN, GLOBAL]
+          example: "AE"
+        alertType:
+          type: string
+          enum: [KYC, AML, FRAUD, SANCTIONS, VELOCITY, PATTERN]
+          example: "SANCTIONS"
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          example: "HIGH"
+        message:
+          type: string
+          example: "Wallet matched against OFAC sanctions list"
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 87
+        details:
+          type: object
+          description: Alert-specific details
+          example:
+            matchedList: "OFAC_SDN"
+            confidence: 0.95
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-27T10:30:00Z"
+        requiresAction:
+          type: boolean
+          example: true
+
+    WebSocketStats:
+      type: object
+      properties:
+        totalConnections:
+          type: integer
+          example: 42
+        byWallet:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            "0xABC123": 2
+            "0xDEF456": 3
+        queueSize:
+          type: integer
+          example: 150
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============================================
+  # Authentication Endpoints
+  # ============================================
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login and receive JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  expiresIn:
+                    type: integer
+                    example: 3600
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh-token:
+    post:
+      tags: [Authentication]
+      summary: Refresh JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                  expiresIn:
+                    type: integer
+
+  # ============================================
+  # KYC Endpoints
+  # ============================================
+  /kyc-check:
+    post:
+      tags: [KYC]
+      summary: Perform KYC verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KYCRequest'
+      responses:
+        '200':
+          description: KYC check completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Bearer token required
+        '403':
+          description: Forbidden - Insufficient permissions
+
+  /kyc/{id}:
+    get:
+      tags: [KYC]
+      summary: Get KYC check status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "kyc-chk-abc123"
+      responses:
+        '200':
+          description: KYC check details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCResponse'
+        '404':
+          description: KYC check not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ============================================
+  # AML Endpoints
+  # ============================================
+  /aml-score:
+    post:
+      tags: [AML]
+      summary: Perform AML risk screening
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AMLRequest'
+      responses:
+        '200':
+          description: AML screening completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AMLResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /aml/{id}:
+    get:
+      tags: [AML]
+      summary: Get AML check results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AML check results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AMLResponse'
+        '404':
+          description: AML check not found
+
+  # ============================================
+  # Compliance Endpoints
+  # ============================================
+  /compliance/checks:
+    get:
+      tags: [Compliance]
+      summary: Get compliance check history
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [APPROVED, REJECTED, ESCALATED, PENDING]
+        - name: jurisdiction
+          in: query
+          schema:
+            type: string
+            enum: [AE, US, EU, IN]
+        - name: riskLevel
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      responses:
+        '200':
+          description: List of compliance checks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ComplianceCheck'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+
+  /compliance/checks/{id}:
+    get:
+      tags: [Compliance]
+      summary: Get compliance check details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Compliance check details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ComplianceCheck'
+        '404':
+          description: Check not found
+
+  /compliance/approve/{id}:
+    post:
+      tags: [Compliance]
+      summary: Approve a compliance check (officer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: "All checks passed verification"
+      responses:
+        '200':
+          description: Check approved successfully
+        '403':
+          description: Forbidden - Officer role required
+        '404':
+          description: Check not found
+
+  /compliance/reject/{id}:
+    post:
+      tags: [Compliance]
+      summary: Reject a compliance check (officer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  example: "Sanctions match detected"
+      responses:
+        '200':
+          description: Check rejected successfully
+        '403':
+          description: Forbidden - Officer role required
+        '404':
+          description: Check not found
+
+  # ============================================
+  # Monitoring Endpoints
+  # ============================================
+  /monitoring/stats:
+    get:
+      tags: [Monitoring]
+      summary: Get WebSocket connection statistics
+      responses:
+        '200':
+          description: WebSocket statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: '#/components/schemas/WebSocketStats'
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /monitoring/health:
+    get:
+      tags: [Monitoring]
+      summary: Check WebSocket service health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "WebSocket"
+                  totalConnections:
+                    type: integer
+                  timestamp:
+                    type: string
+                    format: date-time
+        '503':
+          description: Service unavailable
+
+  /monitoring/alert:
+    post:
+      tags: [Monitoring]
+      summary: Inject compliance alert (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplianceAlert'
+      responses:
+        '200':
+          description: Alert injected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                  alert:
+                    $ref: '#/components/schemas/ComplianceAlert'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Missing required fields
+        '403':
+          description: Forbidden - Admin role required
+
+  /monitoring/wallets/{wallet}/stats:
+    get:
+      tags: [Monitoring]
+      summary: Get wallet-specific monitoring statistics
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^0x[a-fA-F0-9]{40}$"
+      responses:
+        '200':
+          description: Wallet statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  wallet:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      connections:
+                        type: integer
+                      lastAlert:
+                        type: string
+                        format: date-time
+                      alertCount:
+                        type: integer
+
+  # ============================================
+  # Reports Endpoints
+  # ============================================
+  /reports/compliance:
+    get:
+      tags: [Reports]
+      summary: Generate compliance report
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: jurisdiction
+          in: query
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, pdf, csv]
+            default: json
+      responses:
+        '200':
+          description: Compliance report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+
+  /reports/audit:
+    get:
+      tags: [Reports]
+      summary: Generate audit trail report
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit trail report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+
+  # ============================================
+  # Health Endpoints
+  # ============================================
+  /health:
+    get:
+      tags: [Health]
+      summary: API health check
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "operational"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Uptime in seconds
+                  database:
+                    type: string
+                    enum: [connected, disconnected]
+                  redis:
+                    type: string
+                    enum: [connected, disconnected]
+
+  # ============================================
+  # WebSocket Endpoint
+  # ============================================
+  /stream/monitoring/{wallet}:
+    get:
+      tags: [WebSocket]
+      summary: WebSocket connection for real-time compliance monitoring
+      description: |
+        Upgrade to WebSocket connection to receive real-time compliance alerts.
+        
+        **URL Pattern**: `ws://localhost:3000/api/stream/monitoring/{wallet}`
+        
+        **Authentication**: Bearer token must be provided in Authorization header or as query parameter: `?token={jwt}`
+        
+        **Messages Received**:
+        - Compliance alerts with type, severity, and details
+        
+        **Client Commands**:
+        - `{"type": "HEARTBEAT"}` - Keep-alive ping
+        - `{"type": "FILTER", "jurisdiction": "AE"}` - Filter alerts by jurisdiction  
+        - `{"type": "REQUEST_CACHE"}` - Request queued alerts
+        
+        **Example Connection**:
+        ```javascript
+        const ws = new WebSocket(
+          'ws://localhost:3000/api/stream/monitoring/0xABC123?token=your_jwt_token'
+        );
+        
+        ws.onmessage = (event) => {
+          const alert = JSON.parse(event.data);
+          console.log('Alert received:', alert);
+        };
+        
+        ws.send(JSON.stringify({ type: 'HEARTBEAT' }));
+        ```
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^0x[a-fA-F0-9]{40}$"
+            example: "0xabcd1234567890abcd1234567890abcd12345678"
+        - name: token
+          in: query
+          schema:
+            type: string
+            description: JWT token (alternative to Authorization header)
+      responses:
+        '101':
+          description: WebSocket upgrade successful
+        '401':
+          description: Unauthorized - Valid JWT token required
+        '404':
+          description: Wallet not found or monitoring not enabled
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: KYC
+    description: Know Your Customer verification endpoints
+  - name: AML
+    description: Anti-Money Laundering screening endpoints
+  - name: Compliance
+    description: Compliance check management
+  - name: Monitoring
+    description: Real-time monitoring and alert management
+  - name: Reports
+    description: Compliance reports and analytics
+  - name: Health
+    description: System health checks
+  - name: WebSocket
+    description: Real-time WebSocket connections
+
+x-code-samples:
+  - lang: 'curl'
+    source: |
+      # Get JWT Token
+      curl -X POST http://localhost:3000/api/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"email": "user@example.com", "password": "pass123"}'
+      
+      # Perform KYC Check
+      curl -X POST http://localhost:3000/api/kyc-check \
+        -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "entityId": "entity-123",
+          "jurisdiction": "AE",
+          "documents": [...],
+          "entityData": {...}
+        }'
+      
+      # Connect WebSocket
+      wscat -c "ws://localhost:3000/api/stream/monitoring/0xABC123?token=YOUR_JWT_TOKEN"
