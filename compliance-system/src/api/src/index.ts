@@ -4,6 +4,7 @@
  */
 
 import express, { Express, Request, Response, NextFunction } from 'express';
+import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -24,6 +25,11 @@ import { localizationMiddleware } from './middleware/localizationMiddleware';
 // Import localization service
 import { initializeLocalizationService } from './services/localizationService';
 
+// Import security services
+import { initializeEncryptionService } from './services/encryptionService';
+import { initializeSigningService } from './services/signingService';
+import { initializeWebSocketService } from './services/websocketService';
+
 // Import routes
 import authRoutes from './routes/authRoutes';
 import complianceRoutes from './routes/complianceRoutes';
@@ -32,6 +38,7 @@ import reportRoutes from './routes/reportRoutes';
 import healthRoutes from './routes/healthRoutes';
 import kycRoutes from './routes/kycRoutes';
 import amlRoutes from './routes/amlRoutes';
+import monitoringRoutes from './routes/monitoringRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -71,6 +78,26 @@ async function initializeApp(): Promise<void> {
         'Redis configuration failed, continuing without Redis:',
         redisError instanceof Error ? redisError.message : String(redisError)
       );
+    }
+
+    // Initialize security services
+    logger.info('Initializing encryption service...');
+    try {
+      const encryptionKey = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
+      initializeEncryptionService(encryptionKey);
+      logger.info('Encryption service initialized');
+    } catch (encError) {
+      logger.error('Encryption service initialization failed:', encError);
+      throw encError;
+    }
+
+    logger.info('Initializing signing service...');
+    try {
+      initializeSigningService();
+      logger.info('Signing service initialized');
+    } catch (sigError) {
+      logger.error('Signing service initialization failed:', sigError);
+      throw sigError;
     }
 
     // Security middleware
@@ -148,6 +175,7 @@ async function initializeApp(): Promise<void> {
     app.use('/api/health', healthRoutes);
     app.use('/api', kycRoutes);
     app.use('/api', amlRoutes);
+    app.use('/api/monitoring', monitoringRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
@@ -155,28 +183,49 @@ async function initializeApp(): Promise<void> {
     // Error handling middleware (must be last)
     app.use(errorHandler);
 
+    // Create HTTP server for WebSocket support
+    const httpServer = http.createServer(app);
+
+    // Initialize WebSocket service with HTTP server
+    logger.info('Initializing WebSocket service...');
+    try {
+      const wsService = initializeWebSocketService();
+      wsService.initialize(httpServer);
+      logger.info('WebSocket service initialized and attached to HTTP server');
+    } catch (wsError) {
+      logger.error('WebSocket service initialization failed:', wsError);
+      throw wsError;
+    }
+
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       logger.info(`AI Compliance API Gateway listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info(`WebSocket monitoring: ws://localhost:${PORT}/stream/monitoring/{wallet}`);
     });
+
+    // Graceful shutdown
+    const shutdown = () => {
+      logger.info('Shutting down gracefully...');
+      httpServer.close(() => {
+        logger.info('HTTP server closed');
+        process.exit(0);
+      });
+      // Force shutdown after 30 seconds
+      setTimeout(() => {
+        logger.error('Forced shutdown after timeout');
+        process.exit(1);
+      }, 30000);
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     process.exit(1);
   }
 }
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  process.exit(0);
-});
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
