@@ -3,6 +3,7 @@
  * Business logic for compliance operations
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import db from '../config/database';
 import SqlLoader from '../utils/sqlLoader';
@@ -43,7 +44,353 @@ export interface ComplianceRule {
   updatedAt: Date;
 }
 
+/**
+ * Compliance Decision represents aggregated compliance verdict
+ */
+export interface ComplianceDecision {
+  decisionId: string;
+  entityId: string;
+  kycStatus: 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING';
+  amlStatus: 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING';
+  overallStatus: 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING';
+  riskScore: number;
+  kycRiskScore?: number;
+  amlRiskScore?: number;
+  combinedFlags: string[];
+  recommendations: string[];
+  jurisdiction: string;
+  approvedBy?: string;
+  approvalDate?: Date;
+  expiryDate?: Date;
+  auditTrail: AuditEntry[];
+}
+
+/**
+ * Audit entry for compliance decisions
+ */
+export interface AuditEntry {
+  timestamp: Date;
+  action: string;
+  userId: string;
+  details: any;
+  status: 'success' | 'failure';
+}
+
+/**
+ * Compliance Rule with enhanced evaluation logic
+ */
+export interface EnhancedComplianceRule extends ComplianceRule {
+  jurisdictions?: string[];
+  riskThresholds?: {
+    low: number;
+    medium: number;
+    high: number;
+  };
+  autoEscalate?: boolean;
+  notifyChannels?: string[];
+}
+
 export class ComplianceService {
+  private auditTrail: Map<string, AuditEntry[]> = new Map();
+
+  /**
+   * Aggregate compliance decision from KYC and AML results
+   */
+  async aggregateComplianceDecision(
+    entityId: string,
+    kycResult: any,
+    amlResult: any,
+    jurisdiction: string,
+    userId?: string
+  ): Promise<ComplianceDecision> {
+    const decisionId = uuidv4();
+    const timestamp = new Date();
+
+    try {
+      logger.info('Aggregating compliance decision', {
+        decisionId,
+        entityId,
+        kycScore: kycResult?.score,
+        amlScore: amlResult?.score,
+        jurisdiction,
+        userId,
+      });
+
+      // Extract risk scores
+      const kycRiskScore = kycResult?.score || 0;
+      const amlRiskScore = amlResult?.score || 0;
+      const overallScore = (kycRiskScore + amlRiskScore) / 2;
+
+      // Determine individual statuses
+      const kycStatus = this.determineStatus(kycRiskScore);
+      const amlStatus = this.determineStatus(amlRiskScore);
+
+      // Combine flags from both checks
+      const combinedFlags: string[] = [
+        ...(kycResult?.flags?.map((f: any) => f.type) || []),
+        ...(amlResult?.flags?.map((f: any) => f.type) || []),
+      ];
+
+      // Determine overall status (most restrictive wins)
+      const overallStatus = this.determineOverallStatus(kycStatus, amlStatus);
+
+      // Generate combined recommendations
+      const recommendations = [
+        ...(kycResult?.recommendations || []),
+        ...(amlResult?.recommendations || []),
+      ];
+
+      const decision: ComplianceDecision = {
+        decisionId,
+        entityId,
+        kycStatus,
+        amlStatus,
+        overallStatus,
+        riskScore: overallScore,
+        kycRiskScore,
+        amlRiskScore,
+        combinedFlags: [...new Set(combinedFlags)],
+        recommendations: [...new Set(recommendations)],
+        jurisdiction,
+        auditTrail: [],
+      };
+
+      // Add audit trail entry
+      const auditEntry: AuditEntry = {
+        timestamp,
+        action: 'DECISION_AGGREGATED',
+        userId: userId || 'SYSTEM',
+        details: {
+          kycStatus,
+          amlStatus,
+          overallScore,
+          flagCount: combinedFlags.length,
+        },
+        status: 'success',
+      };
+      decision.auditTrail.push(auditEntry);
+
+      // Store decision in database
+      await this.storeComplianceDecision(decision);
+
+      return decision;
+    } catch (error) {
+      logger.error('Error aggregating compliance decision', {
+        decisionId,
+        entityId,
+        error: (error as any).message,
+      });
+
+      // Log failure audit trail
+      const failureEntry: AuditEntry = {
+        timestamp,
+        action: 'DECISION_AGGREGATION_FAILED',
+        userId: userId || 'SYSTEM',
+        details: { error: (error as any).message },
+        status: 'failure',
+      };
+      
+      if (!this.auditTrail.has(entityId)) {
+        this.auditTrail.set(entityId, []);
+      }
+      this.auditTrail.get(entityId)!.push(failureEntry);
+
+      throw error;
+    }
+  }
+
+  /**
+   * Determine compliance status based on risk score
+   */
+  private determineStatus(riskScore: number): 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING' {
+    if (riskScore >= 70) return 'REJECTED';
+    if (riskScore >= 40) return 'ESCALATED';
+    if (riskScore >= 20) return 'PENDING';
+    return 'APPROVED';
+  }
+
+  /**
+   * Determine overall status (most restrictive)
+   */
+  private determineOverallStatus(
+    kycStatus: 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING',
+    amlStatus: 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING'
+  ): 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING' {
+    const statusPriority: { [key: string]: number } = {
+      REJECTED: 4,
+      ESCALATED: 3,
+      PENDING: 2,
+      APPROVED: 1,
+    };
+
+    const maxPriority = Math.max(statusPriority[kycStatus] || 0, statusPriority[amlStatus] || 0);
+    for (const [status, priority] of Object.entries(statusPriority)) {
+      if (priority === maxPriority) return status as 'APPROVED' | 'REJECTED' | 'ESCALATED' | 'PENDING';
+    }
+    return 'APPROVED';
+  }
+
+  /**
+   * Store compliance decision in database
+   */
+  private async storeComplianceDecision(decision: ComplianceDecision): Promise<void> {
+    const query = sqlLoader.getQuery('compliance_checks/insert_compliance_decision');
+
+    try {
+      await db.query(query, [
+        decision.decisionId,
+        decision.entityId,
+        decision.overallStatus,
+        decision.riskScore,
+        decision.jurisdiction,
+        JSON.stringify(decision.combinedFlags),
+        JSON.stringify(decision.recommendations),
+        JSON.stringify(decision.auditTrail),
+      ]);
+
+      logger.info('Compliance decision stored', {
+        decisionId: decision.decisionId,
+        entityId: decision.entityId,
+        status: decision.overallStatus,
+      });
+    } catch (error) {
+      logger.error('Error storing compliance decision', {
+        decisionId: decision.decisionId,
+        error: (error as any).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Apply compliance rules to a decision
+   */
+  async applyComplianceRules(decision: ComplianceDecision): Promise<string[]> {
+    const applicableRules: string[] = [];
+
+    try {
+      logger.info('Applying compliance rules', {
+        decisionId: decision.decisionId,
+        jurisdiction: decision.jurisdiction,
+      });
+
+      // Get rules for jurisdiction
+      const rulesQuery = sqlLoader.getQuery('compliance_checks/get_rules_by_jurisdiction');
+      const rulesResult = await db.query(rulesQuery, [decision.jurisdiction]);
+
+      for (const rule of rulesResult.rows) {
+        // Check if rule conditions are met
+        const conditions = rule.conditions || {};
+        const riskThreshold = conditions.riskThreshold || 70;
+
+        if (decision.riskScore >= riskThreshold) {
+          applicableRules.push(rule.rule_name);
+
+          // Execute rule actions
+          if (rule.actions?.escalate === true) {
+            decision.overallStatus = 'ESCALATED';
+          }
+          if (rule.actions?.notify === true) {
+            logger.warn('Compliance rule triggered - notification sent', {
+              ruleName: rule.rule_name,
+              decisionId: decision.decisionId,
+            });
+          }
+
+          // Log in audit trail
+          decision.auditTrail.push({
+            timestamp: new Date(),
+            action: `RULE_APPLIED_${rule.rule_name}`,
+            userId: 'COMPLIANCE_ENGINE',
+            details: { rule: rule.rule_name, actions: rule.actions },
+            status: 'success',
+          });
+        }
+      }
+
+      return applicableRules;
+    } catch (error) {
+      logger.error('Error applying compliance rules', {
+        decisionId: decision.decisionId,
+        error: (error as any).message,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Approve compliance decision
+   */
+  async approveDecision(decisionId: string, approvedBy: string): Promise<void> {
+    const timestamp = new Date();
+
+    try {
+      logger.info('Approving compliance decision', {
+        decisionId,
+        approvedBy,
+      });
+
+      const query = sqlLoader.getQuery('compliance_checks/approve_decision');
+      await db.query(query, [decisionId, approvedBy, timestamp]);
+
+    } catch (error) {
+      logger.error('Error approving decision', {
+        decisionId,
+        error: (error as any).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Reject compliance decision
+   */
+  async rejectDecision(decisionId: string, rejectedBy: string, reason: string): Promise<void> {
+    const timestamp = new Date();
+
+    try {
+      logger.info('Rejecting compliance decision', {
+        decisionId,
+        rejectedBy,
+        reason,
+      });
+
+      const query = sqlLoader.getQuery('compliance_checks/reject_decision');
+      await db.query(query, [decisionId, rejectedBy, timestamp, reason]);
+
+    } catch (error) {
+      logger.error('Error rejecting decision', {
+        decisionId,
+        error: (error as any).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get audit trail for entity
+   */
+  async getAuditTrail(entityId: string): Promise<AuditEntry[]> {
+    try {
+      const query = sqlLoader.getQuery('compliance_checks/get_audit_trail');
+      const result = await db.query(query, [entityId]);
+
+      return result.rows.map((row: any) => ({
+        timestamp: row.timestamp,
+        action: row.action,
+        userId: row.user_id,
+        details: row.details,
+        status: row.status,
+      }));
+    } catch (error) {
+      logger.error('Error fetching audit trail', {
+        entityId,
+        error: (error as any).message,
+      });
+      return [];
+    }
+  }
+
   /**
    * Get compliance checks with pagination and filtering
    */

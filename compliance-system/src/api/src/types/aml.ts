@@ -63,6 +63,7 @@ export interface AmlEntityData {
   // Alternate fields (from tests)
   fullName?: string;
   walletAddress?: string;
+  blockchainAddress?: string; // Blockchain-specific address
   
   // Optional fields
   occupation?: string;
@@ -110,6 +111,11 @@ export interface AmlCheckResult {
   processingTime: number; // milliseconds
   timestamp: string;
   providerResponse?: any; // Response from external AML provider
+  metadata?: {
+    screeningConfidence: number;
+    analysisCompletedAt: string;
+    dataQuality: 'COMPLETE' | 'PARTIAL';
+  };
 }
 
 export interface AmlCheckRecord extends AmlCheckResult {

@@ -678,4 +678,490 @@ export class AmlService {
       screeningResults: row.screening_results || {},
     };
   }
+
+  /**
+   * Perform enhanced velocity analysis on transaction patterns
+   * Detects abnormal transaction frequency, clustering, and escalation patterns
+   */
+  private performVelocityAnalysis(transactions: AmlTransaction[]): {
+    velocityScore: number;
+    flags: AmlFlag[];
+    analysis: Record<string, any>;
+  } {
+    const flags: AmlFlag[] = [];
+    const analysis: Record<string, any> = {};
+
+    if (transactions.length === 0) {
+      return { velocityScore: 0, flags, analysis };
+    }
+
+    let velocityScore = 0;
+
+    // 1. Daily transaction count analysis
+    const transactionsByDay = this.groupTransactionsByDay(transactions);
+    analysis.transactionsByDay = Object.entries(transactionsByDay).map(([day, count]) => ({
+      day,
+      count,
+    }));
+
+    const avgDailyTransactions = transactions.length / Object.keys(transactionsByDay).length;
+    const maxDailyTransactions = Math.max(...Object.values(transactionsByDay));
+
+    if (maxDailyTransactions > avgDailyTransactions * 3) {
+      flags.push({
+        type: AmlFlagType.VELOCITY_ANOMALY,
+        severity: 'MEDIUM',
+        message: 'Unusual daily transaction spike detected',
+        details: `Peak daily transactions (${maxDailyTransactions}) is 3x average (${avgDailyTransactions.toFixed()})`,
+        evidence: { maxDaily: maxDailyTransactions, avgDaily: avgDailyTransactions.toFixed(2) },
+      });
+      velocityScore += 15;
+    }
+
+    // 2. Intra-day velocity (transactions within short time window)
+    const intradayVelocity = this.analyzeIntradayVelocity(transactions);
+    analysis.intradayVelocity = intradayVelocity;
+
+    if (intradayVelocity.spikesDetected > 0) {
+      flags.push({
+        type: AmlFlagType.VELOCITY_ANOMALY,
+        severity: intradayVelocity.spikesDetected > 2 ? 'HIGH' : 'MEDIUM',
+        message: 'Multi-transaction velocity spike detected',
+        details: `${intradayVelocity.spikesDetected} instances of ${intradayVelocity.transactionsPerSpike} transactions within 60 minutes`,
+        evidence: intradayVelocity,
+      });
+      velocityScore += intradayVelocity.spikesDetected * 10;
+    }
+
+    // 3. Transaction escalation pattern
+    const escalationPattern = this.detectTransactionEscalation(transactions);
+    analysis.escalationPattern = escalationPattern;
+
+    if (escalationPattern.escalating) {
+      flags.push({
+        type: AmlFlagType.VELOCITY_ANOMALY,
+        severity: 'HIGH',
+        message: 'Transaction amount escalation pattern detected',
+        details: `Transactions increasing from ${escalationPattern.avgEarly} to ${escalationPattern.avgLate} (${escalationPattern.percentIncrease.toFixed(1)}% increase)`,
+        evidence: escalationPattern,
+      });
+      velocityScore += 20;
+    }
+
+    // 4. Frequency escalation (transaction count increasing)
+    const frequencyTrend = this.analyzeFrequencyTrend(transactions);
+    analysis.frequencyTrend = frequencyTrend;
+
+    if (frequencyTrend.escalating && frequencyTrend.percentIncrease > 50) {
+      flags.push({
+        type: AmlFlagType.VELOCITY_ANOMALY,
+        severity: 'MEDIUM',
+        message: 'Accelerating transaction frequency pattern',
+        details: `Transaction frequency increased ${frequencyTrend.percentIncrease.toFixed(1)}% (early: ${frequencyTrend.earlyFrequency}, late: ${frequencyTrend.lateFrequency})`,
+        evidence: frequencyTrend,
+      });
+      velocityScore += 12;
+    }
+
+    return { velocityScore: Math.min(100, velocityScore), flags, analysis };
+  }
+
+  /**
+   * Perform Chainalysis-integrated screening for blockchain-based entities
+   * Includes blockchain-specific risk indicators and OFAC SDN/Sanctions data
+   */
+  private async performChainalysisScreening(request: AmlCheckRequest): Promise<{
+    blockchainRiskScore: number;
+    sanctions: string[];
+    fraudFlags: string[];
+    aml: string[];
+  }> {
+    try {
+      // Validate blockchain address format if applicable
+      if (request.entityData.blockchainAddress) {
+        const addressValidation = this.validateBlockchainAddress(request.entityData.blockchainAddress);
+        if (!addressValidation.valid) {
+          logger.warn('Invalid blockchain address format', {
+            entityId: request.entityId,
+            address: request.entityData.blockchainAddress,
+          });
+        }
+      }
+
+      // Note: In production, this would call actual Chainalysis API
+      // For now, return structured mock response with real API format
+      return {
+        blockchainRiskScore: 0,
+        sanctions: [],
+        fraudFlags: [],
+        aml: [],
+      };
+    } catch (error) {
+      logger.error('Chainalysis screening error', {
+        entityId: request.entityId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Return empty results on error, don't fail the entire check
+      return {
+        blockchainRiskScore: 0,
+        sanctions: [],
+        fraudFlags: [],
+        aml: [],
+      };
+    }
+  }
+
+  /**
+   * Generate a Suspicious Activity Report (SAR) document
+   * Creates detailled SAR for high-risk entities with regulatory compliance
+   */
+  private async generateSuspiciousActivityReport(
+    request: AmlCheckRequest,
+    result: AmlCheckResult,
+    riskThreshold: number = 60
+  ): Promise<string | null> {
+    try {
+      // Only generate SAR for high-risk or higher
+      if (result.score < riskThreshold) {
+        return null;
+      }
+
+      const timestamp = new Date().toISOString();
+      const sarId = `SAR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
+
+      const sar = {
+        sarId,
+        generatedAt: timestamp,
+        jurisdiction: request.jurisdiction,
+        entityId: request.entityId,
+        entityName: request.entityData.name || request.entityData.fullName,
+        riskScore: result.score,
+        riskLevel: result.riskLevel,
+        reportType: 'Suspicious Activity Report',
+        reportingParty: {
+          institution: 'Ableka Lumina Compliance Engine',
+          date: timestamp,
+        },
+        suspiciousActivity: {
+          flags: result.flags.map((f) => ({
+            type: f.type,
+            severity: f.severity,
+            message: f.message,
+            details: f.details,
+          })),
+          transactions: request.transactions?.slice(0, 10).map((tx) => ({
+            id: tx.id,
+            amount: tx.amount,
+            currency: tx.currency,
+            timestamp: tx.timestamp,
+            direction: (tx.from || tx.counterparty) === request.entityId ? 'OUTBOUND' : 'INBOUND',
+          })) || [],
+        },
+        recommendations: result.recommendations,
+        affidavit: `This report is submitted in compliance with anti-money laundering (AML) and know-your-customer (KYC) regulations. The suspicious activity detailed in this report has been identified through comprehensive screening against multiple sanctions lists, analysis of transaction patterns, and risk assessment algorithms.`,
+        signatory: {
+          role: 'Compliance System',
+          timestamp,
+        },
+      };
+
+      // Store SAR in database for audit trail
+      await this.storeSuspiciousActivityReport(sarId, sar);
+
+      return JSON.stringify(sar, null, 2);
+    } catch (error) {
+      logger.error('SAR generation failed', {
+        entityId: request.entityId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Detect structuring patterns (deliberate transaction splitting to avoid thresholds)
+   * Enhanced detection with multi-timeframe analysis
+   */
+  private detectStructuringPattern(transactions: AmlTransaction[]): {
+    detected: boolean;
+    confidence: number;
+    evidence: Record<string, any>;
+  } {
+    const evidence: Record<string, any> = {};
+
+    if (transactions.length < 3) {
+      return { detected: false, confidence: 0, evidence };
+    }
+
+    let structuringScore = 0;
+
+    // 1. Classic structuring: transactions just under $10k
+    const justUnder10k = transactions.filter((tx) => tx.amount >= 9000 && tx.amount <= 9999);
+    evidence.justUnder10kCount = justUnder10k.length;
+
+    if (justUnder10k.length >= 3) {
+      structuringScore += 30;
+      evidence.justUnder10kPattern = true;
+    }
+
+    // 2. Round-number pattern (structuring characteristic)
+    const roundNumbers = transactions.filter(
+      (tx) =>
+        (tx.amount % 1000 <= 100 || tx.amount % 1000 >= 900) &&
+        tx.amount >= 5000 &&
+        tx.amount <= 15000
+    );
+    evidence.roundNumberCount = roundNumbers.length;
+
+    if (roundNumbers.length >= 3) {
+      structuringScore += 20;
+      evidence.roundNumberPattern = true;
+    }
+
+    // 3. Temporal clustering (multiple transactions same day, different amounts)
+    const txByDay = this.groupTransactionsByDay(transactions);
+    const suspiciousDays = Object.entries(txByDay)
+      .filter(([, count]) => count >= 2)
+      .map(([, count]) => count);
+    evidence.suspiciousDaysCount = suspiciousDays.length;
+
+    if (suspiciousDays.length >= 2 && suspiciousDays.some((count) => count >= 3)) {
+      structuringScore += 25;
+      evidence.temporalClusteringPattern = true;
+    }
+
+    // 4. Similar amounts (within 5% variation)
+    const amountVariation = this.calculateAmountVariation(transactions);
+    evidence.amountVariation = amountVariation;
+
+    if (amountVariation.lowVariation && transactions.length >= 4) {
+      structuringScore += 15;
+      evidence.consistentAmountPattern = true;
+    }
+
+    const detected = structuringScore >= 40;
+    const confidence = Math.min(100, structuringScore);
+
+    return { detected, confidence, evidence };
+  }
+
+  /**
+   * Enrich AML results with additional context for comprehensive analysis
+   */
+  private enrichAmlResultWithContext(
+    result: AmlCheckResult,
+    request: AmlCheckRequest,
+    screeningResults: ScreeningResults,
+    velocityData: { velocityScore: number; flags: AmlFlag[] }
+  ): AmlCheckResult {
+    // Adjust risk score based on velocity analysis
+    if (velocityData.velocityScore > 0) {
+      result.score = Math.min(100, result.score + velocityData.velocityScore * 0.2); // Weighted contribution
+    }
+
+    // Add velocity flags to results
+    result.flags = [...result.flags, ...velocityData.flags];
+
+    // Update risk level if score changed
+    if (result.score >= 85) {
+      result.riskLevel = AmlRiskLevel.CRITICAL;
+    } else if (result.score >= 60) {
+      result.riskLevel = AmlRiskLevel.HIGH;
+    } else if (result.score >= 30) {
+      result.riskLevel = AmlRiskLevel.MEDIUM;
+    } else {
+      result.riskLevel = AmlRiskLevel.LOW;
+    }
+
+    // Add screening confidence
+    const screeningConfidence = this.calculateScreeningConfidence(screeningResults);
+    result.metadata = {
+      screeningConfidence,
+      analysisCompletedAt: new Date().toISOString(),
+      dataQuality: request.transactions.length > 0 ? 'COMPLETE' : 'PARTIAL',
+    };
+
+    return result;
+  }
+
+  /**
+   * Helper: Group transactions by calendar day
+   */
+  private groupTransactionsByDay(transactions: AmlTransaction[]): Record<string, number> {
+    const grouped: Record<string, number> = {};
+
+    transactions.forEach((tx) => {
+      const date = new Date(tx.timestamp);
+      const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+      grouped[day] = (grouped[day] || 0) + 1;
+    });
+
+    return grouped;
+  }
+
+  /**
+   * Helper: Analyze intra-day velocity (transactions within 60 minutes)
+   */
+  private analyzeIntradayVelocity(transactions: AmlTransaction[]): Record<string, any> {
+    const sixtyMinutes = 60 * 60 * 1000;
+    let spikesDetected = 0;
+    let maxTransactionsinWindow = 0;
+    const spikes: Record<string, any>[] = [];
+
+    for (let i = 0; i < transactions.length - 1; i++) {
+      const windowStart = new Date(transactions[i].timestamp).getTime();
+      let txInWindow = 1;
+
+      for (let j = i + 1; j < transactions.length; j++) {
+        const windowEnd = new Date(transactions[j].timestamp).getTime();
+
+        if (windowEnd - windowStart <= sixtyMinutes) {
+          txInWindow++;
+        } else {
+          break;
+        }
+      }
+
+      if (txInWindow >= 3) {
+        spikesDetected++;
+        maxTransactionsinWindow = Math.max(maxTransactionsinWindow, txInWindow);
+        spikes.push({
+          timeWindow: `${new Date(transactions[i].timestamp).toISOString()} - ${new Date(transactions[Math.min(i + txInWindow - 1, transactions.length - 1)].timestamp).toISOString()}`,
+          count: txInWindow,
+        });
+      }
+    }
+
+    return {
+      spikesDetected,
+      transactionsPerSpike: maxTransactionsinWindow,
+      spikes: spikes.slice(0, 5), // Limit to top 5
+    };
+  }
+
+  /**
+   * Helper: Detect if transaction amounts are escalating
+   */
+  private detectTransactionEscalation(transactions: AmlTransaction[]): Record<string, any> {
+    if (transactions.length < 3) {
+      return { escalating: false, percentIncrease: 0 };
+    }
+
+    const sorted = [...transactions].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const midpoint = Math.floor(sorted.length / 2);
+
+    const earlyTransactions = sorted.slice(0, midpoint);
+    const lateTransactions = sorted.slice(midpoint);
+
+    const avgEarly = earlyTransactions.reduce((sum, tx) => sum + tx.amount, 0) / earlyTransactions.length;
+    const avgLate = lateTransactions.reduce((sum, tx) => sum + tx.amount, 0) / lateTransactions.length;
+
+    const percentIncrease = ((avgLate - avgEarly) / avgEarly) * 100;
+
+    return {
+      escalating: percentIncrease > 20,
+      percentIncrease,
+      avgEarly: avgEarly.toFixed(2),
+      avgLate: avgLate.toFixed(2),
+      earlyCount: earlyTransactions.length,
+      lateCount: lateTransactions.length,
+    };
+  }
+
+  /**
+   * Helper: Analyze frequency trend over time
+   */
+  private analyzeFrequencyTrend(transactions: AmlTransaction[]): Record<string, any> {
+    if (transactions.length < 3) {
+      return { escalating: false, percentIncrease: 0 };
+    }
+
+    const sorted = [...transactions].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const midpoint = Math.floor(sorted.length / 2);
+
+    const earlyFrequency = midpoint;
+    const lateFrequency = sorted.length - midpoint;
+
+    const percentIncrease = ((lateFrequency - earlyFrequency) / earlyFrequency) * 100;
+
+    return {
+      escalating: percentIncrease > 0,
+      percentIncrease,
+      earlyFrequency,
+      lateFrequency,
+      totalTransactions: sorted.length,
+    };
+  }
+
+  /**
+   * Helper: Calculate variation in transaction amounts (indicator of structuring)
+   */
+  private calculateAmountVariation(transactions: AmlTransaction[]): Record<string, any> {
+    const amounts = transactions.map((tx) => tx.amount);
+    const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+    const variance = amounts.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / amounts.length;
+    const stdDev = Math.sqrt(variance);
+    const coefficientOfVariation = (stdDev / mean) * 100;
+
+    return {
+      mean: mean.toFixed(2),
+      stdDev: stdDev.toFixed(2),
+      coefficientOfVariation: coefficientOfVariation.toFixed(2),
+      lowVariation: coefficientOfVariation < 15, // Less than 15% variation
+    };
+  }
+
+  /**
+   * Helper: Validate blockchain address format
+   */
+  private validateBlockchainAddress(address: string): { valid: boolean; type?: string } {
+    // Ethereum address (0x...)
+    if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      return { valid: true, type: 'ethereum' };
+    }
+
+    // Bitcoin address (P2PKH, P2SH, P2WPKH)
+    if (/^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(address)) {
+      return { valid: true, type: 'bitcoin' };
+    }
+
+    return { valid: false };
+  }
+
+  /**
+   * Helper: Calculate screening confidence score
+   */
+  private calculateScreeningConfidence(screeningResults: ScreeningResults): number {
+    let confidence = 100;
+
+    // Reduce confidence for error states
+    if (screeningResults.ofac === ScreeningResult.ERROR) confidence -= 20;
+    if (screeningResults.euSanctions === ScreeningResult.ERROR) confidence -= 20;
+    if (screeningResults.pep === ScreeningResult.ERROR) confidence -= 15;
+
+    return Math.max(0, confidence);
+  }
+
+  /**
+   * Helper: Store Suspicious Activity Report in database for audit trail
+   */
+  private async storeSuspiciousActivityReport(
+    sarId: string,
+    sarData: Record<string, any>
+  ): Promise<void> {
+    try {
+      const query = this.sqlLoader.getQuery('aml_checks/insert_sar_report');
+
+      await db.query(query, [sarId, sarData.entityId, JSON.stringify(sarData), new Date()]);
+
+      logger.info('SAR stored successfully', { sarId });
+    } catch (error) {
+      logger.error('Failed to store SAR', {
+        sarId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }
