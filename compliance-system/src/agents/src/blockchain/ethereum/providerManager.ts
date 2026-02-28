@@ -111,6 +111,9 @@ export class EthereumProviderManager extends EventEmitter {
    * Get the best available provider (lowest priority, healthy).
    */
   getBestProvider(): ethers.JsonRpcProvider {
+    if (this.providers.length === 0) {
+      throw new Error('No providers configured');
+    }
     const healthy = this.providers.filter((mp) => mp.health.isHealthy);
     if (healthy.length === 0) {
       logger.warn('No healthy providers available, returning first provider as fallback');

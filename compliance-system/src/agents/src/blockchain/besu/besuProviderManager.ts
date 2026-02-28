@@ -77,13 +77,45 @@ export class BesuProviderManager extends EventEmitter {
   }
 
   /**
+   * Internal helper: call a Besu privacy RPC method with timeout support.
+   */
+  private async fetchPrivacyRPC(method: string, params: unknown[]): Promise<unknown> {
+    if (!this.config.privacyUrl) {
+      throw new Error('privacyUrl is required to call privacy RPC');
+    }
+
+    const timeoutMs = this.config.timeout ?? 10000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(this.config.privacyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Besu privacy RPC returned HTTP ${response.status}`);
+      }
+
+      const json = (await response.json()) as { result?: unknown; error?: { message: string } };
+      if (json.error) {
+        throw new Error(`Besu privacy RPC error: ${json.error.message}`);
+      }
+
+      return json.result;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
    * Create a new privacy group via the Besu privacy RPC endpoint.
    * Requires privacyUrl to be configured.
    */
-  async createPrivacyGroup(
-    members: string[],
-    name: string
-  ): Promise<BesuPrivacyGroup> {
+  async createPrivacyGroup(members: string[], name: string): Promise<BesuPrivacyGroup> {
     if (!this.config.privacyUrl) {
       throw new Error('privacyUrl is required to create privacy groups');
     }
@@ -91,30 +123,11 @@ export class BesuProviderManager extends EventEmitter {
     logger.info('Creating Besu privacy group', { name, memberCount: members.length });
 
     try {
-      // Use fetch to call Besu privacy RPC (eea_createPrivacyGroup)
-      const response = await fetch(this.config.privacyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eea_createPrivacyGroup',
-          params: [{ addresses: members, name, type: 'PANTHEON' }],
-          id: 1,
-        }),
-      });
+      const privacyGroupId = (await this.fetchPrivacyRPC('eea_createPrivacyGroup', [
+        { addresses: members, name, type: 'PANTHEON' },
+      ])) as string;
 
-      if (!response.ok) {
-        throw new Error(`Besu privacy RPC returned HTTP ${response.status}`);
-      }
-
-      const json = (await response.json()) as { result?: string; error?: { message: string } };
-      if (json.error) {
-        throw new Error(`Besu privacy RPC error: ${json.error.message}`);
-      }
-
-      const privacyGroupId = json.result ?? '';
       logger.info('Privacy group created', { privacyGroupId, name });
-
       const group: BesuPrivacyGroup = { privacyGroupId, name, members, type: 'PANTHEON' };
       this.emit('privacyGroupCreated', group);
       return group;
@@ -137,31 +150,14 @@ export class BesuProviderManager extends EventEmitter {
     logger.info('Finding Besu privacy groups', { memberCount: members.length });
 
     try {
-      const response = await fetch(this.config.privacyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eea_findPrivacyGroup',
-          params: [members],
-          id: 1,
-        }),
-      });
+      const result = (await this.fetchPrivacyRPC('eea_findPrivacyGroup', [members])) as Array<{
+        privacyGroupId: string;
+        name: string;
+        members: string[];
+        type: string;
+      }>;
 
-      if (!response.ok) {
-        throw new Error(`Besu privacy RPC returned HTTP ${response.status}`);
-      }
-
-      const json = (await response.json()) as {
-        result?: Array<{ privacyGroupId: string; name: string; members: string[]; type: string }>;
-        error?: { message: string };
-      };
-
-      if (json.error) {
-        throw new Error(`Besu privacy RPC error: ${json.error.message}`);
-      }
-
-      return (json.result ?? []).map((g) => ({
+      return (result ?? []).map((g) => ({
         privacyGroupId: g.privacyGroupId,
         name: g.name,
         members: g.members,

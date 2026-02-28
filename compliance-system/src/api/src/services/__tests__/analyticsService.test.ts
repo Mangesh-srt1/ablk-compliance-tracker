@@ -25,7 +25,6 @@ jest.mock('winston', () => {
 
 import db from '../../config/database';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockQuery = db.query as jest.Mock;
 
 describe('AnalyticsService', () => {

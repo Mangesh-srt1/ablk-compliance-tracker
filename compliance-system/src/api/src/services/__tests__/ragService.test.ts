@@ -36,9 +36,7 @@ jest.mock('winston', () => {
 
 import db from '../../config/database';
 
-/** Cast any function to jest.Mock in a babel-compatible way */
-function asMock(fn) { return fn; }
-const mockQuery = asMock(db.query);
+const mockQuery = db.query as jest.Mock;
 
 const makeRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 1,
