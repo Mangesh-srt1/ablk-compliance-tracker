@@ -27,6 +27,32 @@ export interface RateLimitStatus {
   isLimited: boolean;
 }
 
+// ─── FR-8.4: Per-tier rate limit policy ──────────────────────────────────────
+
+/**
+ * Subscription tiers supported for rate limiting (FR-8.4).
+ */
+export type SubscriptionTier = 'free' | 'pro' | 'enterprise';
+
+/**
+ * Per-tier general API limits (req/min) as defined in FR-8.4.
+ * Enterprise tier defaults to Pro values; custom limits may override.
+ */
+export const TIER_GENERAL_LIMITS: Record<SubscriptionTier, number> = {
+  free: 60,
+  pro: 600,
+  enterprise: 6000, // Default for enterprise; overridable via config
+};
+
+/**
+ * Per-tier auth endpoint limits (req/min) as defined in FR-8.4.
+ */
+export const TIER_AUTH_LIMITS: Record<SubscriptionTier, number> = {
+  free: 10,
+  pro: 30,
+  enterprise: 300, // Default for enterprise; overridable via config
+};
+
 const DEFAULT_CONFIG: RateLimitConfig = {
   perIpLimit: 100,
   perUserLimit: 1000,
@@ -45,13 +71,20 @@ export class RateLimiter {
 
   /**
    * Create Express middleware for rate limiting
-   * Checks IP-based limits by default
+   * Checks IP-based limits by default; for authenticated users reads tier from JWT claims (FR-8.4).
    */
   middleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
         // Get client IP (account for proxies)
         const clientIp = this.getClientIp(req);
+
+        // Determine effective per-user limit based on subscription tier (FR-8.4)
+        const tier = this.getTierFromRequest(req);
+        const isAuthEndpoint = this.isAuthEndpoint(req);
+        const tierUserLimit = isAuthEndpoint
+          ? TIER_AUTH_LIMITS[tier]
+          : TIER_GENERAL_LIMITS[tier];
 
         // Check IP-based rate limit
         const ipStatus = await this.checkRateLimit(
@@ -73,18 +106,24 @@ export class RateLimiter {
           });
         }
 
-        // For authenticated users, also check user-based limit
+        // For authenticated users, apply tier-based limit (FR-8.4)
         if (req.user) {
+          const effectiveLimit = Math.min(tierUserLimit, this.config.perUserLimit);
           const userStatus = await this.checkRateLimit(
             `rate_limit:user:${req.user.id}`,
-            this.config.perUserLimit
+            effectiveLimit
           );
 
+          // Override headers with the more specific tier-based limit
+          res.setHeader('X-RateLimit-Limit', String(userStatus.limit));
+          res.setHeader('X-RateLimit-Remaining', String(userStatus.remaining));
+          res.setHeader('X-RateLimit-Tier', tier);
+
           if (userStatus.isLimited) {
-            logger.warn(`[RATE_LIMIT] User limit exceeded: ${req.user.id}`);
+            logger.warn(`[RATE_LIMIT] User limit exceeded: ${req.user.id} (tier=${tier})`);
             return res.status(429).json({
               error: 'Too Many Requests',
-              message: `User rate limit exceeded. Maximum ${userStatus.limit} requests per minute.`,
+              message: `User rate limit exceeded. Maximum ${userStatus.limit} requests per minute for ${tier} tier.`,
               retryAfter: userStatus.resetSeconds,
             });
           }
@@ -118,6 +157,25 @@ export class RateLimiter {
         next();
       }
     };
+  }
+
+  /**
+   * Determine subscription tier from JWT claims (FR-8.4).
+   * Falls back to 'free' if no tier claim is present.
+   */
+  getTierFromRequest(req: Request): SubscriptionTier {
+    const user = req.user as Record<string, unknown> | undefined;
+    const tier = user?.['tier'];
+    if (tier === 'pro' || tier === 'enterprise') return tier;
+    return 'free';
+  }
+
+  /**
+   * Determine whether the current request targets an authentication endpoint.
+   * Auth endpoints have stricter per-tier limits (FR-8.4).
+   */
+  private isAuthEndpoint(req: Request): boolean {
+    return req.path?.startsWith('/auth') || req.path?.startsWith('/api/v1/auth');
   }
 
   /**

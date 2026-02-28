@@ -35,6 +35,24 @@ export interface Transaction {
   timestamp: number | Date;
   type: string;
   currency?: string;
+  jurisdiction?: string;
+}
+
+/**
+ * Result of PE-specific hawala pattern detection (FR-7.8)
+ */
+export interface HawalaDetectionResult {
+  flagged: boolean;
+  hawalaScore: number; // 0–100
+  patterns: HawalaPattern[];
+  recommendation: string;
+}
+
+export interface HawalaPattern {
+  type: 'STRUCTURING' | 'ROUND_TRIP' | 'FAN_OUT' | 'FAN_IN' | 'MIRROR_TRADING';
+  confidence: number;
+  description: string;
+  transactions: string[]; // IDs of involved transactions
 }
 
 export interface VelocityProfile {
@@ -497,6 +515,310 @@ export class AMLPatternDetector {
       riskLevel: 'LOW',
       confidence: 0
     };
+  }
+
+  // ─── FR-7.8: PE-Specific Hawala Pattern Detection ────────────────────────
+
+  /**
+   * Reporting threshold below which structuring is checked (USD equivalent).
+   * PE fund default: $10,000 (FATF/CTR reporting threshold).
+   */
+  private readonly STRUCTURING_THRESHOLD = 10_000;
+
+  /**
+   * Detect PE fund-specific hawala-like layering patterns (FR-7.8).
+   * Returns { flagged, hawalaScore, patterns, recommendation }.
+   * hawalaScore ≥ 80 should trigger the STR workflow (FR-7.12).
+   */
+  detectHawalaPatterns(transactions: Transaction[]): HawalaDetectionResult {
+    if (!transactions || transactions.length === 0) {
+      return {
+        flagged: false,
+        hawalaScore: 0,
+        patterns: [],
+        recommendation: 'No transactions provided for hawala analysis.',
+      };
+    }
+
+    logger.info('AMLPatternDetector: Starting hawala pattern detection', {
+      transactionCount: transactions.length,
+    });
+
+    const detectedPatterns: HawalaPattern[] = [];
+
+    const structuring = this.detectStructuring(transactions);
+    if (structuring) detectedPatterns.push(structuring);
+
+    const roundTrip = this.detectRoundTrip(transactions);
+    if (roundTrip) detectedPatterns.push(roundTrip);
+
+    const fanOut = this.detectFanOut(transactions);
+    if (fanOut) detectedPatterns.push(fanOut);
+
+    const fanIn = this.detectFanIn(transactions);
+    if (fanIn) detectedPatterns.push(fanIn);
+
+    const mirrorTrading = this.detectMirrorTrading(transactions);
+    if (mirrorTrading) detectedPatterns.push(mirrorTrading);
+
+    const hawalaScore = this.calculateHawalaScore(detectedPatterns);
+    const flagged = hawalaScore > 0;
+    const recommendation = this.buildHawalaRecommendation(hawalaScore, detectedPatterns);
+
+    logger.info('AMLPatternDetector: Hawala detection complete', {
+      flagged,
+      hawalaScore,
+      patternCount: detectedPatterns.length,
+    });
+
+    return { flagged, hawalaScore, patterns: detectedPatterns, recommendation };
+  }
+
+  /**
+   * STRUCTURING: Multiple sub-threshold transfers from the same sender within 24 hours
+   * whose combined value exceeds the reporting threshold.
+   */
+  private detectStructuring(transactions: Transaction[]): HawalaPattern | null {
+    const windowMs = 24 * 60 * 60 * 1000; // 24 hours
+    const senderMap = new Map<string, Transaction[]>();
+
+    transactions.forEach(tx => {
+      const existing = senderMap.get(tx.from) || [];
+      senderMap.set(tx.from, [...existing, tx]);
+    });
+
+    for (const [, senderTxs] of senderMap) {
+      // Only consider sub-threshold individual amounts
+      const subThreshold = senderTxs.filter(tx => tx.amount < this.STRUCTURING_THRESHOLD);
+      if (subThreshold.length < 2) continue;
+
+      // Sort by time
+      const sorted = [...subThreshold].sort(
+        (a, b) => getTimestampMs(a.timestamp) - getTimestampMs(b.timestamp)
+      );
+
+      // Slide a 24h window and look for combined amount ≥ threshold
+      for (let i = 0; i < sorted.length; i++) {
+        const windowStart = getTimestampMs(sorted[i].timestamp);
+        const windowTxs = sorted.filter(
+          tx =>
+            getTimestampMs(tx.timestamp) >= windowStart &&
+            getTimestampMs(tx.timestamp) <= windowStart + windowMs
+        );
+        if (windowTxs.length < 2) continue;
+        const combined = windowTxs.reduce((s, tx) => s + tx.amount, 0);
+        if (combined >= this.STRUCTURING_THRESHOLD) {
+          return {
+            type: 'STRUCTURING',
+            confidence: Math.min(0.95, 0.6 + windowTxs.length * 0.05),
+            description: `${windowTxs.length} sub-threshold transfers within 24h with combined value ${combined.toFixed(2)} exceed reporting threshold.`,
+            transactions: windowTxs.map(tx => tx.id),
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * ROUND_TRIP: Funds sent from A→B and returned B→A within 48 hours.
+   */
+  private detectRoundTrip(transactions: Transaction[]): HawalaPattern | null {
+    const windowMs = 48 * 60 * 60 * 1000; // 48 hours
+    const outbound = transactions.filter(tx => tx.type !== 'return');
+    const inbound = transactions.filter(tx => tx.type === 'return' || tx.type === 'incoming');
+
+    for (const out of outbound) {
+      // Look for a matching inbound from out.to back to out.from within 48 h
+      const match = inbound.find(
+        inp =>
+          inp.from === out.to &&
+          inp.to === out.from &&
+          Math.abs(inp.amount - out.amount) / (out.amount || 1) < 0.1 && // within 10%
+          Math.abs(getTimestampMs(inp.timestamp) - getTimestampMs(out.timestamp)) <= windowMs
+      );
+      if (match) {
+        return {
+          type: 'ROUND_TRIP',
+          confidence: 0.85,
+          description: `Round-trip detected: ${out.from}→${out.to} then returned within 48h (amounts within 10%).`,
+          transactions: [out.id, match.id],
+        };
+      }
+    }
+
+    // Fallback: same from/to pair in both directions within window among all transactions
+    for (let i = 0; i < transactions.length; i++) {
+      for (let j = i + 1; j < transactions.length; j++) {
+        const a = transactions[i];
+        const b = transactions[j];
+        if (
+          a.from === b.to &&
+          a.to === b.from &&
+          Math.abs(a.amount - b.amount) / (Math.max(a.amount, b.amount) || 1) < 0.1 &&
+          Math.abs(getTimestampMs(a.timestamp) - getTimestampMs(b.timestamp)) <= windowMs
+        ) {
+          return {
+            type: 'ROUND_TRIP',
+            confidence: 0.8,
+            description: `Round-trip detected between ${a.from} and ${a.to} within 48h.`,
+            transactions: [a.id, b.id],
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * FAN_OUT: One sender distributing to many recipients in a short burst — high entropy anomaly.
+   */
+  private detectFanOut(transactions: Transaction[]): HawalaPattern | null {
+    const FAN_OUT_MIN_RECIPIENTS = 5;
+    const FAN_OUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+    const senderMap = new Map<string, Transaction[]>();
+    transactions.forEach(tx => {
+      senderMap.set(tx.from, [...(senderMap.get(tx.from) || []), tx]);
+    });
+
+    for (const [sender, senderTxs] of senderMap) {
+      const sorted = [...senderTxs].sort(
+        (a, b) => getTimestampMs(a.timestamp) - getTimestampMs(b.timestamp)
+      );
+      for (let i = 0; i < sorted.length; i++) {
+        const windowStart = getTimestampMs(sorted[i].timestamp);
+        const windowTxs = sorted.filter(
+          tx =>
+            getTimestampMs(tx.timestamp) >= windowStart &&
+            getTimestampMs(tx.timestamp) <= windowStart + FAN_OUT_WINDOW_MS
+        );
+        const uniqueRecipients = new Set(windowTxs.map(tx => tx.to)).size;
+        if (uniqueRecipients >= FAN_OUT_MIN_RECIPIENTS) {
+          const entropy = this.shannonEntropy(windowTxs.map(tx => tx.to));
+          return {
+            type: 'FAN_OUT',
+            confidence: Math.min(0.95, 0.5 + entropy * 0.1),
+            description: `Fan-out: ${sender} dispersed funds to ${uniqueRecipients} recipients within 1h (entropy=${entropy.toFixed(2)}).`,
+            transactions: windowTxs.map(tx => tx.id),
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * FAN_IN: Many senders consolidating to a single recipient in a short burst — low entropy anomaly.
+   */
+  private detectFanIn(transactions: Transaction[]): HawalaPattern | null {
+    const FAN_IN_MIN_SENDERS = 5;
+    const FAN_IN_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+    const recipientMap = new Map<string, Transaction[]>();
+    transactions.forEach(tx => {
+      recipientMap.set(tx.to, [...(recipientMap.get(tx.to) || []), tx]);
+    });
+
+    for (const [recipient, recipientTxs] of recipientMap) {
+      const sorted = [...recipientTxs].sort(
+        (a, b) => getTimestampMs(a.timestamp) - getTimestampMs(b.timestamp)
+      );
+      for (let i = 0; i < sorted.length; i++) {
+        const windowStart = getTimestampMs(sorted[i].timestamp);
+        const windowTxs = sorted.filter(
+          tx =>
+            getTimestampMs(tx.timestamp) >= windowStart &&
+            getTimestampMs(tx.timestamp) <= windowStart + FAN_IN_WINDOW_MS
+        );
+        const uniqueSenders = new Set(windowTxs.map(tx => tx.from)).size;
+        if (uniqueSenders >= FAN_IN_MIN_SENDERS) {
+          const entropy = this.shannonEntropy(windowTxs.map(tx => tx.from));
+          return {
+            type: 'FAN_IN',
+            confidence: Math.min(0.95, 0.5 + entropy * 0.1),
+            description: `Fan-in: ${uniqueSenders} senders consolidated funds to ${recipient} within 1h (entropy=${entropy.toFixed(2)}).`,
+            transactions: windowTxs.map(tx => tx.id),
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * MIRROR_TRADING: Near-identical amounts sent in opposite cross-jurisdiction directions
+   * (e.g., buy asset in jurisdiction A, sell equivalent in jurisdiction B).
+   */
+  private detectMirrorTrading(transactions: Transaction[]): HawalaPattern | null {
+    const MIRROR_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+    const AMOUNT_TOLERANCE = 0.05; // 5% tolerance
+
+    const withJurisdiction = transactions.filter(tx => tx.jurisdiction);
+    if (withJurisdiction.length < 2) return null;
+
+    for (let i = 0; i < withJurisdiction.length; i++) {
+      for (let j = i + 1; j < withJurisdiction.length; j++) {
+        const a = withJurisdiction[i];
+        const b = withJurisdiction[j];
+        if (
+          a.jurisdiction !== b.jurisdiction &&
+          Math.abs(a.amount - b.amount) / (Math.max(a.amount, b.amount) || 1) <= AMOUNT_TOLERANCE &&
+          Math.abs(getTimestampMs(a.timestamp) - getTimestampMs(b.timestamp)) <= MIRROR_WINDOW_MS
+        ) {
+          return {
+            type: 'MIRROR_TRADING',
+            confidence: 0.75,
+            description: `Mirror trading: near-equal amounts (${a.amount} / ${b.amount}) in opposite jurisdictions (${a.jurisdiction} / ${b.jurisdiction}) within 24h.`,
+            transactions: [a.id, b.id],
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Shannon entropy of a label array — higher entropy means more dispersion.
+   */
+  private shannonEntropy(labels: string[]): number {
+    if (labels.length === 0) return 0;
+    const freq = new Map<string, number>();
+    labels.forEach(l => freq.set(l, (freq.get(l) || 0) + 1));
+    let entropy = 0;
+    for (const count of freq.values()) {
+      const p = count / labels.length;
+      entropy -= p * Math.log2(p);
+    }
+    return entropy;
+  }
+
+  /**
+   * Aggregate per-pattern confidence into a 0–100 hawala score.
+   * Each pattern contributes `confidence × PATTERN_SCORE_MULTIPLIER` points, capped at 100.
+   * With 3 fully confident patterns: 3 × 0.95 × 40 ≈ 114 → capped at 100.
+   */
+  private readonly PATTERN_SCORE_MULTIPLIER = 40;
+
+  private calculateHawalaScore(patterns: HawalaPattern[]): number {
+    if (patterns.length === 0) return 0;
+    const base = patterns.reduce((sum, p) => sum + p.confidence * this.PATTERN_SCORE_MULTIPLIER, 0);
+    return Math.min(100, Math.round(base));
+  }
+
+  /**
+   * Build a human-readable recommendation for the hawala result.
+   */
+  private buildHawalaRecommendation(score: number, patterns: HawalaPattern[]): string {
+    if (score === 0) return 'No hawala patterns detected. Continue routine monitoring.';
+    const names = patterns.map(p => p.type).join(', ');
+    if (score >= 80) {
+      return `HIGH RISK – hawala score ${score}/100. Patterns: ${names}. Immediately trigger STR/SAR filing workflow.`;
+    }
+    if (score >= 50) {
+      return `MEDIUM RISK – hawala score ${score}/100. Patterns: ${names}. Escalate to senior compliance officer for review.`;
+    }
+    return `LOW-MEDIUM RISK – hawala score ${score}/100. Patterns: ${names}. Flag for enhanced monitoring.`;
   }
 }
 

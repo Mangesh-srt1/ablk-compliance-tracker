@@ -1,11 +1,17 @@
 /**
  * Rate Limiter Tests
  * Validates per-IP and per-user rate limiting with sliding window counter
+ * and FR-8.4 per-tier rate limit policy.
  */
 
 import { Request, Response, NextFunction } from 'express';
 import { Redis } from 'ioredis';
-import { RateLimiter } from '../rateLimiter';
+import {
+  RateLimiter,
+  TIER_GENERAL_LIMITS,
+  TIER_AUTH_LIMITS,
+  SubscriptionTier,
+} from '../rateLimiter';
 import logger from '../../config/logger';
 
 const mockRedis = {
@@ -99,7 +105,8 @@ describe('RateLimiter', () => {
         .mockResolvedValueOnce(50) // IP limit check
         .mockResolvedValueOnce(900); // User limit check (900 of 1000)
 
-      (mockReq as any).user = { id: 'user-123', email: 'test@test.com', role: 'admin', permissions: [], iat: 0, exp: 0 };
+      // Enterprise tier user — effective limit is min(6000, 1000) = 1000; 900 < 1000 → allowed
+      (mockReq as any).user = { id: 'user-123', email: 'test@test.com', role: 'admin', tier: 'enterprise', permissions: [], iat: 0, exp: 0 };
 
       const middleware = rateLimiter.middleware();
       await middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -112,7 +119,8 @@ describe('RateLimiter', () => {
         .mockResolvedValueOnce(50) // IP limit check
         .mockResolvedValueOnce(1000); // User limit check (at limit)
 
-      (mockReq as any).user = { id: 'user-123', email: 'test@test.com', role: 'admin', permissions: [], iat: 0, exp: 0 };
+      // Enterprise tier user — effective limit is min(6000, 1000) = 1000; 1000 >= 1000 → rejected
+      (mockReq as any).user = { id: 'user-123', email: 'test@test.com', role: 'admin', tier: 'enterprise', permissions: [], iat: 0, exp: 0 };
 
       const middleware = rateLimiter.middleware();
       await middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -263,6 +271,105 @@ describe('RateLimiter', () => {
       await rateLimiter.getStatus('rate_limit:test', 100);
 
       expect(mockRedis.expire).toHaveBeenCalledWith('rate_limit:test', 70); // windowSize + 10
+    });
+  });
+
+  // ─── FR-8.4: Per-Tier Rate Limit Policy Tests ─────────────────────────────
+
+  describe('TIER_GENERAL_LIMITS (FR-8.4)', () => {
+    it('should define Free tier at 60 req/min', () => {
+      expect(TIER_GENERAL_LIMITS['free']).toBe(60);
+    });
+
+    it('should define Pro tier at 600 req/min', () => {
+      expect(TIER_GENERAL_LIMITS['pro']).toBe(600);
+    });
+
+    it('should define Enterprise tier higher than Pro', () => {
+      expect(TIER_GENERAL_LIMITS['enterprise']).toBeGreaterThan(TIER_GENERAL_LIMITS['pro']);
+    });
+  });
+
+  describe('TIER_AUTH_LIMITS (FR-8.4)', () => {
+    it('should define Free tier at 10 req/min for auth endpoints', () => {
+      expect(TIER_AUTH_LIMITS['free']).toBe(10);
+    });
+
+    it('should define Pro tier at 30 req/min for auth endpoints', () => {
+      expect(TIER_AUTH_LIMITS['pro']).toBe(30);
+    });
+
+    it('should define Enterprise tier higher than Pro for auth endpoints', () => {
+      expect(TIER_AUTH_LIMITS['enterprise']).toBeGreaterThan(TIER_AUTH_LIMITS['pro']);
+    });
+
+    it('should have lower auth limits than general limits for all tiers', () => {
+      const tiers: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+      tiers.forEach(tier => {
+        expect(TIER_AUTH_LIMITS[tier]).toBeLessThan(TIER_GENERAL_LIMITS[tier]);
+      });
+    });
+  });
+
+  describe('getTierFromRequest (FR-8.4)', () => {
+    it('should return "free" when no user is present', () => {
+      const req = { user: undefined } as unknown as Request;
+      expect(rateLimiter.getTierFromRequest(req)).toBe('free');
+    });
+
+    it('should return "free" when user has no tier claim', () => {
+      const req = { user: { id: 'u1' } } as unknown as Request;
+      expect(rateLimiter.getTierFromRequest(req)).toBe('free');
+    });
+
+    it('should return "pro" for a Pro-tier JWT claim', () => {
+      const req = { user: { id: 'u1', tier: 'pro' } } as unknown as Request;
+      expect(rateLimiter.getTierFromRequest(req)).toBe('pro');
+    });
+
+    it('should return "enterprise" for an Enterprise-tier JWT claim', () => {
+      const req = { user: { id: 'u1', tier: 'enterprise' } } as unknown as Request;
+      expect(rateLimiter.getTierFromRequest(req)).toBe('enterprise');
+    });
+
+    it('should fall back to "free" for unknown tier values', () => {
+      const req = { user: { id: 'u1', tier: 'unknown' } } as unknown as Request;
+      expect(rateLimiter.getTierFromRequest(req)).toBe('free');
+    });
+  });
+
+  describe('tier-based limit enforcement in middleware (FR-8.4)', () => {
+    it('should enforce Free tier limit (60 req/min) for general endpoints', async () => {
+      // Pro user: IP limit OK, but user limit enforced at Free level since no tier claim
+      mockRedis.zcard
+        .mockResolvedValueOnce(10)   // IP: 10/100 OK
+        .mockResolvedValueOnce(60);  // User: 60 requests – at Free limit
+
+      (mockReq as any).user = { id: 'free-user', email: 'f@test.com', role: 'user', iat: 0, exp: 0 };
+
+      const middleware = rateLimiter.middleware();
+      await middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(429);
+    });
+
+    it('should set X-RateLimit-Tier header for authenticated users', async () => {
+      mockRedis.zcard
+        .mockResolvedValueOnce(10)   // IP check
+        .mockResolvedValueOnce(50);  // User check (under Pro limit)
+
+      (mockReq as any).user = { id: 'pro-user', tier: 'pro', email: 'p@test.com', role: 'user', iat: 0, exp: 0 };
+
+      const middleware = rateLimiter.middleware();
+      await middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.setHeader).toHaveBeenCalledWith('X-RateLimit-Tier', 'pro');
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should allow more requests for Pro tier than Free tier', () => {
+      // Pro allows 600, Free allows 60 — verify constant values hold
+      expect(TIER_GENERAL_LIMITS['pro']).toBeGreaterThan(TIER_GENERAL_LIMITS['free']);
     });
   });
 });
