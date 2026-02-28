@@ -6,12 +6,10 @@
 
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
+import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import { requirePermission } from '../middleware/authMiddleware';
-import { AdvancedComplianceScanner } from '../services/advancedComplianceScanner';
-import { RiskAssessmentEngine } from '../services/riskAssessmentEngine';
-import { MultiJurisdictionalMonitor } from '../services/multiJurisdictionalMonitor';
-import { ComplianceReportingSystem } from '../services/complianceReportingSystem';
+import { getAdvancedComplianceScanner } from '../services/advancedComplianceScanner';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
 
 const router = Router();
@@ -25,11 +23,7 @@ const logger = winston.createLogger({
   ],
 });
 
-const scanner = new AdvancedComplianceScanner(
-  new RiskAssessmentEngine(),
-  new MultiJurisdictionalMonitor(),
-  new ComplianceReportingSystem()
-);
+const scanner = getAdvancedComplianceScanner();
 
 /**
  * POST /api/compliance/advanced-scan
@@ -92,7 +86,7 @@ router.post(
           'Validation failed',
           400,
           errors.array(),
-          req.headers['x-request-id'] as string | undefined ?? 'unknown'
+          req.headers['x-request-id'] as string | undefined ?? uuidv4()
         )
       );
       return;
@@ -144,7 +138,7 @@ router.post(
           'Advanced compliance scan failed',
           500,
           { message: error.message },
-          req.headers['x-request-id'] as string | undefined ?? 'unknown'
+          req.headers['x-request-id'] as string | undefined ?? uuidv4()
         )
       );
     }

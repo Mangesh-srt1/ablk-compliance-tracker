@@ -139,7 +139,11 @@ function buildExecutiveSummary(
   }
 }
 
-// ─── Service ─────────────────────────────────────────────────────────────────
+// Review period in days based on risk level
+const REVIEW_PERIODS = {
+  HIGH_RISK: 30,
+  NORMAL: 90,
+} as const;
 
 export class ComplianceReportingSystem {
   /**
@@ -172,8 +176,8 @@ export class ComplianceReportingSystem {
       input.entityId
     );
 
-    // Next review date: 30 days for high/critical, 90 days otherwise
-    const reviewDays = riskScore >= 60 ? 30 : 90;
+    // Next review date: HIGH_RISK days for high/critical, NORMAL days otherwise
+    const reviewDays = riskScore >= 60 ? REVIEW_PERIODS.HIGH_RISK : REVIEW_PERIODS.NORMAL;
     const nextReviewDate = new Date();
     nextReviewDate.setDate(nextReviewDate.getDate() + reviewDays);
 

@@ -22,6 +22,12 @@ const logger = winston.createLogger({
   ],
 });
 
+// Thresholds used during scan orchestration
+const MULTI_JURISDICTION_THRESHOLD = 2;  // Number of jurisdictions above which risk is elevated
+const MULTI_JURISDICTION_RISK_HIGH = 40; // Risk value when entity spans many jurisdictions
+const MULTI_JURISDICTION_RISK_LOW = 20;  // Risk value for standard jurisdiction footprint
+const TRANSACTION_VOLUME_DIVISOR = 10_000; // Normalises transaction amount to 0-100 scale
+
 export interface AdvancedScanInput {
   entityId: string;
   scanType: 'comprehensive' | 'targeted' | 'regulatory' | 'ad-hoc';
@@ -99,9 +105,11 @@ export class AdvancedComplianceScanner {
         amlScore: input.amlScore,
         sanctionsMatch: input.sanctionsMatch,
         pepMatch: input.entityData.pepStatus,
-        jurisdictionRisk: input.jurisdiction.length > 2 ? 40 : 20,
+        jurisdictionRisk: input.jurisdiction.length > MULTI_JURISDICTION_THRESHOLD
+          ? MULTI_JURISDICTION_RISK_HIGH
+          : MULTI_JURISDICTION_RISK_LOW,
         transactionVolume: input.transactionData?.amount
-          ? Math.min(100, input.transactionData.amount / 10_000)
+          ? Math.min(100, input.transactionData.amount / TRANSACTION_VOLUME_DIVISOR)
           : undefined,
       });
 
@@ -170,7 +178,11 @@ export class AdvancedComplianceScanner {
       return result;
     } catch (err) {
       const processingTime = Date.now() - startTime;
-      logger.error('Advanced compliance scan failed', { scanId, entityId: input.entityId, error: err });
+      logger.error('Advanced compliance scan failed', {
+        scanId,
+        entityId: input.entityId,
+        error: err instanceof Error ? err.message : String(err),
+      });
 
       // Re-throw so the caller (route) can handle it
       throw err;

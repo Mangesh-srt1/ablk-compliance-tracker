@@ -53,7 +53,9 @@ type RuleEvaluator = (
   input: JurisdictionCheckInput
 ) => JurisdictionFinding | null;
 
-// ─── Jurisdiction Rule Definitions ────────────────────────────────────────────
+// INR/USD conversion rate used for threshold comparisons.
+// NOTE: This is a static approximation. For production, use a currency service.
+const USD_TO_INR_RATE = 83;
 
 const JURISDICTION_RULES: Record<string, RuleEvaluator[]> = {
   IN: [
@@ -72,7 +74,7 @@ const JURISDICTION_RULES: Record<string, RuleEvaluator[]> = {
       const amount = input.transactionData?.amount;
       const currency = input.transactionData?.currency;
       if (amount === undefined) return null;
-      const amountInINR = currency === 'USD' ? amount * 83 : amount;
+      const amountInINR = currency === 'USD' ? amount * USD_TO_INR_RATE : amount;
       const threshold = 1_000_000;
       const exceeds = amountInINR > threshold;
       return {
@@ -132,7 +134,7 @@ const JURISDICTION_RULES: Record<string, RuleEvaluator[]> = {
       const amount = input.transactionData?.amount;
       const currency = input.transactionData?.currency;
       if (amount === undefined) return null;
-      const amountInUSD = currency === 'INR' ? amount / 83 : amount;
+      const amountInUSD = currency === 'INR' ? amount / USD_TO_INR_RATE : amount;
       const threshold = 10_000;
       const exceeds = amountInUSD > threshold;
       return {

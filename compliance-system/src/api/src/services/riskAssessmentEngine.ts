@@ -40,6 +40,9 @@ const WEIGHTS = {
   transactionVolume: 0.10,
 };
 
+// Default risk value used when a factor is not provided (represents neutral/unknown risk)
+const DEFAULT_RISK_VALUE = 50;
+
 // Flat point additions for boolean risk flags
 const BOOLEAN_POINTS = {
   sanctionsMatch: 40,
@@ -71,22 +74,22 @@ export class RiskAssessmentEngine {
     let booleanScore = 0;
 
     // KYC score is inverted: higher KYC score means lower risk
-    const kycRisk = factors.kycScore !== undefined ? clamp(100 - factors.kycScore) : 50;
+    const kycRisk = factors.kycScore !== undefined ? clamp(100 - factors.kycScore) : DEFAULT_RISK_VALUE;
     breakdown['kycRisk'] = parseFloat((kycRisk * WEIGHTS.kyc).toFixed(2));
     continuousScore += kycRisk * WEIGHTS.kyc;
 
     // AML score: higher = more risky
-    const amlRisk = factors.amlScore !== undefined ? clamp(factors.amlScore) : 50;
+    const amlRisk = factors.amlScore !== undefined ? clamp(factors.amlScore) : DEFAULT_RISK_VALUE;
     breakdown['amlRisk'] = parseFloat((amlRisk * WEIGHTS.aml).toFixed(2));
     continuousScore += amlRisk * WEIGHTS.aml;
 
     // Jurisdiction risk
-    const jurisdictionRisk = factors.jurisdictionRisk !== undefined ? clamp(factors.jurisdictionRisk) : 25;
+    const jurisdictionRisk = factors.jurisdictionRisk !== undefined ? clamp(factors.jurisdictionRisk) : DEFAULT_RISK_VALUE / 2;
     breakdown['jurisdictionRisk'] = parseFloat((jurisdictionRisk * WEIGHTS.jurisdictionRisk).toFixed(2));
     continuousScore += jurisdictionRisk * WEIGHTS.jurisdictionRisk;
 
     // Transaction volume
-    const txVolume = factors.transactionVolume !== undefined ? clamp(factors.transactionVolume) : 20;
+    const txVolume = factors.transactionVolume !== undefined ? clamp(factors.transactionVolume) : DEFAULT_RISK_VALUE / 2 - 5;
     breakdown['transactionVolume'] = parseFloat((txVolume * WEIGHTS.transactionVolume).toFixed(2));
     continuousScore += txVolume * WEIGHTS.transactionVolume;
 
