@@ -43,6 +43,7 @@ import fraudRoutes from './routes/fraudRoutes';
 import scanRoutes from './routes/scanRoutes';
 import rulesRoutes from './routes/rulesRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import advancedScanRoutes from './routes/advancedScanRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -184,6 +185,7 @@ async function initializeApp(): Promise<void> {
     app.use('/api', scanRoutes);
     app.use('/api', rulesRoutes);
     app.use('/api/analytics', analyticsRoutes);
+    app.use('/api/compliance', advancedScanRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
