@@ -1,52 +1,45 @@
-# Multi-stage build for AI Compliance Agents Service
-FROM node:18-alpine AS base
+# ================================
+# Build Stage
+# ================================
+FROM node:20-alpine AS builder
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ dumb-init
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
+RUN npm ci && npm cache clean --force
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+COPY . .
+RUN npm run build
+RUN npm prune --production
 
-# Production stage
-FROM node:18-alpine AS production
+# ================================
+# Production Stage
+# ================================
+FROM node:20-alpine AS production
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+RUN apk add --no-cache dumb-init curl \
+    && addgroup -g 1001 -S lumina \
+    && adduser -S lumina -u 1001 -G lumina
 
-# Create app user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Set working directory
 WORKDIR /app
 
-# Copy dependencies from base stage
-COPY --from=base --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=lumina:lumina /app/node_modules ./node_modules
+COPY --from=builder --chown=lumina:lumina /app/dist ./dist
+COPY --from=builder --chown=lumina:lumina /app/package*.json ./
 
-# Copy source code
-COPY --chown=nextjs:nodejs . .
+# Copy jurisdiction config YAMLs needed at runtime
+COPY --chown=lumina:lumina src/config ./src/config
 
-# Build TypeScript
-RUN npm run build
+RUN mkdir -p /app/logs && chown -R lumina:lumina /app/logs
 
-# Create logs directory
-RUN mkdir -p logs && chown -R nextjs:nodejs logs
+USER lumina
 
-# Switch to non-root user
-USER nextjs
-
-# Expose port
 EXPOSE 3002
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3002/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3002/health || exit 1
 
-# Start the application
-CMD ["npm", "start"]
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]
