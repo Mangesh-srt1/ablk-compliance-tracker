@@ -9,8 +9,29 @@ import axios, { AxiosInstance } from 'axios';
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+// Create a shared mock client that axios.create() will return
+const mockAxiosInstance = {
+  post: jest.fn(),
+  get: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn(),
+  patch: jest.fn(),
+  defaults: {
+    headers: {
+      'Authorization': 'Bearer test-token',
+      'Content-Type': 'application/json',
+    },
+  },
+  interceptors: {
+    request: { use: jest.fn(), eject: jest.fn() },
+    response: { use: jest.fn(), eject: jest.fn() },
+  },
+} as unknown as jest.Mocked<AxiosInstance>;
+
+mockedAxios.create = jest.fn().mockReturnValue(mockAxiosInstance);
+
 describe('Agent → API Integration Tests', () => {
-  let apiClient: AxiosInstance;
+  let apiClient: jest.Mocked<AxiosInstance>;
   const API_BASE_URL = 'http://localhost:4000';
 
   beforeEach(() => {
@@ -22,7 +43,7 @@ describe('Agent → API Integration Tests', () => {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer test-token',
       },
-    });
+    }) as jest.Mocked<AxiosInstance>;
 
     // Clear mock calls
     jest.clearAllMocks();
@@ -37,7 +58,7 @@ describe('Agent → API Integration Tests', () => {
         reasoning: 'Identity verified, low risk',
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: mockResponse,
         status: 200,
         statusText: 'OK',
@@ -54,7 +75,7 @@ describe('Agent → API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.data.status).toBe('APPROVED');
       expect(response.data.riskScore).toBeLessThan(30);
-      expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/kyc-check'),
         expect.objectContaining({
           wallet: '0x1234567890abcdef',
@@ -72,7 +93,7 @@ describe('Agent → API Integration Tests', () => {
         reasoning: 'No sanctions matches',
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: mockResponse,
         status: 200,
         statusText: 'OK',
@@ -102,7 +123,7 @@ describe('Agent → API Integration Tests', () => {
         reasoning: 'Large transaction amount',
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: mockResponse,
         status: 200,
         statusText: 'OK',
@@ -132,7 +153,7 @@ describe('Agent → API Integration Tests', () => {
         processed: 42,
       };
 
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         data: mockResponse,
         status: 200,
         statusText: 'OK',
@@ -165,14 +186,14 @@ describe('Agent → API Integration Tests', () => {
         sessionId: 'sess-abc123',
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true },
         status: 200,
       });
 
       await apiClient.post('/api/v1/entity-check', complexPayload);
 
-      const callArgs = mockedAxios.post.mock.calls[0];
+      const callArgs = mockAxiosInstance.post.mock.calls[0];
       const serializedData = callArgs[1] as any;
 
       // Verify serialization preserved structure
@@ -205,7 +226,7 @@ describe('Agent → API Integration Tests', () => {
         },
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: complexResponse,
         status: 200,
       });
@@ -226,14 +247,14 @@ describe('Agent → API Integration Tests', () => {
         ],
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { processed: 5 },
         status: 200,
       });
 
       await apiClient.post('/api/v1/batch-check', payloadWithArrays);
 
-      const callArgs = mockedAxios.post.mock.calls[0];
+      const callArgs = mockAxiosInstance.post.mock.calls[0];
       const data = callArgs[1] as any;
 
       expect(Array.isArray(data?.wallets)).toBe(true);
@@ -249,14 +270,14 @@ describe('Agent → API Integration Tests', () => {
         emptyField: undefined,
       };
 
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true },
         status: 200,
       });
 
       await apiClient.post('/api/v1/test', payloadWithNulls);
 
-      const callArgs = mockedAxios.post.mock.calls[0];
+      const callArgs = mockAxiosInstance.post.mock.calls[0];
       const data = callArgs[1] as any;
 
       expect(data?.requiredField).toBe('value');
@@ -266,7 +287,7 @@ describe('Agent → API Integration Tests', () => {
 
   describe('Error Handling and Resilience', () => {
     it('should handle API 400 Bad Request', async () => {
-      mockedAxios.post.mockRejectedValueOnce({
+      mockAxiosInstance.post.mockRejectedValueOnce({
         response: {
           status: 400,
           data: {
@@ -286,7 +307,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should handle API 401 Unauthorized', async () => {
-      mockedAxios.post.mockRejectedValueOnce({
+      mockAxiosInstance.post.mockRejectedValueOnce({
         response: {
           status: 401,
           data: {
@@ -305,7 +326,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should handle API 500 Server Error', async () => {
-      mockedAxios.post.mockRejectedValueOnce({
+      mockAxiosInstance.post.mockRejectedValueOnce({
         response: {
           status: 500,
           data: {
@@ -324,7 +345,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should handle network timeout', async () => {
-      mockedAxios.post.mockRejectedValueOnce({
+      mockAxiosInstance.post.mockRejectedValueOnce({
         message: 'timeout of 5000ms exceeded',
         code: 'ECONNABORTED',
       });
@@ -357,6 +378,7 @@ describe('Agent → API Integration Tests', () => {
         try {
           const result = await mockRetryableAxios.post?.('/api/v1/test', {});
           expect(result?.status).toBe(200);
+          lastError = null; // Reset on success
           break;
         } catch (error) {
           lastError = error as Error;
@@ -370,7 +392,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should gracefully handle API response parsing errors', async () => {
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         status: 200,
         data: 'Invalid JSON response',
       });
@@ -385,7 +407,7 @@ describe('Agent → API Integration Tests', () => {
 
   describe('Request Headers and Authentication', () => {
     it('should include authorization header in requests', () => {
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         status: 200,
         data: { success: true },
       });
@@ -397,7 +419,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should set correct content-type header', () => {
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         status: 200,
         data: { success: true },
       });
@@ -408,7 +430,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should handle custom headers in requests', async () => {
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         status: 200,
         data: { success: true },
       });
@@ -420,13 +442,13 @@ describe('Agent → API Integration Tests', () => {
         },
       });
 
-      expect(mockedAxios.post).toHaveBeenCalled();
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
     });
   });
 
   describe('Performance and Timeout', () => {
     it('should enforce timeout limits', async () => {
-      mockedAxios.post.mockRejectedValueOnce({
+      mockAxiosInstance.post.mockRejectedValueOnce({
         code: 'ECONNABORTED',
         message: 'timeout of 5000ms exceeded',
       });
@@ -440,7 +462,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should measure response time', async () => {
-      mockedAxios.post.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         status: 200,
         data: { success: true },
         headers: { 'x-response-time': '125ms' },
@@ -457,7 +479,7 @@ describe('Agent → API Integration Tests', () => {
 
   describe('API Endpoint Availability', () => {
     it('should verify KYC endpoint is available', async () => {
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         status: 200,
         data: { endpoint: 'kyc-check', available: true },
       });
@@ -469,7 +491,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should verify AML endpoint is available', async () => {
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         status: 200,
         data: { endpoint: 'aml-check', available: true },
       });
@@ -481,7 +503,7 @@ describe('Agent → API Integration Tests', () => {
     });
 
     it('should verify Compliance endpoint is available', async () => {
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         status: 200,
         data: { endpoint: 'compliance-check', available: true },
       });

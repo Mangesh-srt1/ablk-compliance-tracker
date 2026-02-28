@@ -5,7 +5,7 @@
  * File: src/__tests__/unit/agents/sebiAgent.test.ts
  */
 
-import { SebiAgent } from '../../../agents/sebiAgent';
+import { SEBIAgent as SebiAgent } from '../../../agents/sebiAgent';
 
 describe('SebiAgent', () => {
   let agent: SebiAgent;

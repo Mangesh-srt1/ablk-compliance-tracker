@@ -5,7 +5,7 @@
  * File: src/__tests__/unit/agents/amlAgent.test.ts
  */
 
-import { AmlAgent } from '../../../agents/amlAgent';
+import { AMLAgent as AmlAgent } from '../../../agents/amlAgent';
 
 describe('AmlAgent', () => {
   let agent: AmlAgent;

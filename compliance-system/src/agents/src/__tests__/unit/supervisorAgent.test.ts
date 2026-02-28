@@ -3,6 +3,13 @@
  * Tests supervisor agent workflow, state transitions, and multi-agent coordination
  */
 
+// Mock @langchain/anthropic before imports to avoid API key validation
+jest.mock('@langchain/anthropic', () => ({
+  ChatAnthropic: jest.fn().mockImplementation(() => ({
+    invoke: jest.fn().mockResolvedValue({ content: 'mocked response' }),
+  })),
+}));
+
 import {
   ComplianceSupervisorAgent,
   ComplianceCheck,
@@ -13,7 +20,6 @@ import { AMLAgent } from '../../../agents/amlAgent';
 import { SEBIAgent } from '../../../agents/sebiAgent';
 
 jest.mock('../../../config/database');
-jest.mock('@langchain/anthropic');
 jest.mock('winston');
 
 describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {

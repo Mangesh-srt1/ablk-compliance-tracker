@@ -5,6 +5,13 @@
  * File: src/__tests__/unit/agents/supervisorAgent.test.ts
  */
 
+// Mock @langchain/anthropic before imports to avoid API key validation
+jest.mock('@langchain/anthropic', () => ({
+  ChatAnthropic: jest.fn().mockImplementation(() => ({
+    invoke: jest.fn().mockResolvedValue({ content: 'mocked response' }),
+  })),
+}));
+
 import { ComplianceSupervisorAgent } from '../../../agents/supervisorAgent';
 
 describe('ComplianceSupervisorAgent', () => {

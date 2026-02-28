@@ -1,0 +1,250 @@
+###############################################################################
+# Saudi Arabia (SA) - Saudi CMA Jurisdiction Configuration
+# For PE & Real-Estate tokenization compliance
+# Regulatory Framework: Saudi Capital Market Authority (CMA), SAFIU, NCFEI
+###############################################################################
+
+jurisdiction:
+  code: SA
+  name: 'Saudi Arabia - Riyadh'
+  region: MENA
+  launchDate: '2026-04-01'
+  timeZone: 'Asia/Riyadh'
+  currencyCode: 'SAR'
+  currencySymbol: 'ر.س'
+
+regulatoryFramework:
+  primaryRegulator: SAUDI_CMA
+  secondaryRegulators:
+    - SAFIU                             # Saudi Financial Intelligence Unit
+    - NCFEI                             # National Committee for Combating Money Laundering
+    - SAMA                              # Saudi Arabian Monetary Authority
+  applicableLaws:
+    - CAPITAL_MARKET_LAW_2003
+    - ANTI_MONEY_LAUNDERING_LAW_2017
+    - REAL_ESTATE_INVESTMENT_FUNDS_REGULATIONS_2018
+    - REIT_REGULATIONS_2016
+    - PERSONAL_DATA_PROTECTION_LAW_2021
+    - CMA_SECURITIES_REGULATIONS_2018
+
+regulatoryBodies:
+  - id: SAUDI_CMA
+    name: 'Capital Market Authority - Saudi Arabia'
+    jurisdiction: SAUDI_ARABIA
+    website: 'https://www.cma.org.sa'
+    reportingEmail: 'complaints@cma.org.sa'
+    contactPhone: '+966-11-200-2400'
+    reportingFormats: [PDF, XML, XBRL]
+
+  - id: SAFIU
+    name: 'Saudi Financial Intelligence Unit'
+    jurisdiction: SAUDI_ARABIA
+    website: 'https://www.safiu.gov.sa'
+    reportingEmail: 'fiu@safiu.gov.sa'
+    reportingFormats: [GOAML, XML]
+
+kyc:
+  providerIntegration: ballerine
+  livenessCheck: true
+  faceMatch: true
+  docLanguages: [AR, EN]
+
+  minimumAge: 18
+
+  docRequirements:
+    individual:
+      - SAUDI_NATIONAL_ID                 # Iqama for expatriates
+      - PASSPORT
+      - PROOF_OF_ADDRESS
+      - SOURCE_OF_FUNDS_DECLARATION
+      - BENEFICIAL_OWNERSHIP_DECLARATION
+      - NAJM_CREDIT_REPORT               # For large investments
+
+    corporate:
+      - COMMERCIAL_REGISTRATION
+      - ARTICLES_OF_ASSOCIATION
+      - BOARD_RESOLUTION
+      - AUTHORIZED_SIGNATORY_LIST
+      - AUDITED_FINANCIALS_LAST_2_YEARS
+      - VAT_REGISTRATION_CERTIFICATE
+
+  sanctionsList:
+    - OFAC_SDN
+    - UN_SECURITY_COUNCIL
+    - SAUDI_CMA_WATCHLIST
+    - SAFIU_WATCHLIST
+    - GCC_SANCTIONS_LIST
+    - EU_CONSOLIDATED_LIST
+
+  eddThresholdSAR: 375000                 # ~$100k USD EDD trigger
+  eddThresholdUSD: 100000
+
+  adverseMediaScreening: true
+  pepCheck: true
+  pepDefinition: 'Member of Royal Family, Senior Government Official, Military Rank Colonel+, Board of SOEs'
+  pepRelativeCheck: true
+  pepRelativeLevels: 2                    # Saudi: stricter PEP family check
+
+  kycRefreshInterval: 365                 # Days
+  kycExpiryNotification: 30
+
+  accreditedInvestorThresholds:
+    individualInstitutional:
+      minInvestmentSAR: 750000           # SAR 750k (~$200k USD)
+    hnwIndividual:
+      minNetWorthSAR: 3000000            # SAR 3M (~$800k USD)
+      minAnnualIncomeSAR: 600000         # SAR 600k
+    retail:
+      maxInvestmentSAR: 50000            # Retail cap per investment
+
+tokenization:
+  transferRestrictions:
+    requireBothPartiesKYC: true
+    holdingLimitPercent: 25              # Saudi CMA: max 25% single investor
+    restrictedJurisdictions:
+      - IR                               # Iran (FATF black list)
+      - KP                               # North Korea
+      - SY                               # Syria
+      - CU                               # Cuba
+      - SD                               # Sudan
+    requireComplianceApproval:
+      thresholdSAR: 1875000              # ~$500k USD
+
+  lockupRules:
+    defaultLockupDays: 180               # REIT: 6 months
+    peDefaultLockupDays: 365             # PE Fund: 1 year
+    redemptionWindowDays: 90
+    redemptionNoticeDays: 30
+
+  corporateActions:
+    capitalCallNoticeDays: 10            # Saudi CMA requirement
+    dividendWithholdingTax: 0.05         # Saudi Arabia: 5% withholding
+    redemptionAMLThresholdUSD: 500000
+    reitDistributionMinPercent: 90       # REIT must distribute 90% of profits
+
+  reitSpecific:
+    minAssetValueSAR: 100000000          # SAR 100M minimum REIT size
+    maxLeveragePercent: 50               # Max debt 50% of NAV
+    minLiquidityPercent: 5               # Maintain 5% liquid assets
+    mandatoryDistributionPercent: 90     # Must distribute 90% of profits
+
+aml:
+  ctrThresholdSAR: 375000                # SAR 375k (~$100k USD) CTR threshold
+  sarFilingAuthority: SAFIU
+  sarFilingSystem: GOAML
+  sarFilingDeadlineHours: 72             # 3 business days per SAFIU
+
+  suspiciousActivityPatterns:
+    - structuring
+    - hawala
+    - round_tripping
+    - shell_company_layering
+    - reit_income_manipulation
+
+  velocityChecks:
+    enabled: true
+    dailyTransferLimit: 5
+    weeklyLargeTransferThreshold: 3      # > SAR 375k per week
+
+  hawalaDetection:
+    enabled: true
+    sensitivityLevel: HIGH               # Saudi: strict hawala enforcement
+
+  sanctionsList:
+    - OFAC_SDN
+    - UN_SECURITY_COUNCIL
+    - SAUDI_CMA_WATCHLIST
+    - SAFIU_WATCHLIST
+    - GCC_SANCTIONS_LIST
+
+oracle:
+  propertyValuation:
+    provider: SAUDI_GENERAL_AUTHORITY_FOR_STATISTICS
+    maxDiscrepancyPercent: 10
+    revaluationFrequencyDays: 90
+    mandatoryValuerCertification: true
+    approvedValuers:
+      - SAUDI_AUTHORITY_LICENSED_VALUER
+
+  doubleCheckRegistry:
+    enabled: true
+    registry: MINISTRY_OF_JUSTICE_AQARI  # Saudi property registry
+    apiEndpoint: 'https://aqari.moj.gov.sa/api/v1'
+    backupRegistry: 'https://rga.gov.sa/api/v1'
+
+  sourceOfFunds:
+    highValueThresholdSAR: 1875000       # ~$500k USD
+    requiredDocuments:
+      - BANK_STATEMENT_6MONTHS
+      - AUDITED_FINANCIALS
+      - SOURCE_DECLARATION
+
+governance:
+  majorChangesRequireVote: true
+  votingThreshold: 75                    # Saudi CMA: 75% supermajority
+  votingDeadlineDays: 21
+  minVotingParticipation: 50             # 50% quorum required
+
+  majorChangeDefinitions:
+    - FUND_MANAGER_CHANGE
+    - INVESTMENT_STRATEGY_CHANGE
+    - FEE_STRUCTURE_CHANGE
+    - FUND_EXTENSION
+    - EARLY_TERMINATION
+
+  shariahCompliance:
+    # When enabled: requires shariahBoardRequired=true and halalScreeningEnabled=true.
+    # Islamic finance funds must screen investments for riba (interest), gharar (uncertainty),
+    # and haram sectors. Requires approved Shariah Board approval for all investment decisions.
+    enabled: false                       # Set true for Islamic finance funds
+    shariahBoardRequired: false
+    halalScreeningEnabled: false
+
+reporting:
+  periodicReturnFrequency: quarterly
+  quarterlyReportDeadlineDays: 30
+  retentionYears: 7
+
+  quarterlyReportContents:
+    - FUND_NAV
+    - DISTRIBUTION_PAID
+    - ASSET_ALLOCATION
+    - PERFORMANCE_METRICS
+    - AML_INCIDENTS
+    - GOVERNANCE_VOTES
+
+  annualAuditRequired: true
+  auditStandard: IFRS_9
+  auditDeadline: 120                     # Days after year-end
+  regulatoryReportingAuthority: SAUDI_CMA
+  cmaFormRequired: true
+
+dataProtection:
+  standard: SAUDI_PERSONAL_DATA_PROTECTION_LAW_2021
+  piiEncryption: AES_256
+  dataResidencyRequired: true
+  dataStorageLocation: SAUDI_ARABIA_ONLY
+  consentMechanism: EXPLICIT_OPT_IN
+  retentionYears: 7
+
+peerToPeer:
+  allowSecondaryMarketTrading: true
+  requiresComplianceApproval: true
+  approvalLatency: 120                   # Minutes max
+
+  allowedExchanges:
+    - TADAWUL_DFM                        # Saudi Exchange
+    - CMA_LICENSED_EXCHANGE
+    - MUQASSA_CLEARING_HOUSE
+
+features:
+  enableArabicLanguageSupport: true
+  enableIslamicFinanceCompliance: false  # Optional feature
+  enableReitCompliance: true
+  enableHawalaDetection: true
+  enableGoAMLIntegration: true
+
+configVersion: '1.0.0-SA'
+lastUpdated: '2026-02-28'
+nextReviewDate: '2026-08-31'
+effectiveDate: '2026-04-01'
