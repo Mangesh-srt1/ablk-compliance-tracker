@@ -14,12 +14,12 @@ import {
   ComplianceSupervisorAgent,
   ComplianceCheck,
   ComplianceResult,
-} from '../../../agents/supervisorAgent';
-import { KYCAgent } from '../../../agents/kycAgent';
-import { AMLAgent } from '../../../agents/amlAgent';
-import { SEBIAgent } from '../../../agents/sebiAgent';
+} from '../../agents/supervisorAgent';
+import { KYCAgent } from '../../agents/kycAgent';
+import { AMLAgent } from '../../agents/amlAgent';
+import { SEBIAgent } from '../../agents/sebiAgent';
 
-jest.mock('../../../config/database');
+jest.mock('../../config/database');
 jest.mock('winston');
 
 describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
@@ -31,10 +31,7 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Create supervisor
-    supervisor = new ComplianceSupervisorAgent();
-
-    // Create mocked agents
+    // Create mocked agents first so they can be injected
     mockKycAgent = {
       run: jest.fn(),
       validate: jest.fn(),
@@ -49,6 +46,13 @@ describe('ComplianceSupervisorAgent (Agent Orchestration)', () => {
       run: jest.fn(),
       checkRegulation: jest.fn(),
     } as any;
+
+    // Create supervisor with injected mock agents
+    supervisor = new ComplianceSupervisorAgent({
+      kycAgent: mockKycAgent,
+      amlAgent: mockAmlAgent,
+      sebiAgent: mockSebiAgent,
+    });
   });
 
   describe('Workflow Orchestration', () => {

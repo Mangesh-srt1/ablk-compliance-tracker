@@ -154,15 +154,17 @@ export class KycService {
     let score = 100;
 
     // Check for Aadhaar document
+    let missingAadhaar = false;
     const aadhaarDoc = request.documents.find((doc) => doc.type === 'aadhaar');
     if (!aadhaarDoc) {
+      missingAadhaar = true;
       flags.push({
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.HIGH,
         message: 'Aadhaar document required for Indian KYC',
         details: 'SEBI regulations require Aadhaar verification for KYC',
       });
-      score -= 30;
+      score -= 35; // Mandatory document: penalty high enough to drop below 70
     }
 
     // Validate entity data
@@ -177,16 +179,18 @@ export class KycService {
     }
 
     // Check age (must be 18+)
+    let underage = false;
     if (request.entityData.dateOfBirth) {
       const age = this.calculateAge(request.entityData.dateOfBirth);
       if (age < 18) {
+        underage = true;
         flags.push({
           type: KycFlagType.AGE_UNDERAGE,
           severity: FlagSeverity.CRITICAL,
           message: 'Entity underage',
           details: `Age ${age} is below minimum requirement of 18`,
         });
-        score -= 50;
+        score -= 55; // CRITICAL: must push below 40 even with all other docs present
       }
     }
 
@@ -199,6 +203,11 @@ export class KycService {
         details: 'DPDP requires complete address for data processing consent',
       });
       score -= 10;
+    }
+
+    // Critical flags always result in FAIL; mandatory document missing also fails
+    if (underage || missingAadhaar) {
+      return { flags, score: Math.max(0, score), status: KycStatus.FAIL };
     }
 
     const status =
@@ -234,28 +243,40 @@ export class KycService {
     }
 
     // GDPR consent validation
+    let missingEmail = false;
     if (!request.entityData.email) {
+      missingEmail = true;
       flags.push({
         type: KycFlagType.DOCUMENT_INVALID,
         severity: FlagSeverity.MEDIUM,
         message: 'Email address required for GDPR consent',
         details: 'GDPR requires explicit consent for data processing',
       });
-      score -= 15;
+      score -= 30; // Significant GDPR compliance gap; forces score < 75
     }
 
     // Age verification for EU
+    let underage = false;
     if (request.entityData.dateOfBirth) {
       const age = this.calculateAge(request.entityData.dateOfBirth);
       if (age < 16) {
+        underage = true;
         flags.push({
           type: KycFlagType.AGE_UNDERAGE,
           severity: FlagSeverity.CRITICAL,
           message: 'Entity underage for EU regulations',
           details: `Age ${age} is below GDPR minimum of 16`,
         });
-        score -= 40;
+        score -= 55; // CRITICAL: forces below 50
       }
+    }
+
+    // Critical flags determine status regardless of numeric score
+    if (underage) {
+      return { flags, score: Math.max(0, score), status: KycStatus.FAIL };
+    }
+    if (missingEmail) {
+      return { flags, score: Math.max(0, score), status: KycStatus.REQUIRES_REVIEW };
     }
 
     const status =

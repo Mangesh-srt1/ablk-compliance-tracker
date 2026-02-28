@@ -119,142 +119,133 @@ export class BallerineClient {
         customerId: workflowData.customer.id,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error((error as any)?.message || 'Failed to create Ballerine workflow');
     }
   }
 
   /**
-   * Get workflow status
+   * Get workflow status (with retry on transient network errors)
    */
-  async getWorkflowStatus(workflowId: string): Promise<BallerineWorkflowResult> {
-    try {
-      logger.info('Getting Ballerine workflow status', { workflowId });
+  async getWorkflowStatus(workflowId: string, retries = 2): Promise<BallerineWorkflowResult> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        logger.info('Getting Ballerine workflow status', { workflowId, attempt });
 
-      const response = await this.client.get(`/workflows/${workflowId}`);
+        const response = await this.client.get(`/workflows/${workflowId}`);
+        const workflow = response.data;
 
-      const workflow = response.data;
+        logger.info('Ballerine workflow status retrieved', { workflowId, status: workflow.status });
 
-      logger.info('Ballerine workflow status retrieved', {
-        workflowId,
-        status: workflow.status,
-      });
-
-      return this.mapWorkflowResponse(workflow);
-    } catch (error) {
-      logger.error('Failed to get Ballerine workflow status', {
-        workflowId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+        return this.mapWorkflowResponse(workflow);
+      } catch (error: any) {
+        // Retry on transient network errors
+        const isTransient = error?.code === 'ECONNABORTED' || error?.code === 'ECONNRESET' || error?.message === 'Network timeout';
+        if (isTransient && attempt < retries) {
+          await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+          continue;
+        }
+        logger.error('Failed to get Ballerine workflow status', {
+          workflowId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        if (error instanceof Error) throw error;
+        throw new Error((error as any)?.message || 'Failed to get Ballerine workflow status');
+      }
     }
+    throw new Error('Failed to get workflow status after retries');
   }
 
   /**
-   * Update workflow with additional documents
+   * Update workflow with additional documents.
+   * Accepts either an array of documents or an object with a documents property.
    */
-  async updateWorkflow(workflowId: string, documents: any[]): Promise<void> {
+  async updateWorkflow(workflowId: string, update: any[] | { documents: any[] }): Promise<BallerineWorkflowResult> {
     try {
-      logger.info('Updating Ballerine workflow', {
-        workflowId,
-        documentCount: documents.length,
-      });
+      const documents = Array.isArray(update) ? update : (update as any).documents ?? [];
+      logger.info('Updating Ballerine workflow', { workflowId, documentCount: documents.length });
 
-      await this.client.patch(`/workflows/${workflowId}`, {
-        documents,
-      });
+      const response = await this.client.put(`/workflows/${workflowId}`, { documents });
 
       logger.info('Ballerine workflow updated', { workflowId });
+      return this.mapWorkflowResponse(response.data);
     } catch (error) {
       logger.error('Failed to update Ballerine workflow', {
         workflowId,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error((error as any)?.message || 'Failed to update Ballerine workflow');
     }
   }
 
   /**
-   * Submit document for verification
+   * Submit document for verification.
+   * Accepts either (workflowId, documentType, documentData) or (workflowId, { type, file })
    */
-  async submitDocument(workflowId: string, documentType: string, documentData: any): Promise<void> {
+  async submitDocument(workflowId: string, documentOrType: string | { type: string; file?: string }, documentData?: any): Promise<{ documentId: string; workflowId: string; status: string; uploadedAt: string }> {
     try {
-      logger.info('Submitting document to Ballerine', {
-        workflowId,
-        documentType,
-      });
+      const body = typeof documentOrType === 'string'
+        ? { type: documentOrType, data: documentData }
+        : { type: documentOrType.type, data: documentOrType.file };
 
-      await this.client.post(`/workflows/${workflowId}/documents`, {
-        type: documentType,
-        data: documentData,
-      });
+      logger.info('Submitting document to Ballerine', { workflowId, type: body.type });
 
-      logger.info('Document submitted to Ballerine', {
-        workflowId,
-        documentType,
-      });
+      const response = await this.client.post(`/workflows/${workflowId}/documents`, body);
+
+      logger.info('Document submitted to Ballerine', { workflowId, type: body.type });
+      return response.data;
     } catch (error) {
       logger.error('Failed to submit document to Ballerine', {
         workflowId,
-        documentType,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error((error as any)?.message || 'Failed to submit document');
     }
   }
 
   /**
-   * Get supported document types
+   * Get supported document types (async, fetches from API or falls back to hardcoded list)
    */
-  getSupportedDocumentTypes(): string[] {
-    return [
-      'passport',
-      'national_id',
-      'drivers_license',
-      'utility_bill',
-      'bank_statement',
-      'proof_of_address',
-      'selfie',
-    ];
+  async getSupportedDocumentTypes(): Promise<string[]> {
+    try {
+      const response = await this.client.get('/document-types');
+      return response.data?.documentTypes ?? this._defaultDocTypes();
+    } catch (error) {
+      logger.error('Failed to fetch supported document types', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      if (error instanceof Error) throw error;
+      throw new Error((error as any)?.message || 'Failed to fetch document types');
+    }
+  }
+
+  private _defaultDocTypes(): string[] {
+    return ['passport', 'national_id', 'drivers_license', 'utility_bill', 'bank_statement', 'proof_of_address', 'selfie'];
   }
 
   /**
-   * Map API response to internal format
+   * Map API response to internal format.
+   * Handles both nested (verifications/checks) and flat (documentVerification/sanctionsCheck) API shapes.
    */
   private mapWorkflowResponse(apiResponse: any): BallerineWorkflowResult {
+    const docVerif = apiResponse.documentVerification ?? (apiResponse.verifications?.document ? { status: apiResponse.verifications.document.status, reasons: apiResponse.verifications.document.reasons } : undefined);
+    const bioVerif = apiResponse.biometricVerification ?? (apiResponse.verifications?.biometric ? { status: apiResponse.verifications.biometric.status, reasons: apiResponse.verifications.biometric.reasons } : undefined);
+    const addrVerif = apiResponse.addressVerification ?? (apiResponse.verifications?.address ? { status: apiResponse.verifications.address.status, reasons: apiResponse.verifications.address.reasons } : undefined);
+    const sanctions = apiResponse.sanctionsCheck ?? (apiResponse.checks?.sanctions ? { hit: apiResponse.checks.sanctions.hit, matches: apiResponse.checks.sanctions.matches } : undefined);
+    const pep = apiResponse.pepCheck ?? (apiResponse.checks?.pep ? { hit: apiResponse.checks.pep.hit, matches: apiResponse.checks.pep.matches } : undefined);
+
     return {
       id: apiResponse.id,
       status: apiResponse.status,
-      documentVerification: apiResponse.verifications?.document
-        ? {
-            status: apiResponse.verifications.document.status,
-            reasons: apiResponse.verifications.document.reasons,
-          }
-        : undefined,
-      biometricVerification: apiResponse.verifications?.biometric
-        ? {
-            status: apiResponse.verifications.biometric.status,
-            reasons: apiResponse.verifications.biometric.reasons,
-          }
-        : undefined,
-      addressVerification: apiResponse.verifications?.address
-        ? {
-            status: apiResponse.verifications.address.status,
-            reasons: apiResponse.verifications.address.reasons,
-          }
-        : undefined,
-      sanctionsCheck: apiResponse.checks?.sanctions
-        ? {
-            hit: apiResponse.checks.sanctions.hit,
-            matches: apiResponse.checks.sanctions.matches,
-          }
-        : undefined,
-      pepCheck: apiResponse.checks?.pep
-        ? {
-            hit: apiResponse.checks.pep.hit,
-            matches: apiResponse.checks.pep.matches,
-          }
-        : undefined,
-    };
+      documentVerification: docVerif,
+      biometricVerification: bioVerif,
+      addressVerification: addrVerif,
+      sanctionsCheck: sanctions,
+      pepCheck: pep,
+      ...(apiResponse.documents ? { documents: apiResponse.documents } : {}),
+    } as any;
   }
 
   /**
