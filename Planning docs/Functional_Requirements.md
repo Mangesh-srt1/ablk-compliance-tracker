@@ -1,7 +1,7 @@
 # Functional Requirements Document (FRD) for Ableka Lumina
 
-**Document Version**: 1.13  
-**Date**: February 23, 2026  
+**Document Version**: 1.15  
+**Date**: February 28, 2026  
 **Prepared By**: AI Assistant  
 **Approved By**: [To be filled]  
 **Project**: Ableka Lumina (AI-Driven RegTech SaaS Platform)  
@@ -509,6 +509,261 @@ Slack/PagerDuty:
   3. Export PDF/JSON with citations and localization.  
 - **Acceptance Criteria**: Compliant with global regs; supports 10+ languages.
 
+### 3.7 PE & RWA Tokenization Compliance *(NEW – v1.15)*
+
+> **Detail**: Full specifications for each requirement below are in [`Planning docs/PE_RWA_Tokenization_FRD.md`](./PE_RWA_Tokenization_FRD.md).  
+> **Codebase Impact**: `compliance-system/src/api/src/routes/peTokenizationRoutes.ts`, `compliance-system/src/api/src/services/peTokenizationService.ts`, `compliance-system/src/api/src/services/oracleVerificationService.ts`.
+
+**FR-7.1: Corporate KYB (Know Your Business) with UBO Tracing** *(NEW)*
+- **Description**: Verify corporate entities investing in tokenized assets by tracing their Ultimate Beneficial Ownership (UBO) chain, preventing shell-company abuse.
+- **Steps**:
+  1. POST `/api/v1/kyb-check` with corporate registration, ownership structure, and jurisdiction.
+  2. Load jurisdiction-specific KYB rules (UBO threshold: AE/EU 25%+, IN 10%+ per PMLA).
+  3. For each UBO meeting threshold, trigger individual KYC (FR-3.1).
+  4. Verify no circular ownership or shell-company indicators.
+  5. Return `{ status, kybScore, uboChain, reasoning }`.
+- **Acceptance Criteria**: UBO chain depth ≥ 5 levels; corporate registry checks for AE/IN/US; results stored in `kyc_checks` table with `entity_type = 'corporate'`.
+- **Priority**: High (MVP).
+- **Regulatory Reference**: FATF R.24, UAE AML Decree-Law No.20/2018, EU AMLD5 Art.30.
+
+**FR-7.2: Enhanced Due Diligence (EDD) for High-Risk Investors** *(NEW)*
+- **Description**: Automatically trigger additional verification for high-risk investors (PEPs, FATF grey-listed countries, large investments).
+- **Steps**:
+  1. Trigger when KYC risk score ≥ 60, PEP match detected, investment > $1M USD, or FATF grey/black-listed country.
+  2. Collect additional documents (source of wealth, 6-month bank statements, professional references).
+  3. Run AI analysis on documents and adverse media check.
+  4. Route to compliance officer for manual sign-off.
+  5. Store EDD record in `kyc_checks` with `check_type = 'EDD'`.
+- **Acceptance Criteria**: EDD workflow completes within 5 business days; all triggers documented in audit log; compliance officer sign-off required before APPROVED status.
+- **Priority**: High.
+- **Regulatory Reference**: FATF R.19, UAE CBUAE Notice 2021/2, SEBI Master Circular AML.
+
+**FR-7.3: Accredited/Qualified Investor Verification** *(NEW)*
+- **Description**: Verify investors meet minimum accreditation thresholds before they can hold restricted tokenized securities.
+- **Steps**:
+  1. Load thresholds from jurisdiction YAML (US: $200k income or $1M net worth; UAE: $500k investable assets; India: ₹1 crore minimum).
+  2. Validate submitted financial documents against thresholds.
+  3. AI model assesses self-certification plausibility.
+  4. Issue investor classification: `APPROVED` / `CONDITIONAL` / `REJECTED`.
+  5. Link classification to token whitelist (FR-7.4).
+- **Acceptance Criteria**: Threshold values sourced exclusively from YAML config; no hardcoded values; classification linked to token transfer whitelist.
+- **Priority**: High.
+- **Regulatory Reference**: US SEC 17 CFR 230.501, UAE DFSA PIB 2.7, SEBI AIF Reg 4.
+
+**FR-7.4: Token Transfer Whitelist & Compliance Gate** *(NEW)*
+- **Description**: Ensure only KYC-verified, jurisdiction-eligible investors can receive tokenized asset transfers, enforced at the API layer before any on-chain transaction.
+- **Steps**:
+  1. POST `/api/compliance/transfer-check` with `{ from, to, amount, tokenType, jurisdiction }`.
+  2. Verify both sender and receiver on compliance whitelist.
+  3. Check receiver's jurisdiction eligibility for this token type.
+  4. Check holding limits (FR-7.5) and lock-up periods (FR-7.6).
+  5. Run AML screening (FR-3.2) on transfer amount.
+  6. Return `{ status, riskScore, checks: { kyc_sender, kyc_recipient, aml, whitelist, geofence, amount } }`.
+- **Acceptance Criteria**: Response < 2 seconds (P95); restricted jurisdictions configurable via YAML; both-party KYC required.
+- **Priority**: High (MVP).
+- **Regulatory Reference**: FATF R.10, UAE DFSA CIR 5.3, SEBI AIF Reg 13.
+
+**FR-7.5: Investor Holding Limit Enforcement** *(NEW)*
+- **Description**: Prevent any single investor from exceeding jurisdiction-defined concentration limits in a tokenized asset.
+- **Steps**:
+  1. On each transfer request, retrieve investor's current token holdings.
+  2. Calculate projected holding if transfer proceeds.
+  3. Compare against YAML-configured limits (AE DFSA: 20% max; SEBI AIF: 33% max).
+  4. If limit exceeded: auto-REJECT with `HOLDING_LIMIT_EXCEEDED` reason code.
+  5. Update holding register in real-time.
+- **Acceptance Criteria**: Limit check completes within transfer check SLA (2s); configurable per-token and per-jurisdiction; real-time holding register updated atomically.
+- **Priority**: High.
+
+**FR-7.6: Lock-Up Period & Vesting Schedule Enforcement** *(NEW)*
+- **Description**: Block token transfers during mandatory lock-up periods for PE fund tokens; support cliff, linear, and milestone-based vesting schedules.
+- **Steps**:
+  1. On transfer request, check `token_lifecycle` table for lock-up end date and vesting status.
+  2. If `current_date < lockup_end_date`: REJECT with `LOCKUP_ACTIVE`.
+  3. For vested tokens: calculate vested amount and reject transfers exceeding vested balance.
+  4. Notify investor proactively when lock-up expires.
+- **Acceptance Criteria**: Accurate to the day; all blocked transfers logged with reason; lock-up end date configurable at token issuance.
+- **Priority**: High (MVP).
+- **Regulatory Reference**: UAE DFSA CIR 5.4, SEBI AIF Reg 12.
+
+**FR-7.7: Corporate Action Compliance (Dividend, Redemption, Capital Call)** *(NEW)*
+- **Description**: Validate all corporate actions (dividend distribution, token redemption, capital call) against regulatory requirements before they execute.
+- **Sub-requirements**:
+  - **FR-7.7a Dividend**: Verify distributable profits (via oracle), check KYC-currency of all recipients, apply jurisdiction-specific withholding tax.
+  - **FR-7.7b Redemption**: Verify investor is within redemption window, no pending SAR filings, redemption ≤ vested holding; EDD for redemptions > $500k.
+  - **FR-7.7c Capital Call**: Validate within committed capital limits; verify notice period compliance (AE: 10 days, IN: 21 days per YAML); flag calls > 50% committed capital for review.
+- **Acceptance Criteria**: Each corporate action type returns `{ approved, reason, withholdingTax? }` within 5 seconds; notice-period rules sourced from YAML.
+- **Priority**: Medium (Phase 2).
+- **Regulatory Reference**: SEBI LODR, UAE DFSA CIR 6.1, FATF R.10.
+
+**FR-7.8: Hawala & Velocity Pattern Detection** *(EXTENDED – existing FR-3.3 enhanced)*
+- **Description**: Detect PE fund-specific hawala-like layering patterns in tokenized asset transactions. Extends the existing fraud detection (FR-3.3) with PE-specific patterns.
+- **Patterns Detected**: Structuring (sub-threshold splits within 24h), round-tripping (within 48h), fan-out/fan-in entropy anomalies, mirror trading across jurisdictions.
+- **Steps**:
+  1. On each transaction, retrieve 30-day transaction history for sender/receiver.
+  2. Run pattern detection algorithms (structuring, round-trip graph, entropy analysis).
+  3. Return `{ flagged, hawalaScore, patterns, recommendation }`.
+  4. If `hawalaScore ≥ 80`: trigger STR workflow (FR-7.12).
+- **Acceptance Criteria**: < 5% false positive rate; all pattern types independently configurable on/off per jurisdiction YAML; results stored in `aml_checks` table.
+- **Priority**: High.
+- **Regulatory Reference**: FATF Typology 2023, UAE CBUAE AML Regulation 2020.
+
+**FR-7.9: Cross-Chain Compliance Monitoring** *(NEW)*
+- **Description**: Provide a unified compliance view across all client-approved blockchain networks (permissioned Besu for PE, Ethereum/Solana for public RWA).
+- **Steps**:
+  1. Accept monitoring requests specifying blockchain type (`permissioned` | `public`) and client-provided RPC endpoint.
+  2. For `public` chains: additionally query Chainalysis for wallet risk score.
+  3. Aggregate cross-chain activity per investor across all monitored networks.
+  4. Alert on: cross-chain bridging, anonymous mixing services, unusual cross-chain velocity.
+- **Acceptance Criteria**: Single API call returns consolidated investor activity across all monitored chains; cross-chain alerts generated within 1 second of event detection; no blockchain infrastructure provisioned by the platform.
+- **Priority**: Medium (Phase 2).
+- **Codebase Impact**: `compliance-system/src/agents/src/blockchain/` (besu, ethereum providers), `compliance-system/src/api/src/services/blockchainMonitor.ts`.
+
+**FR-7.10: Property Valuation Oracle Integration** *(NEW)*
+- **Description**: Verify that on-chain token price/supply is consistent with current off-chain property valuations, preventing inflated tokenization fraud.
+- **Steps**:
+  1. Trigger on token issuance or large transfer (> $1M).
+  2. Query client-provided property valuation oracle endpoint.
+  3. Retrieve NAV; compare `tokenSupply × tokenPrice` vs. oracle NAV.
+  4. If discrepancy > `maxDiscrepancyPercent` (from YAML): ESCALATE with `VALUATION_DISCREPANCY` flag.
+  5. Log oracle result with timestamp for audit.
+- **Acceptance Criteria**: Discrepancy threshold configurable per YAML; oracle query timeout of 10 seconds; all oracle queries logged immutably.
+- **Priority**: Medium (Phase 2).
+- **Codebase Impact**: `compliance-system/src/api/src/services/oracleVerificationService.ts`.
+
+**FR-7.11: Double-Dipping Prevention** *(NEW)*
+- **Description**: Prevent the same underlying real-world asset from being tokenized on multiple platforms simultaneously, creating fraudulent duplicate claims.
+- **Steps**:
+  1. On asset registration, extract unique identifier (title deed, fund registration number, land registry ID).
+  2. Query internal `asset_registry` table for duplicate.
+  3. Query external property registries (client-provided: UAE DLD, India state registry, Saudi Aqari).
+  4. If duplicate found: REJECT with `DUPLICATE_ASSET`.
+  5. If unique: register asset and issue uniqueness certificate.
+- **Acceptance Criteria**: 100% prevention of exact-match duplicates; external registry check with configurable timeout; uniqueness certificate stored in audit log.
+- **Priority**: Medium (Phase 2).
+- **Regulatory Reference**: UAE DFSA PIB 2.6, SEBI AIF Reg 24.
+
+**FR-7.12: Automated STR/SAR Filing** *(EXTENDED – existing FR-6.2 enhanced)*
+- **Description**: Automatically draft and submit Suspicious Transaction Reports (STR/SAR) to relevant financial intelligence units when suspicious activity is detected. Extends FR-6.2 with jurisdiction-specific filing integrations.
+- **Trigger Conditions**: AML risk score ≥ 70, hawala score ≥ 80, any sanctions hit, or manual escalation.
+- **Filing Targets**:
+  - AE: UAE FIU via goAML platform
+  - IN: FIU-IND submission API
+  - US: FinCEN BSA E-Filing
+  - SA: SAFIU Saudi Financial Intelligence Unit
+- **Steps**:
+  1. LangChain agent generates STR/SAR narrative from transaction data and AML flags.
+  2. Compliance officer review (auto-file for `auto_file_threshold` as set in YAML).
+  3. Submit to appropriate authority; store `{ filingId, status, filingReference }`.
+  4. Retain filing record for 5 years (FATF R.11 minimum).
+- **Acceptance Criteria**: Draft generated within 30 seconds of trigger; jurisdiction-specific form fields populated correctly; filing reference stored in `compliance_checks` table.
+- **Priority**: High.
+
+**FR-7.13: Compliance Case Management** *(NEW)*
+- **Description**: Structured workflow to investigate, document, and resolve compliance cases from initial detection through final resolution.
+- **Case Types**: Suspicious activity, Failed KYC, Sanctions hit, Corporate action dispute, Data breach.
+- **Steps**:
+  1. Case created automatically from alerts or manually by compliance officer.
+  2. AI agent populates case with evidence (transaction history, KYC records, similar cases via PGVector similarity search).
+  3. Case assigned to compliance officer (round-robin or by expertise).
+  4. Investigation workflow: evidence gathering → AI-assisted analysis → decision (close/escalate/report).
+  5. Regulatory report generated if required (FR-7.12, FR-6.2).
+  6. Case closed with full audit trail.
+- **Case Status States**: `OPEN` → `INVESTIGATING` → `PENDING_INFO` → `RESOLVED` | `REPORTED`.
+- **Acceptance Criteria**: Case history fully queryable; PGVector similarity search returns top-5 similar cases; full audit trail with timestamps for each state transition.
+- **Priority**: Medium (Phase 2).
+- **Codebase Impact**: New route `compliance-system/src/api/src/routes/caseManagementRoutes.ts` (to be implemented).
+
+---
+
+### 3.8 Security Hardening Requirements *(NEW – v1.15)*
+
+> **Detail**: Full gap analysis in [`Planning docs/security-standards-coverage-analysis.md`](./security-standards-coverage-analysis.md).  
+> **Codebase Impact**: `compliance-system/src/api/src/middleware/`, `compliance-system/src/api/src/config/`, `compliance-system/src/api/src/utils/sqlLoader.ts`.
+
+**FR-8.1: Multi-Factor Authentication (MFA)** *(NEW)*
+- **Description**: Require a second authentication factor for compliance officers and admin users accessing sensitive compliance data.
+- **Steps**:
+  1. After successful password login, prompt for TOTP (authenticator app) code.
+  2. Validate TOTP within ±30-second window.
+  3. Store MFA enrollment status in `users` table.
+  4. Enforce MFA for roles: `admin`, `compliance_officer`.
+- **Acceptance Criteria**: MFA required before accessing `/api/v1/compliance/*` endpoints for elevated roles; backup recovery codes generated at enrollment; compliant with eIDAS (EU).
+- **Priority**: High.
+
+**FR-8.2: JWT Token Blacklisting on Logout** *(NEW)*
+- **Description**: Invalidate JWT tokens immediately on logout or forced revocation, preventing reuse of stolen tokens.
+- **Steps**:
+  1. On `POST /auth/logout`: add `jti` (JWT ID) to Redis blacklist with TTL = remaining token lifetime.
+  2. `authMiddleware.ts` checks blacklist on every request.
+  3. Admin can force-revoke all tokens for a user (e.g., suspected breach).
+- **Acceptance Criteria**: Revoked token returns 401 within 100ms; blacklist entries auto-expire from Redis; no memory leaks from expired entries.
+- **Priority**: High.
+- **Codebase Impact**: `compliance-system/src/api/src/middleware/authMiddleware.ts`, `compliance-system/src/api/src/config/redis.ts`.
+
+**FR-8.3: SQL Query Externalization** *(NEW)*
+- **Description**: Move all inline SQL queries to external `.sql` files loaded via `SqlQueryLoader`, eliminating injection risk if parameterization ever fails.
+- **Steps**:
+  1. Create `compliance-system/src/api/src/sql/{domain}/` directory structure (kyc/, aml/, compliance/, audit/).
+  2. Extract all inline SQL from service files to corresponding `.sql` files.
+  3. Use `SqlQueryLoader.load()` utility for all database queries.
+  4. Path-traversal protection: validate resolved path stays within `sql/` directory.
+- **Acceptance Criteria**: Zero inline SQL strings in service files; `SqlQueryLoader` throws on path-traversal attempts; all SQL files reviewed and parameterized correctly.
+- **Priority**: High.
+- **Codebase Impact**: All `compliance-system/src/api/src/services/*.ts` files; `compliance-system/src/api/src/utils/sqlLoader.ts` (already scaffolded).
+
+**FR-8.4: API Rate Limiting Policy** *(CLARIFIED – extends existing FR-1.2)*
+- **Description**: Define and enforce request rate limits per tier and per endpoint category to prevent abuse and ensure fair usage.
+- **Limits**:
+  | Tier | General API | Auth endpoints | Compliance scans |
+  |------|------------|----------------|-----------------|
+  | Free | 60 req/min | 10 req/min | 100/month total |
+  | Pro | 600 req/min | 30 req/min | 10,000/month |
+  | Enterprise | Custom | Custom | Unlimited |
+- **Steps**:
+  1. Rate limiter reads tier from JWT claims.
+  2. Per-IP and per-API-key counters stored in Redis with sliding window.
+  3. Return `429 Too Many Requests` with `Retry-After` header when exceeded.
+- **Acceptance Criteria**: Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) present on all responses; limits enforced within ±5% accuracy.
+- **Priority**: High.
+- **Codebase Impact**: `compliance-system/src/api/src/middleware/rateLimiter.ts` (already scaffolded).
+
+---
+
+### 3.9 Webhook Notifications *(NEW – v1.15)*
+
+> **Codebase Impact**: New `compliance-system/src/api/src/routes/webhookRoutes.ts` and `compliance-system/src/api/src/services/webhookService.ts` (to be implemented).
+
+**FR-9.1: Client Webhook Registration & Delivery** *(NEW)*
+- **Description**: Allow clients to register HTTPS webhook URLs to receive real-time notifications when compliance events occur (e.g., KYC REJECTED, AML ESCALATED, STR filed).
+- **Steps**:
+  1. `POST /api/v1/webhooks` to register: `{ url, events: string[], secret }`.
+  2. Ableka signs payload with HMAC-SHA256 using client secret; delivers via POST.
+  3. Retry with exponential backoff (3 retries, 30s/120s/300s intervals) on delivery failure.
+  4. Client acknowledges with HTTP 200; non-200 triggers retry.
+  5. `GET /api/v1/webhooks/{id}/logs` to view delivery history.
+- **Supported Event Types**: `kyc.approved`, `kyc.rejected`, `kyc.escalated`, `aml.flagged`, `transfer.blocked`, `str.filed`, `case.opened`.
+- **Acceptance Criteria**: Webhook delivered within 5 seconds of event; HMAC signature verifiable by client; delivery log retained for 30 days.
+- **Priority**: Medium (Phase 2).
+
+---
+
+### 3.10 Subscription & SaaS Billing Management *(CLARIFIED – v1.15)*
+
+> **Codebase Impact**: New `compliance-system/src/api/src/routes/billingRoutes.ts` and Stripe integration (to be implemented, Phase 5).
+
+**FR-10.1: Tiered Subscription Management** *(CLARIFIED)*
+- **Description**: Manage client subscriptions (Free/Pro/Enterprise) with usage metering, enforcement, and Stripe billing integration.
+- **Steps**:
+  1. Client selects tier during onboarding (UI-1.1).
+  2. Scan usage metered per tenant in real-time; stored in `usage_metrics` table.
+  3. When Free tier scan limit reached: return `429` with upgrade prompt.
+  4. Stripe webhooks update subscription status on payment events.
+  5. Usage reports available via `GET /api/v1/billing/usage`.
+- **Acceptance Criteria**: Usage counter updated within 1 second of each scan; overage billed at $0.01–$0.05 per scan; subscription changes take effect immediately.
+- **Priority**: Medium (Phase 5).
+
+---
+
 ## 4. UI Flows and User Interfaces
 ### 4.1 Ableka Portal (Web App for Clients/Admins)
 **UI-1.1: Client Onboarding Flow**  
@@ -597,13 +852,106 @@ Slack/PagerDuty:
 - As a compliance officer, I want audit trails so I can prove adherence.
 - As a Compliance Tracker, I want real-time dashboards so I can monitor SEBI/DPDP adherence and escalate risks.
 - As a global fintech operator, I want jurisdiction-specific scans so I can comply with EU GDPR and US OFAC simultaneously.
+- *(NEW)* As a compliance officer, I want the system to trace corporate UBO structures automatically (FR-7.1) so I can detect shell-company abuse without manual research.
+- *(NEW)* As a compliance officer, I want lock-up and holding-limit enforcement (FR-7.5, FR-7.6) so I can ensure PE token transfers comply with DFSA/SEBI concentration rules automatically.
+- *(NEW)* As a compliance officer, I want automated STR draft generation (FR-7.12) so I can submit suspicious transaction reports to FIU-IND/UAE FIU with 80% less manual effort.
+- *(NEW)* As a platform security engineer, I want JWT token blacklisting (FR-8.2) and SQL query externalization (FR-8.3) so I can close the security gaps identified in the audit.
+- *(NEW)* As a fintech developer client, I want webhook notifications (FR-9.1) so I can receive real-time alerts when KYC/AML decisions affect my users without polling the API.
 
-## 7. Testing Requirements
+## 7. Functional Requirements Gap Analysis *(NEW – v1.15)*
+
+This section documents the gap assessment performed against existing documentation and implementation.
+
+### 7.1 Coverage Assessment Methodology
+
+The following sources were reviewed:
+- `Planning docs/Functional_Requirements.md` (this document, v1.13 before this update)
+- `Planning docs/PE_RWA_Tokenization_FRD.md` (v1.0, specialized PE/RWA module)
+- `Planning docs/MASTER_IMPLEMENTATION_PLAN.md` (40-week roadmap)
+- `Planning docs/Implementation_Audit.md` (pre-implementation gap audit)
+- `Planning docs/security-standards-coverage-analysis.md` (security controls analysis)
+- `Planning docs/PROJECT_ANALYSIS_ALIGNMENT_REPORT.md` (architecture alignment)
+- `compliance-system/src/` (actual implementation)
+
+### 7.2 Identified Gaps
+
+| Gap # | Area | Gap Description | Addressed In | Codebase Status |
+|-------|------|----------------|--------------|-----------------|
+| G-01 | Corporate Compliance | No FR for KYB/UBO corporate entity verification | FR-7.1 (new) | `kycService.ts` handles individual only |
+| G-02 | Enhanced Due Diligence | EDD flow not described in main FRD | FR-7.2 (new) | Not implemented |
+| G-03 | Investor Classification | Accredited investor thresholds not in main FRD | FR-7.3 (new) | Not implemented |
+| G-04 | Token Lifecycle | No FRs for transfer whitelist, holding limits, lock-up, or corporate actions | FR-7.4–7.7 (new) | `peTokenizationService.ts` partially covers |
+| G-05 | Hawala Detection | Only general fraud detection described; PE-specific hawala patterns missing | FR-7.8 (extended) | `amlPatternDetector.ts` has velocity checks |
+| G-06 | Cross-Chain Compliance | No unified multi-chain compliance view described in main FRD | FR-7.9 (new) | `blockchainMonitor.ts` covers individual chains |
+| G-07 | Oracle Verification | No FRs for property valuation oracle, double-dipping, or source-of-funds oracle | FR-7.10–7.11 (new) | `oracleVerificationService.ts` scaffolded |
+| G-08 | Case Management | No structured case lifecycle management FR | FR-7.13 (new) | Not implemented |
+| G-09 | STR/SAR Filing | FR-6.2 covers general regulatory reporting; jurisdiction-specific STR filing integration missing | FR-7.12 (extended) | `complianceReportingSystem.ts` partially covers |
+| G-10 | MFA | Security analysis identified MFA as missing; no FR existed | FR-8.1 (new) | Not implemented |
+| G-11 | Token Blacklisting | Security analysis identified JWT token blacklisting as missing | FR-8.2 (new) | Not implemented |
+| G-12 | SQL Externalization | Security analysis flagged inline SQL as a risk; no FR mandated externalization | FR-8.3 (new) | `sqlLoader.ts` utility scaffolded; services have inline SQL |
+| G-13 | Rate Limiting | FR-1.2 mentions rate limits conceptually; no per-tier policy documented | FR-8.4 (clarified) | `rateLimiter.ts` scaffolded |
+| G-14 | Webhook Notifications | No client notification mechanism described | FR-9.1 (new) | Not implemented |
+| G-15 | Billing & SaaS Metering | Subscription tiers mentioned but no FR for billing lifecycle or usage metering | FR-10.1 (clarified) | Not implemented |
+
+### 7.3 Requirements Traceability
+
+The table below maps each new requirement to the relevant existing documentation and the planned implementation module.
+
+| FR # | Documented In | Implemented In | Priority |
+|------|--------------|----------------|---------|
+| FR-7.1 (KYB) | PE_RWA_Tokenization_FRD FR-102 | `kycService.ts` + new KYB endpoint | P0 MVP |
+| FR-7.2 (EDD) | PE_RWA_Tokenization_FRD FR-103 | `kycService.ts` + EDD workflow | P1 |
+| FR-7.3 (Accredited Investor) | PE_RWA_Tokenization_FRD FR-105 | `kycService.ts` + jurisdiction YAML | P1 |
+| FR-7.4 (Transfer Whitelist) | PE_RWA_Tokenization_FRD FR-201 | `peTokenizationRoutes.ts` + `complianceService.ts` | P0 MVP |
+| FR-7.5 (Holding Limits) | PE_RWA_Tokenization_FRD FR-202 | `peTokenizationService.ts` | P1 |
+| FR-7.6 (Lock-Up) | PE_RWA_Tokenization_FRD FR-203 | `peTokenizationService.ts` | P0 MVP |
+| FR-7.7 (Corporate Actions) | PE_RWA_Tokenization_FRD FR-204 | `peTokenizationService.ts` | P1 |
+| FR-7.8 (Hawala) | PE_RWA_Tokenization_FRD FR-302 | `amlPatternDetector.ts` (extend) | P1 |
+| FR-7.9 (Cross-Chain) | PE_RWA_Tokenization_FRD FR-303 | `blockchainMonitor.ts` + `multiJurisdictionalMonitor.ts` | P2 |
+| FR-7.10 (Oracle) | PE_RWA_Tokenization_FRD FR-401 | `oracleVerificationService.ts` | P1 |
+| FR-7.11 (Double-Dipping) | PE_RWA_Tokenization_FRD FR-402 | `oracleVerificationService.ts` | P1 |
+| FR-7.12 (STR Filing) | PE_RWA_Tokenization_FRD FR-501 | `complianceReportingSystem.ts` (extend) | P0 MVP |
+| FR-7.13 (Case Mgmt) | PE_RWA_Tokenization_FRD FR-503 | New `caseManagementRoutes.ts` (to be built) | P1 |
+| FR-8.1 (MFA) | security-standards-coverage-analysis.md | `authMiddleware.ts` (extend) | P1 |
+| FR-8.2 (Token Blacklist) | security-standards-coverage-analysis.md | `authMiddleware.ts` + `redis.ts` | P1 |
+| FR-8.3 (SQL Externalization) | security-standards-coverage-analysis.md | All service files + `sqlLoader.ts` | P1 |
+| FR-8.4 (Rate Limiting) | Implied in FR-1.2 | `rateLimiter.ts` (complete per policy) | P0 MVP |
+| FR-9.1 (Webhooks) | — (new) | New `webhookRoutes.ts` + `webhookService.ts` | P1 |
+| FR-10.1 (Billing) | UI-1.1 (portal onboarding) | New `billingRoutes.ts` + Stripe (Phase 5) | P2 |
+
+### 7.4 No-Change Confirmation
+
+The following existing FRs were reviewed and confirmed **complete and traceable**:
+
+| FR # | Status | Notes |
+|------|--------|-------|
+| FR-1.1 (API Key Management) | ✅ Complete | `authMiddleware.ts` implements |
+| FR-1.2 (Multi-Tenant Isolation) | ✅ Complete (policy gap clarified in FR-8.4) | `authMiddleware.ts` |
+| FR-2.1 (Agent Query Processing) | ✅ Complete | `supervisorAgent.ts`, `agentRoutes.ts` |
+| FR-2.2 (RAG for Regulatory Knowledge) | ✅ Complete | `ragService.ts` |
+| FR-2.3 (Custom Tools Integration) | ✅ Complete | `compliance-system/src/agents/src/tools/` (kycTool, amlTool, etc.) |
+| FR-3.1 (/kyc-check) | ✅ Complete | `kycRoutes.ts` + `kycService.ts` |
+| FR-3.2 (/aml-score) | ✅ Complete | `amlRoutes.ts` + `amlService.ts` |
+| FR-3.3 (/fraud-detect) | ✅ Complete | `fraudRoutes.ts` + `fraudDetectionService.ts` |
+| FR-3.4 (/scan) | ✅ Complete | `scanRoutes.ts` + `advancedComplianceScanner.ts` |
+| FR-4.1 (Multi-Agent Orchestration) | ✅ Complete | `supervisorAgent.ts` + `agentOrchestrator.ts` |
+| FR-5.1 (Usage Dashboards) | ✅ Complete | `analyticsRoutes.ts` + `analyticsService.ts` |
+| FR-5.5 (Hierarchical Agent Integration) | ✅ Complete | `complianceGraphAgent.ts` + `complianceGraph.ts` |
+| FR-6.1 (Data Encryption) | ✅ Complete | `encryptionService.ts` + KMS via CDK |
+| FR-6.2 (Regulatory Reporting) | ⚠️ Partial – jurisdiction-specific STR integrations addressed in FR-7.12 | `complianceReportingSystem.ts` |
+
+---
+
+## 8. Testing Requirements
+
 - Unit: Jest for tools.
 - E2E: Cypress for API flows.
 - Load: 1k concurrent users.
+- *(NEW)* Unit tests for all new FR-7.x, FR-8.x, FR-9.x requirements (≥ 80% coverage per existing TDD mandate).
+- *(NEW)* Integration tests for token transfer whitelist (FR-7.4) covering edge cases: lock-up active, holding limit exceeded, restricted jurisdiction.
+- *(NEW)* Security regression tests for JWT blacklisting (FR-8.2) and rate limiting (FR-8.4).
 
-## 8. Change Log
+## 9. Change Log
 - v1.0: Initial draft based on project plan.
 - v1.1: Added global compliance modules, multi-jurisdictional support, localization, and enhanced integrations for EU/US expansion.
 - v1.2: Added project scope outline (section 1.7) based on Phase 1, Week 1 research and designs for logical sequencing.
@@ -618,5 +966,5 @@ Slack/PagerDuty:
 - v1.11: Added user journeys and API design drafts from Phase 1 Week 2.
 - v1.12: Added provider evaluations, UI wireframes/designs, localization plan, and proxy design from Phase 1 Week 3.
 - v1.13: Finalized FRD with PRD draft, OpenAPI spec, wireframes, tech spec, and compliance audit from Phase 1 Week 4.
-- v1.14: Completed Phase 3 Week 14 (Multi-Agent Setup) with comprehensive agent architecture, communication protocols, reasoning and tool integration, learning and adaptation, and deployment/testing frameworks. Consolidated Phase 3 documentation folders - merged "Phase 3 Integrations" and "Phase 3 Advanced Features & Integrations" with the latter being authoritative.</content>
-<parameter name="filePath">c:\Users\Mange\work\ablk-compliance-tracker\Functional_Requirements.md
+- v1.14: Completed Phase 3 Week 14 (Multi-Agent Setup) with comprehensive agent architecture, communication protocols, reasoning and tool integration, learning and adaptation, and deployment/testing frameworks. Consolidated Phase 3 documentation folders - merged "Phase 3 Integrations" and "Phase 3 Advanced Features & Integrations" with the latter being authoritative.
+- v1.15: *(NEW)* Conducted full functional requirements gap analysis against existing documentation and implementation. Added new sections 3.7–3.10 covering 15 identified gaps: PE & RWA Tokenization Compliance (FR-7.1–7.13), Security Hardening (FR-8.1–8.4), Webhook Notifications (FR-9.1), and Subscription Billing (FR-10.1). Added Gap Analysis (Section 7) with traceability matrix. Updated user stories (Section 6) with 5 new stories. Extended testing requirements (Section 8) with new test mandates. Renumbered Change Log to Section 9. All new requirements explicitly marked `*(NEW)*` or `*(EXTENDED)*` with codebase impact notes.
