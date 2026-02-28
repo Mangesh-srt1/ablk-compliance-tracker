@@ -44,6 +44,7 @@ import scanRoutes from './routes/scanRoutes';
 import rulesRoutes from './routes/rulesRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import advancedScanRoutes from './routes/advancedScanRoutes';
+import peTokenizationRoutes from './routes/peTokenizationRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -186,6 +187,7 @@ async function initializeApp(): Promise<void> {
     app.use('/api', rulesRoutes);
     app.use('/api/analytics', analyticsRoutes);
     app.use('/api/compliance', advancedScanRoutes);
+    app.use('/api/pe', peTokenizationRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
