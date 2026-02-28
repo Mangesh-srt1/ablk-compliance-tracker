@@ -5,7 +5,7 @@
  * File: src/__tests__/unit/agents/kycAgent.test.ts
  */
 
-import { KycAgent } from '../../../agents/kycAgent';
+import { KYCAgent as KycAgent } from '../../../agents/kycAgent';
 
 describe('KycAgent', () => {
   let agent: KycAgent;

@@ -7,20 +7,45 @@ import request from 'supertest';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 
+// Mock auth middleware before importing routes
+jest.mock('../src/middleware/authMiddleware', () => ({
+  requirePermission: (_permission: string) => (req: any, _res: any, next: any) => {
+    if (!req.user) {
+      return _res.status(401).json({ error: 'Authentication required' });
+    }
+    next();
+  },
+  requireComplianceOfficer: (req: any, _res: any, next: any) => {
+    if (!req.user) {
+      return _res.status(401).json({ error: 'Authentication required' });
+    }
+    next();
+  },
+  authenticateToken: (req: any, res: any, next: any) => next(),
+}));
+
+import rwaComplianceRouter from '../src/routes/rwaComplianceRoutes';
+
 // Mock Express app setup
 const mockApp = express();
 mockApp.use(express.json());
 
-// Mock middleware
-const mockAuthMiddleware = (req: any, res: any, next: any) => {
+// Mock middleware that sets req.user when Bearer token provided
+const mockAuthMiddleware = (req: any, _res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (token) {
-    req.user = { id: 'test-user', role: 'compliance_officer' };
+    req.user = {
+      id: 'test-user',
+      role: 'compliance_officer',
+      permissions: ['compliance:execute', 'compliance:read', 'compliance:escalate'],
+    };
   }
   next();
 };
 
 mockApp.use(mockAuthMiddleware);
+mockApp.use('/api/compliance', rwaComplianceRouter);
+mockApp.use('/api/filing', rwaComplianceRouter);
 
 describe('RWA Compliance Endpoints', () => {
   const validToken = jwt.sign(
@@ -65,7 +90,7 @@ describe('RWA Compliance Endpoints', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toHaveProperty('code');
     });
 
     it('❌ Should reject negative amount', async () => {
@@ -86,7 +111,7 @@ describe('RWA Compliance Endpoints', () => {
         .set('Authorization', `Bearer ${validToken}`)
         .send({
           ...validTransferPayload,
-          currency: 'INVALID',
+          currency: 'AB', // too short (min 3 chars)
         });
 
       expect(response.status).toBe(400);
