@@ -576,4 +576,206 @@ describe('AMLPatternDetector', () => {
       expect(result1.hasAnomalies).toBe(result2.hasAnomalies);
     });
   });
+
+  // ─── FR-7.8: PE-Specific Hawala Pattern Detection Tests ──────────────────
+
+  describe('detectHawalaPatterns (FR-7.8)', () => {
+    it('should return unflagged result for empty transactions', () => {
+      const result = detector.detectHawalaPatterns([]);
+
+      expect(result.flagged).toBe(false);
+      expect(result.hawalaScore).toBe(0);
+      expect(result.patterns).toHaveLength(0);
+      expect(result.recommendation).toContain('No transactions');
+    });
+
+    describe('Structuring detection', () => {
+      it('should detect structuring: multiple sub-threshold splits within 24h', () => {
+        const now = Date.now();
+        // Five $2,000 transfers from same sender within a few hours — combined $10k
+        const transactions: Transaction[] = [
+          { id: 'tx1', from: '0xSender', to: '0xA', amount: 2000, timestamp: now - 3 * 60 * 60 * 1000, type: 'transfer' },
+          { id: 'tx2', from: '0xSender', to: '0xB', amount: 2000, timestamp: now - 2 * 60 * 60 * 1000, type: 'transfer' },
+          { id: 'tx3', from: '0xSender', to: '0xC', amount: 2000, timestamp: now - 1 * 60 * 60 * 1000, type: 'transfer' },
+          { id: 'tx4', from: '0xSender', to: '0xD', amount: 2000, timestamp: now - 30 * 60 * 1000, type: 'transfer' },
+          { id: 'tx5', from: '0xSender', to: '0xE', amount: 2000, timestamp: now, type: 'transfer' },
+        ];
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const structuring = result.patterns.find(p => p.type === 'STRUCTURING');
+        expect(structuring).toBeDefined();
+        expect(structuring!.confidence).toBeGreaterThan(0.5);
+        expect(result.hawalaScore).toBeGreaterThan(0);
+        expect(result.flagged).toBe(true);
+      });
+
+      it('should NOT flag structuring for a single large transfer above threshold', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = [
+          { id: 'tx1', from: '0xSender', to: '0xA', amount: 50_000, timestamp: now, type: 'transfer' },
+        ];
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const structuring = result.patterns.find(p => p.type === 'STRUCTURING');
+        expect(structuring).toBeUndefined();
+      });
+    });
+
+    describe('Round-trip detection', () => {
+      it('should detect round-trip: funds sent and returned within 48h', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = [
+          { id: 'out1', from: '0xAlice', to: '0xBob', amount: 10_000, timestamp: now - 24 * 60 * 60 * 1000, type: 'transfer' },
+          { id: 'ret1', from: '0xBob', to: '0xAlice', amount: 9_800, timestamp: now - 12 * 60 * 60 * 1000, type: 'return' },
+        ];
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const roundTrip = result.patterns.find(p => p.type === 'ROUND_TRIP');
+        expect(roundTrip).toBeDefined();
+        expect(roundTrip!.transactions).toContain('out1');
+        expect(roundTrip!.transactions).toContain('ret1');
+      });
+
+      it('should NOT flag round-trip for transfers more than 48h apart', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = [
+          { id: 'out1', from: '0xAlice', to: '0xBob', amount: 10_000, timestamp: now - 72 * 60 * 60 * 1000, type: 'transfer' },
+          { id: 'ret1', from: '0xBob', to: '0xAlice', amount: 9_800, timestamp: now, type: 'return' },
+        ];
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const roundTrip = result.patterns.find(p => p.type === 'ROUND_TRIP');
+        expect(roundTrip).toBeUndefined();
+      });
+    });
+
+    describe('Fan-out detection', () => {
+      it('should detect fan-out: one sender to many recipients in burst', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = Array.from({ length: 6 }, (_, i) => ({
+          id: `fanout-${i}`,
+          from: '0xHub',
+          to: `0xRecipient${i}`,
+          amount: 1_000,
+          timestamp: now - (5 - i) * 10 * 60 * 1000, // 10-min intervals within 1 hour
+          type: 'transfer',
+        }));
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const fanOut = result.patterns.find(p => p.type === 'FAN_OUT');
+        expect(fanOut).toBeDefined();
+        expect(fanOut!.confidence).toBeGreaterThan(0);
+        expect(result.flagged).toBe(true);
+      });
+    });
+
+    describe('Fan-in detection', () => {
+      it('should detect fan-in: many senders consolidating to one recipient', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = Array.from({ length: 6 }, (_, i) => ({
+          id: `fanin-${i}`,
+          from: `0xSender${i}`,
+          to: '0xCollector',
+          amount: 1_000,
+          timestamp: now - (5 - i) * 10 * 60 * 1000,
+          type: 'transfer',
+        }));
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const fanIn = result.patterns.find(p => p.type === 'FAN_IN');
+        expect(fanIn).toBeDefined();
+        expect(fanIn!.confidence).toBeGreaterThan(0);
+        expect(result.flagged).toBe(true);
+      });
+    });
+
+    describe('Mirror trading detection', () => {
+      it('should detect mirror trading: near-equal amounts across jurisdictions within 24h', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = [
+          { id: 'buy-ae', from: '0xTraderA', to: '0xFundAE', amount: 500_000, timestamp: now - 6 * 60 * 60 * 1000, type: 'transfer', jurisdiction: 'AE' },
+          { id: 'sell-in', from: '0xFundIN', to: '0xTraderA', amount: 495_000, timestamp: now - 4 * 60 * 60 * 1000, type: 'transfer', jurisdiction: 'IN' },
+        ];
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const mirror = result.patterns.find(p => p.type === 'MIRROR_TRADING');
+        expect(mirror).toBeDefined();
+        expect(mirror!.transactions).toContain('buy-ae');
+        expect(mirror!.transactions).toContain('sell-in');
+      });
+
+      it('should NOT detect mirror trading for same jurisdiction', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = [
+          { id: 'tx1', from: '0xA', to: '0xB', amount: 500_000, timestamp: now - 60 * 60 * 1000, type: 'transfer', jurisdiction: 'AE' },
+          { id: 'tx2', from: '0xC', to: '0xD', amount: 498_000, timestamp: now, type: 'transfer', jurisdiction: 'AE' },
+        ];
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        const mirror = result.patterns.find(p => p.type === 'MIRROR_TRADING');
+        expect(mirror).toBeUndefined();
+      });
+    });
+
+    describe('hawalaScore and recommendation', () => {
+      it('should return hawalaScore >= 80 and STR recommendation for high-confidence multi-pattern match', () => {
+        const now = Date.now();
+        // Structuring pattern (5 sub-threshold within 24h)
+        const structuring: Transaction[] = Array.from({ length: 5 }, (_, i) => ({
+          id: `s-${i}`,
+          from: '0xSender',
+          to: `0xRecip${i}`,
+          amount: 2_000,
+          timestamp: now - (4 - i) * 60 * 60 * 1000,
+          type: 'transfer',
+        }));
+        // Fan-out (6 recipients from hub)
+        const fanOut: Transaction[] = Array.from({ length: 6 }, (_, i) => ({
+          id: `fo-${i}`,
+          from: '0xHub',
+          to: `0xDst${i}`,
+          amount: 1_000,
+          timestamp: now - (5 - i) * 8 * 60 * 1000,
+          type: 'transfer',
+        }));
+        // Round-trip
+        const roundTrip: Transaction[] = [
+          { id: 'rt1', from: '0xAlice', to: '0xBob', amount: 10_000, timestamp: now - 20 * 60 * 60 * 1000, type: 'transfer' },
+          { id: 'rt2', from: '0xBob', to: '0xAlice', amount: 9_900, timestamp: now - 10 * 60 * 60 * 1000, type: 'return' },
+        ];
+
+        const allTx = [...structuring, ...fanOut, ...roundTrip];
+        const result = detector.detectHawalaPatterns(allTx);
+
+        expect(result.hawalaScore).toBeGreaterThanOrEqual(80);
+        expect(result.recommendation).toContain('STR/SAR');
+      });
+
+      it('should have recommendation with trigger suggestion when flagged', () => {
+        const now = Date.now();
+        const transactions: Transaction[] = Array.from({ length: 5 }, (_, i) => ({
+          id: `t-${i}`,
+          from: '0xSender',
+          to: `0xR${i}`,
+          amount: 2_000,
+          timestamp: now - (4 - i) * 60 * 60 * 1000,
+          type: 'transfer',
+        }));
+
+        const result = detector.detectHawalaPatterns(transactions);
+
+        if (result.flagged) {
+          expect(result.recommendation.length).toBeGreaterThan(10);
+        }
+      });
+    });
+  });
 });

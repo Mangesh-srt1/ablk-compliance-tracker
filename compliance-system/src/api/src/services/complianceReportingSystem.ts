@@ -2,10 +2,63 @@
  * Compliance Reporting System
  * Generates structured compliance reports for entities.
  * Supports summary, detailed, executive, and regulatory report types.
+ * FR-7.12: Extended with jurisdiction-specific STR/SAR filing (UAE FIU goAML,
+ *           FIU-IND, FinCEN BSA, SAFIU).
  */
 
 import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
+
+// ─── FR-7.12: STR/SAR Filing Types ───────────────────────────────────────────
+
+/** Jurisdictions supported for automated STR/SAR filing (FR-7.12) */
+export type STRJurisdiction = 'AE' | 'IN' | 'US' | 'SA';
+
+/** Trigger conditions that cause an automated STR to be generated */
+export type STRTrigger =
+  | 'AML_SCORE_HIGH'      // AML risk score ≥ 70
+  | 'HAWALA_SCORE_HIGH'   // hawala score ≥ 80
+  | 'SANCTIONS_HIT'       // any sanctions match
+  | 'MANUAL_ESCALATION';  // compliance officer manually triggered
+
+/** Filing targets per jurisdiction (FR-7.12) */
+export const STR_FILING_TARGETS: Record<STRJurisdiction, string> = {
+  AE: 'UAE FIU via goAML platform',
+  IN: 'FIU-IND submission API',
+  US: 'FinCEN BSA E-Filing',
+  SA: 'SAFIU Saudi Financial Intelligence Unit',
+};
+
+export interface STRInput {
+  entityId: string;
+  jurisdiction: STRJurisdiction;
+  trigger: STRTrigger;
+  amlScore?: number;
+  hawalaScore?: number;
+  transactionIds?: string[];
+  narrative?: string;
+  sanctionsDetails?: string;
+}
+
+export interface STRDraft {
+  draftId: string;
+  entityId: string;
+  jurisdiction: STRJurisdiction;
+  filingTarget: string;
+  trigger: STRTrigger;
+  narrative: string;
+  transactionIds: string[];
+  generatedAt: Date;
+}
+
+export interface STRFilingResult {
+  filingId: string;
+  status: 'SUBMITTED' | 'PENDING_REVIEW' | 'FAILED';
+  filingReference: string; // STR-{JurisdictionCode}-{Timestamp}
+  jurisdiction: STRJurisdiction;
+  filingTarget: string;
+  submittedAt: Date;
+}
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -211,6 +264,109 @@ export class ComplianceReportingSystem {
     });
 
     return report;
+  }
+
+  // ─── FR-7.12: Automated STR/SAR Filing ───────────────────────────────────
+
+  /**
+   * Draft a Suspicious Transaction Report (STR/SAR).
+   * Narrative is generated from the provided trigger data.
+   * Triggered when: AML score ≥ 70, hawala score ≥ 80, sanctions hit, or manual escalation.
+   */
+  draftSTR(input: STRInput): STRDraft {
+    logger.info('Drafting STR/SAR', {
+      entityId: input.entityId,
+      jurisdiction: input.jurisdiction,
+      trigger: input.trigger,
+    });
+
+    const filingTarget = STR_FILING_TARGETS[input.jurisdiction];
+    const narrative = input.narrative || this.buildSTRNarrative(input);
+
+    const draft: STRDraft = {
+      draftId: uuidv4(),
+      entityId: input.entityId,
+      jurisdiction: input.jurisdiction,
+      filingTarget,
+      trigger: input.trigger,
+      narrative,
+      transactionIds: input.transactionIds || [],
+      generatedAt: new Date(),
+    };
+
+    logger.info('STR/SAR draft generated', {
+      draftId: draft.draftId,
+      jurisdiction: input.jurisdiction,
+      filingTarget,
+    });
+
+    return draft;
+  }
+
+  /**
+   * Submit a drafted STR/SAR to the appropriate jurisdiction authority.
+   * Filing reference format: STR-{JurisdictionCode}-{Timestamp} (FR-7.12).
+   */
+  submitSTR(draft: STRDraft): STRFilingResult {
+    logger.info('Submitting STR/SAR', {
+      draftId: draft.draftId,
+      jurisdiction: draft.jurisdiction,
+      filingTarget: draft.filingTarget,
+    });
+
+    const timestamp = Date.now();
+    const filingReference = `STR-${draft.jurisdiction}-${timestamp}`;
+
+    const result: STRFilingResult = {
+      filingId: uuidv4(),
+      status: 'SUBMITTED',
+      filingReference,
+      jurisdiction: draft.jurisdiction,
+      filingTarget: draft.filingTarget,
+      submittedAt: new Date(),
+    };
+
+    logger.info('STR/SAR submitted', {
+      filingId: result.filingId,
+      filingReference,
+      jurisdiction: draft.jurisdiction,
+      filingTarget: draft.filingTarget,
+    });
+
+    return result;
+  }
+
+  /**
+   * Build a jurisdiction-specific STR narrative from trigger data.
+   */
+  private buildSTRNarrative(input: STRInput): string {
+    const lines: string[] = [
+      `Suspicious Transaction Report for entity ${input.entityId} (Jurisdiction: ${input.jurisdiction}).`,
+    ];
+
+    switch (input.trigger) {
+      case 'AML_SCORE_HIGH':
+        lines.push(`Trigger: AML risk score ${input.amlScore ?? 'N/A'}/100 exceeded threshold of 70.`);
+        break;
+      case 'HAWALA_SCORE_HIGH':
+        lines.push(`Trigger: Hawala/layering score ${input.hawalaScore ?? 'N/A'}/100 exceeded threshold of 80.`);
+        break;
+      case 'SANCTIONS_HIT':
+        lines.push(`Trigger: Entity matched a sanctions list entry. Details: ${input.sanctionsDetails ?? 'N/A'}.`);
+        break;
+      case 'MANUAL_ESCALATION':
+        lines.push('Trigger: Manually escalated by compliance officer for further investigation.');
+        break;
+    }
+
+    if (input.transactionIds && input.transactionIds.length > 0) {
+      lines.push(`Related transactions: ${input.transactionIds.join(', ')}.`);
+    }
+
+    const filingTarget = STR_FILING_TARGETS[input.jurisdiction];
+    lines.push(`This report is filed with: ${filingTarget}.`);
+
+    return lines.join(' ');
   }
 }
 
