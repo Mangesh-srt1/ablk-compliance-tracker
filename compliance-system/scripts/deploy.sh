@@ -66,7 +66,8 @@ sleep 10
 services=("lumina-api" "lumina-agents")
 for service in "${services[@]}"; do
     if docker ps --format "{{.Names}}" | grep -q "${service}"; then
-        health=$(docker inspect "${service}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0].get('State',{}).get('Health',{}).get('Status','unknown'))" 2>/dev/null || echo "unknown")
+        # Check service health using docker inspect Go template (no python/jq dependency)
+        health=$(docker inspect --format '{{.State.Health.Status}}' "${service}" 2>/dev/null || echo "unknown")
         log "Service ${service}: ${health}"
     fi
 done

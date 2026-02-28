@@ -7,6 +7,7 @@ set -euo pipefail
 REGISTRY="${REGISTRY:-}"
 REPO_NAME="${REPO_NAME:-lumina}"
 TAG="${TAG:-latest}"
+# Default platform is linux/amd64. Override with PLATFORM=linux/arm64 on Apple Silicon or other ARM hosts.
 PLATFORM="${PLATFORM:-linux/amd64}"
 
 # Colors
