@@ -40,7 +40,10 @@ const WEIGHTS = {
   transactionVolume: 0.10,
 };
 
-// Default risk value used when a factor is not provided (represents neutral/unknown risk)
+// Default risk value used when a factor is not provided.
+// 50 is chosen as a conservative "neutral/unknown" midpoint so that missing data
+// does not artificially lower the overall risk score, prompting further investigation
+// rather than an automatic approval.
 const DEFAULT_RISK_VALUE = 50;
 
 // Flat point additions for boolean risk flags

@@ -58,17 +58,39 @@ TAG="${TAG}" docker-compose -f "${COMPOSE_FILE}" pull --ignore-pull-failures || 
 log "Starting services..."
 TAG="${TAG}" docker-compose -f "${COMPOSE_FILE}" up -d --remove-orphans
 
-# Wait for health checks
-log "Waiting for services to become healthy..."
-sleep 10
+# Wait for services to become healthy (max 60s)
+log "Waiting for services to become healthy (up to 60s)..."
+HEALTH_TIMEOUT=60
+HEALTH_INTERVAL=5
+elapsed=0
+all_healthy=false
 
-# Check service health
-services=("lumina-api" "lumina-agents")
-for service in "${services[@]}"; do
+while [ "$elapsed" -lt "$HEALTH_TIMEOUT" ]; do
+    all_healthy=true
+    for service in "lumina-api" "lumina-agents"; do
+        if docker ps --format "{{.Names}}" | grep -q "${service}"; then
+            health=$(docker inspect --format '{{.State.Health.Status}}' "${service}" 2>/dev/null || echo "unknown")
+            if [ "$health" != "healthy" ]; then
+                all_healthy=false
+            fi
+        fi
+    done
+    if [ "$all_healthy" = "true" ]; then
+        break
+    fi
+    sleep "$HEALTH_INTERVAL"
+    elapsed=$((elapsed + HEALTH_INTERVAL))
+done
+
+# Check service health — fail deployment if any critical service is unhealthy
+critical_failure=false
+for service in "lumina-api" "lumina-agents"; do
     if docker ps --format "{{.Names}}" | grep -q "${service}"; then
-        # Check service health using docker inspect Go template (no python/jq dependency)
         health=$(docker inspect --format '{{.State.Health.Status}}' "${service}" 2>/dev/null || echo "unknown")
         log "Service ${service}: ${health}"
+        if [ "$health" = "unhealthy" ]; then
+            error "Critical service ${service} is unhealthy — deployment failed!"
+        fi
     fi
 done
 
