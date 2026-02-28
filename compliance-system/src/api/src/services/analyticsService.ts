@@ -200,7 +200,7 @@ export class AnalyticsService {
            COUNT(*) AS total_checks,
            SUM(CASE WHEN risk_score >= 70 THEN 1 ELSE 0 END) AS high_risk_count
          FROM compliance_checks
-         WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+         WHERE created_at >= NOW() - make_interval(days => $1)
            ${jurisdictionClause}
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,

@@ -75,7 +75,10 @@ export class AgentCommunicationBus extends EventEmitter {
     if (!this.subscriptions.has(agentId)) {
       this.subscriptions.set(agentId, new Set());
     }
-    this.subscriptions.get(agentId)!.add(handler);
+    const handlers = this.subscriptions.get(agentId);
+    if (handlers) {
+      handlers.add(handler);
+    }
     logger.info('Agent subscribed to bus', { agentId });
   }
 

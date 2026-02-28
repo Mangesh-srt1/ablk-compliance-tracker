@@ -116,7 +116,7 @@ export class EthereumProviderManager extends EventEmitter {
     }
     const healthy = this.providers.filter((mp) => mp.health.isHealthy);
     if (healthy.length === 0) {
-      logger.warn('No healthy providers available, returning first provider as fallback');
+      logger.warn('No healthy providers available, returning first provider as fallback — requests may fail');
       return this.providers[0].provider;
     }
     return healthy[0].provider;

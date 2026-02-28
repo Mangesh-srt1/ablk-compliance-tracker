@@ -33,6 +33,9 @@ export interface BesuPrivacyGroup {
   type: 'PANTHEON' | 'ONCHAIN';
 }
 
+/** Default timeout in milliseconds for Besu privacy RPC calls. */
+const DEFAULT_BESU_RPC_TIMEOUT_MS = 10_000;
+
 export class BesuProviderManager extends EventEmitter {
   private provider: ethers.JsonRpcProvider | null = null;
   private signer: ethers.Wallet | null = null;
@@ -79,12 +82,12 @@ export class BesuProviderManager extends EventEmitter {
   /**
    * Internal helper: call a Besu privacy RPC method with timeout support.
    */
-  private async fetchPrivacyRPC(method: string, params: unknown[]): Promise<unknown> {
+  private async callBesuPrivacyRPC(method: string, params: unknown[]): Promise<unknown> {
     if (!this.config.privacyUrl) {
       throw new Error('privacyUrl is required to call privacy RPC');
     }
 
-    const timeoutMs = this.config.timeout ?? 10000;
+    const timeoutMs = this.config.timeout ?? DEFAULT_BESU_RPC_TIMEOUT_MS;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -123,7 +126,7 @@ export class BesuProviderManager extends EventEmitter {
     logger.info('Creating Besu privacy group', { name, memberCount: members.length });
 
     try {
-      const privacyGroupId = (await this.fetchPrivacyRPC('eea_createPrivacyGroup', [
+      const privacyGroupId = (await this.callBesuPrivacyRPC('eea_createPrivacyGroup', [
         { addresses: members, name, type: 'PANTHEON' },
       ])) as string;
 
@@ -150,7 +153,7 @@ export class BesuProviderManager extends EventEmitter {
     logger.info('Finding Besu privacy groups', { memberCount: members.length });
 
     try {
-      const result = (await this.fetchPrivacyRPC('eea_findPrivacyGroup', [members])) as Array<{
+      const result = (await this.callBesuPrivacyRPC('eea_findPrivacyGroup', [members])) as Array<{
         privacyGroupId: string;
         name: string;
         members: string[];

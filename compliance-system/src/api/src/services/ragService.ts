@@ -91,7 +91,8 @@ export class RAGService {
     limit = 10
   ): Promise<RAGQueryResult> {
     try {
-      logger.info('Querying compliance documents', { query: query.substring(0, 100), jurisdiction, limit });
+      // Do not log query content — it may contain sensitive compliance terms
+      logger.info('Querying compliance documents', { jurisdiction, limit });
 
       const safeLimit = Math.min(Math.max(1, limit), 100);
       const result = await db.query<{
