@@ -1,55 +1,60 @@
-# Multi-stage build for AI Compliance API Gateway
-FROM node:18-alpine AS base
+# ================================
+# Build Stage
+# ================================
+FROM node:20-alpine AS builder
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install build dependencies
+RUN apk add --no-cache python3 make g++ dumb-init
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files for dependency caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Production stage
-FROM node:18-alpine AS production
-
-# Install curl for health checks
-RUN apk add --no-cache curl
-
-# Create app user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Set working directory
-WORKDIR /app
-
-# Copy dependencies from base stage
-COPY --from=base --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Install all dependencies (including dev) for build
+RUN npm ci && npm cache clean --force
 
 # Copy source code
-COPY --chown=nextjs:nodejs . .
+COPY . .
 
 # Build TypeScript
 RUN npm run build
 
-# Remove development dependencies
+# Prune dev dependencies
 RUN npm prune --production
 
-# Create logs directory
-RUN mkdir -p logs && chown -R nextjs:nodejs logs
+# ================================
+# Production Stage
+# ================================
+FROM node:20-alpine AS production
 
-# Switch to non-root user
-USER nextjs
+# Install runtime dependencies
+RUN apk add --no-cache dumb-init curl \
+    && addgroup -g 1001 -S lumina \
+    && adduser -S lumina -u 1001 -G lumina
 
-# Expose port
+WORKDIR /app
+
+# Copy production node_modules from builder
+COPY --from=builder --chown=lumina:lumina /app/node_modules ./node_modules
+
+# Copy built application
+COPY --from=builder --chown=lumina:lumina /app/dist ./dist
+COPY --from=builder --chown=lumina:lumina /app/package*.json ./
+
+# Copy SQL files and locales needed at runtime
+COPY --chown=lumina:lumina src/sql ./src/sql
+COPY --chown=lumina:lumina src/locales ./src/locales
+
+# Create directories
+RUN mkdir -p /app/logs /app/uploads && chown -R lumina:lumina /app/logs /app/uploads
+
+USER lumina
+
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
 
-# Start application
-CMD ["npm", "start"]
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]
