@@ -11,7 +11,7 @@ import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
 // Create logs directory if it doesn't exist
-const logsDir = path.join(__dirname, '../../../logs');
+const logsDir = process.env.LOGS_DIR || '/app/logs';
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }

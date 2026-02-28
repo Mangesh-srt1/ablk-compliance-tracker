@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++ dumb-init
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 COPY . .
 RUN npm run build

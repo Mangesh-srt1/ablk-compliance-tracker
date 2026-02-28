@@ -173,10 +173,15 @@ export class KYCAgent extends BaseAgent {
             jurisdiction: input.jurisdiction,
           });
         } else if (this.ballerineClient) {
-          ballerineResult = await this.ballerineClient.initializeWorkflow({
-            userId: input.documentId,
-            documentType: input.documentType,
-            jurisdiction: input.jurisdiction,
+          ballerineResult = await this.ballerineClient.createWorkflow({
+            customer: {
+              id: input.documentId,
+              name: input.name,
+              email: '',
+              phone: '',
+            },
+            documents: [],
+            workflowType: 'general',
           });
         }
         lastError = null;

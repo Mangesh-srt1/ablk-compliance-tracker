@@ -11,7 +11,7 @@ import { StructuredTool } from '@langchain/core/tools';
 import winston from 'winston';
 import { KYCTool, initializeKYCTool, KYCResult } from '../tools/kycTool';
 import { AMLTool, initializeAMLTool, AMLResult } from '../tools/amlTool';
-import { ComplianceTool, initializeComplianceTool, ComplianceResult } from '../tools/complianceTool';
+import { ComplianceTool, initializeComplianceTool } from '../tools/complianceTool';
 import { JurisdictionRulesTool, initializeJurisdictionRulesTool, JurisdictionRules } from '../tools/jurisdictionRulesTool';
 import { BlockchainTool, initializeBlockchainTool, BlockchainAnalysisResult } from '../tools/blockchainTool';
 

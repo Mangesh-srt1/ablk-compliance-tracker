@@ -113,7 +113,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infrastructure/grafana-dashboards:/etc/grafana/provisioning/dashboards
-      - ./infrastructure/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./infrastructure/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
     networks:
       - compliance-network
     deploy:
@@ -182,8 +182,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3002
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}
-      REDIS_URL: redis://redis:${REDIS_PORT}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379
       GROK_API_KEY: ${GROK_API_KEY}
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}
       LOG_LEVEL: ${LOG_LEVEL:-info}
