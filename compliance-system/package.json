@@ -73,5 +73,16 @@
   "dependencies": {
     "swagger-ui-express": "^5.0.1",
     "yaml": "^2.8.2"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": ["ts-jest", {"diagnostics": false, "tsconfig": {"strict": false, "esModuleInterop": true, "allowSyntheticDefaultImports": true, "skipLibCheck": true}}]
+    },
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.js", "**/*.test.ts", "**/*.test.js"],
+    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"],
+    "roots": ["<rootDir>/src"],
+    "collectCoverageFrom": ["src/**/*.ts", "!src/**/*.d.ts", "!src/**/index.ts"],
+    "coveragePathIgnorePatterns": ["/node_modules/", "/dist/"]
   }
 }

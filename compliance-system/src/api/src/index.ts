@@ -41,6 +41,8 @@ import amlRoutes from './routes/amlRoutes';
 import monitoringRoutes from './routes/monitoringRoutes';
 import fraudRoutes from './routes/fraudRoutes';
 import scanRoutes from './routes/scanRoutes';
+import rulesRoutes from './routes/rulesRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -180,6 +182,8 @@ async function initializeApp(): Promise<void> {
     app.use('/api/monitoring', monitoringRoutes);
     app.use('/api', fraudRoutes);
     app.use('/api', scanRoutes);
+    app.use('/api', rulesRoutes);
+    app.use('/api/analytics', analyticsRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
