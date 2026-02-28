@@ -39,6 +39,8 @@ import healthRoutes from './routes/healthRoutes';
 import kycRoutes from './routes/kycRoutes';
 import amlRoutes from './routes/amlRoutes';
 import monitoringRoutes from './routes/monitoringRoutes';
+import fraudRoutes from './routes/fraudRoutes';
+import scanRoutes from './routes/scanRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -176,6 +178,8 @@ async function initializeApp(): Promise<void> {
     app.use('/api', kycRoutes);
     app.use('/api', amlRoutes);
     app.use('/api/monitoring', monitoringRoutes);
+    app.use('/api', fraudRoutes);
+    app.use('/api', scanRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
