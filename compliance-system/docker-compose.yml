@@ -231,7 +231,7 @@ services:
       REACT_APP_API_URL: http://compliance-gateway:3000
       REACT_APP_WS_URL: ws://compliance-gateway:3000
     ports:
-      - '3001:80'
+      - '3005:80'
     volumes:
       - ./src/dashboard/src:/app/src
       - ./src/dashboard/public:/app/public
