@@ -1,0 +1,148 @@
+{
+  "language": "Français",
+  "languageCode": "fr",
+  "region": "France",
+  "dateFormat": "DD/MM/YYYY",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "€",
+  "decimalSeparator": ",",
+  "thousandsSeparator": " ",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "Paramètres de requête invalides",
+      "MISSING_JURISDICTION": "La juridiction est requise",
+      "INVALID_JURISDICTION": "Code de juridiction invalide",
+      "AUTHENTICATION_FAILED": "Échec de l'authentification",
+      "INSUFFICIENT_PERMISSIONS": "Permissions insuffisantes pour cette opération",
+      "RATE_LIMIT_EXCEEDED": "Limite de débit dépassée. Veuillez réessayer plus tard",
+      "INTERNAL_SERVER_ERROR": "Une erreur interne du serveur s'est produite",
+      "SERVICE_UNAVAILABLE": "Le service est actuellement indisponible",
+      "TIMEOUT": "Délai d'attente de la requête dépassé",
+      "INVALID_DOCUMENT_TYPE": "Type de document invalide pour la juridiction",
+      "MISSING_REQUIRED_FIELDS": "Champs obligatoires manquants",
+      "INVALID_EMAIL_FORMAT": "Format d'e-mail invalide",
+      "INVALID_PHONE_FORMAT": "Format de numéro de téléphone invalide",
+      "ENTITY_NOT_FOUND": "Entité introuvable",
+      "RECORD_NOT_FOUND": "Enregistrement introuvable",
+      "DUPLICATE_ENTITY": "L'entité existe déjà",
+      "DATABASE_ERROR": "Échec de l'opération de base de données"
+    },
+    "success": {
+      "KYC_VERIFIED": "Vérification KYC réussie",
+      "KYC_PENDING_REVIEW": "Vérification KYC en attente de révision",
+      "KYC_REJECTED": "Vérification KYC rejetée",
+      "AML_CHECK_PASSED": "Vérification LCB-FT réussie",
+      "AML_CHECK_FLAGGED": "La vérification LCB-FT a détecté des risques",
+      "COMPLIANCE_CHECK_APPROVED": "Vérification de conformité approuvée",
+      "COMPLIANCE_CHECK_ESCALATED": "Vérification de conformité escaladée pour révision",
+      "COMPLIANCE_CHECK_REJECTED": "Vérification de conformité rejetée"
+    },
+    "messages": {
+      "PROCESSING": "Traitement de votre demande en cours...",
+      "TRANSACTION_SUBMITTED": "Transaction soumise avec succès",
+      "DATA_SAVED": "Données enregistrées avec succès",
+      "RECORD_CREATED": "Enregistrement créé avec succès",
+      "RECORD_UPDATED": "Enregistrement mis à jour avec succès",
+      "RECORD_DELETED": "Enregistrement supprimé avec succès"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "Connaissance du Client (KYC)",
+      "description": "Processus de vérification de l'identité du client",
+      "document_types": {
+        "PASSPORT": "Passeport",
+        "GOVERNMENT_ID": "Pièce d'identité gouvernementale",
+        "DRIVERS_LICENSE": "Permis de conduire",
+        "ID_CARD": "Carte d'identité",
+        "AADHAAR": "Aadhaar",
+        "PAN": "Carte PAN",
+        "NATIONAL_ID": "Identifiant national"
+      },
+      "proof_of_address": "Justificatif de domicile",
+      "source_of_funds": "Déclaration de source de fonds",
+      "beneficial_ownership": "Certification de propriété bénéficiaire",
+      "liveness_check": "Vérification de vivacité",
+      "face_match": "Vérification de correspondance faciale",
+      "status": {
+        "PENDING": "En attente",
+        "IN_PROGRESS": "En cours",
+        "VERIFIED": "Vérifié",
+        "REJECTED": "Rejeté",
+        "EXPIRED": "Expiré"
+      }
+    },
+    "aml": {
+      "title": "Lutte Contre le Blanchiment (LCB)",
+      "description": "Surveillance des transactions et évaluation des risques",
+      "risk_level": {
+        "LOW": "Risque faible",
+        "MEDIUM": "Risque moyen",
+        "HIGH": "Risque élevé",
+        "CRITICAL": "Risque critique"
+      },
+      "sanctions_screening": "Filtrage des listes de sanctions",
+      "pep_screening": "Filtrage des Personnes Politiquement Exposées",
+      "adverse_media": "Filtrage des médias défavorables",
+      "velocity_check": "Vérification de la vélocité des transactions"
+    },
+    "status": {
+      "APPROVED": "Approuvé",
+      "REJECTED": "Rejeté",
+      "ESCALATED": "Escaladé pour révision",
+      "PENDING": "En attente de révision"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "Émirats arabes unis",
+      "regulator": "DFSA",
+      "requirements": "Autorisation DFSA requise",
+      "aml_report": "Déclaration SAR requise",
+      "refresh_interval": "Annuel"
+    },
+    "US": {
+      "name": "États-Unis",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "Enregistrement SEC/FINRA",
+      "aml_report": "Déclaration SAR requise",
+      "refresh_interval": "Annuel"
+    },
+    "EU": {
+      "name": "Union européenne",
+      "regulator": "ESMA / EBA",
+      "requirements": "Autorisation AIFM/UCITS",
+      "aml_report": "Déclaration à la CRF requise",
+      "refresh_interval": "Annuel"
+    },
+    "IN": {
+      "name": "Inde",
+      "regulator": "SEBI / RBI",
+      "requirements": "Enregistrement SEBI requis",
+      "aml_report": "Déclaration FIU-IND requise",
+      "refresh_interval": "Bisannuel"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "Jeton JWT invalide",
+    "AUTH002": "Jeton expiré",
+    "AUTH003": "Permissions insuffisantes",
+    "KYC001": "Échec de la vérification KYC",
+    "KYC002": "Échec de la vérification du document",
+    "KYC003": "Échec de la vérification de vivacité",
+    "AML001": "Correspondance de sanctions détectée",
+    "AML002": "Correspondance PPE détectée",
+    "AML003": "Médias défavorables détectés",
+    "AML004": "Vélocité des transactions dépassée",
+    "COMP001": "Échec de la vérification de conformité",
+    "COMP002": "Règles de juridiction violées",
+    "DB001": "Erreur de connexion à la base de données",
+    "EXT001": "Erreur d'API externe",
+    "EXT002": "Délai d'attente de l'API externe",
+    "RATE001": "Limite de débit dépassée"
+  }
+}
