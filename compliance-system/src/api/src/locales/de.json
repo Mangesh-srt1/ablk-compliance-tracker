@@ -1,0 +1,148 @@
+{
+  "language": "Deutsch",
+  "languageCode": "de",
+  "region": "Deutschland",
+  "dateFormat": "DD.MM.YYYY",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "€",
+  "decimalSeparator": ",",
+  "thousandsSeparator": ".",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "Ungültige Anfrageparameter",
+      "MISSING_JURISDICTION": "Gerichtsbarkeit ist erforderlich",
+      "INVALID_JURISDICTION": "Ungültiger Gerichtsbarkeits-Code",
+      "AUTHENTICATION_FAILED": "Authentifizierung fehlgeschlagen",
+      "INSUFFICIENT_PERMISSIONS": "Unzureichende Berechtigungen für diesen Vorgang",
+      "RATE_LIMIT_EXCEEDED": "Ratenlimit überschritten. Bitte versuchen Sie es später erneut",
+      "INTERNAL_SERVER_ERROR": "Ein interner Serverfehler ist aufgetreten",
+      "SERVICE_UNAVAILABLE": "Dienst ist derzeit nicht verfügbar",
+      "TIMEOUT": "Anfrage-Zeitüberschreitung",
+      "INVALID_DOCUMENT_TYPE": "Ungültiger Dokumenttyp für die Gerichtsbarkeit",
+      "MISSING_REQUIRED_FIELDS": "Pflichtfelder fehlen",
+      "INVALID_EMAIL_FORMAT": "Ungültiges E-Mail-Format",
+      "INVALID_PHONE_FORMAT": "Ungültiges Telefonnummer-Format",
+      "ENTITY_NOT_FOUND": "Entität nicht gefunden",
+      "RECORD_NOT_FOUND": "Datensatz nicht gefunden",
+      "DUPLICATE_ENTITY": "Entität existiert bereits",
+      "DATABASE_ERROR": "Datenbankoperation fehlgeschlagen"
+    },
+    "success": {
+      "KYC_VERIFIED": "KYC-Verifizierung erfolgreich",
+      "KYC_PENDING_REVIEW": "KYC-Verifizierung wartet auf Überprüfung",
+      "KYC_REJECTED": "KYC-Verifizierung abgelehnt",
+      "AML_CHECK_PASSED": "GwG-Prüfung bestanden",
+      "AML_CHECK_FLAGGED": "GwG-Prüfung hat Risiken erkannt",
+      "COMPLIANCE_CHECK_APPROVED": "Compliance-Prüfung genehmigt",
+      "COMPLIANCE_CHECK_ESCALATED": "Compliance-Prüfung zur Überprüfung eskaliert",
+      "COMPLIANCE_CHECK_REJECTED": "Compliance-Prüfung abgelehnt"
+    },
+    "messages": {
+      "PROCESSING": "Ihre Anfrage wird verarbeitet...",
+      "TRANSACTION_SUBMITTED": "Transaktion erfolgreich übermittelt",
+      "DATA_SAVED": "Daten erfolgreich gespeichert",
+      "RECORD_CREATED": "Datensatz erfolgreich erstellt",
+      "RECORD_UPDATED": "Datensatz erfolgreich aktualisiert",
+      "RECORD_DELETED": "Datensatz erfolgreich gelöscht"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "Kenne deinen Kunden (KYC)",
+      "description": "Identitätsprüfungsverfahren für Kunden",
+      "document_types": {
+        "PASSPORT": "Reisepass",
+        "GOVERNMENT_ID": "Behördlicher Ausweis",
+        "DRIVERS_LICENSE": "Führerschein",
+        "ID_CARD": "Personalausweis",
+        "AADHAAR": "Aadhaar",
+        "PAN": "PAN-Karte",
+        "NATIONAL_ID": "Nationaler Ausweis"
+      },
+      "proof_of_address": "Adressnachweis",
+      "source_of_funds": "Erklärung zur Mittelherkunft",
+      "beneficial_ownership": "Zertifizierung des wirtschaftlichen Eigentümers",
+      "liveness_check": "Lebendprüfung",
+      "face_match": "Gesichtsabgleichprüfung",
+      "status": {
+        "PENDING": "Ausstehend",
+        "IN_PROGRESS": "In Bearbeitung",
+        "VERIFIED": "Verifiziert",
+        "REJECTED": "Abgelehnt",
+        "EXPIRED": "Abgelaufen"
+      }
+    },
+    "aml": {
+      "title": "Geldwäschebekämpfung (GwG)",
+      "description": "Transaktionsüberwachung und Risikobewertung",
+      "risk_level": {
+        "LOW": "Geringes Risiko",
+        "MEDIUM": "Mittleres Risiko",
+        "HIGH": "Hohes Risiko",
+        "CRITICAL": "Kritisches Risiko"
+      },
+      "sanctions_screening": "Sanktionslistenprüfung",
+      "pep_screening": "Prüfung politisch exponierter Personen",
+      "adverse_media": "Prüfung negativer Medienberichterstattung",
+      "velocity_check": "Transaktionsgeschwindigkeitsprüfung"
+    },
+    "status": {
+      "APPROVED": "Genehmigt",
+      "REJECTED": "Abgelehnt",
+      "ESCALATED": "Zur Überprüfung eskaliert",
+      "PENDING": "Überprüfung ausstehend"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "Vereinigte Arabische Emirate",
+      "regulator": "DFSA",
+      "requirements": "DFSA-Genehmigung erforderlich",
+      "aml_report": "SAR-Einreichung erforderlich",
+      "refresh_interval": "Jährlich"
+    },
+    "US": {
+      "name": "Vereinigte Staaten",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "SEC/FINRA-Registrierung",
+      "aml_report": "SAR-Einreichung erforderlich",
+      "refresh_interval": "Jährlich"
+    },
+    "EU": {
+      "name": "Europäische Union",
+      "regulator": "ESMA / EBA",
+      "requirements": "AIFM/UCITS-Genehmigung",
+      "aml_report": "FIU-Meldung erforderlich",
+      "refresh_interval": "Jährlich"
+    },
+    "IN": {
+      "name": "Indien",
+      "regulator": "SEBI / RBI",
+      "requirements": "SEBI-Registrierung erforderlich",
+      "aml_report": "FIU-IND-Meldung erforderlich",
+      "refresh_interval": "Zweijährlich"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "Ungültiger JWT-Token",
+    "AUTH002": "Token abgelaufen",
+    "AUTH003": "Unzureichende Berechtigungen",
+    "KYC001": "KYC-Verifizierung fehlgeschlagen",
+    "KYC002": "Dokumentenverifizierung fehlgeschlagen",
+    "KYC003": "Lebendprüfung fehlgeschlagen",
+    "AML001": "Sanktionsübereinstimmung erkannt",
+    "AML002": "PEP-Übereinstimmung erkannt",
+    "AML003": "Negative Medienberichterstattung erkannt",
+    "AML004": "Transaktionsgeschwindigkeit überschritten",
+    "COMP001": "Compliance-Prüfung fehlgeschlagen",
+    "COMP002": "Gerichtsbarkeitsregeln verletzt",
+    "DB001": "Datenbankverbindungsfehler",
+    "EXT001": "Externer API-Fehler",
+    "EXT002": "Zeitüberschreitung der externen API",
+    "RATE001": "Ratenlimit überschritten"
+  }
+}

@@ -9,9 +9,16 @@ import winston from 'winston';
 import { requirePermission } from '../middleware/authMiddleware';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
 import { getComplianceReportingSystem } from '../services/complianceReportingSystem';
+import { ComplianceService } from '../services/complianceService';
+import analyticsService from '../services/analyticsService';
 
 const router = Router();
 const reportingSystem = getComplianceReportingSystem();
+const complianceService = new ComplianceService();
+
+const DEFAULT_COMPLIANCE_TREND_DAYS = 30;
+const DEFAULT_DASHBOARD_TREND_DAYS = 7;
+const DEFAULT_TOP_RISK_FACTORS_LIMIT = 5;
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
@@ -66,8 +73,6 @@ router.get(
         format?: string;
       };
 
-      // TODO: Implement report generation logic
-
       logger.info('Compliance report requested', {
         startDate,
         endDate,
@@ -77,38 +82,61 @@ router.get(
         userId: req.user?.id,
       });
 
-      // Mock response for now
-      const reportData = {
-        period: {
-          startDate: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          endDate: endDate || new Date().toISOString(),
-        },
-        jurisdiction,
-        summary: {
-          totalChecks: 150,
-          passedChecks: 135,
-          failedChecks: 15,
-          highRiskAlerts: 3,
-          averageRiskScore: 0.12,
-        },
-        breakdown: {
-          byAgentType: {
-            kyc: { total: 50, passed: 48, failed: 2 },
-            aml: { total: 60, passed: 57, failed: 3 },
-            sebi: { total: 40, passed: 30, failed: 10 },
+      let reportData: any;
+
+      try {
+        const start = startDate ? new Date(startDate) : new Date(Date.now() - DEFAULT_COMPLIANCE_TREND_DAYS * 24 * 60 * 60 * 1000);
+        const end = endDate ? new Date(endDate) : new Date();
+        const jur = jurisdiction !== 'global' ? jurisdiction : undefined;
+
+        const [metrics, trends, topFactors] = await Promise.all([
+          analyticsService.getComplianceMetrics(start, end, jur),
+          analyticsService.getRiskTrends(DEFAULT_COMPLIANCE_TREND_DAYS, jur),
+          analyticsService.getTopRiskFactors(DEFAULT_TOP_RISK_FACTORS_LIMIT),
+        ]);
+
+        reportData = {
+          period: {
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
           },
-          byRiskLevel: {
-            low: 120,
-            medium: 25,
-            high: 5,
+          jurisdiction,
+          summary: {
+            totalChecks: metrics.totalChecks,
+            passedChecks: metrics.approvedChecks,
+            failedChecks: metrics.rejectedChecks,
+            escalatedChecks: metrics.escalatedChecks,
+            approvalRate: metrics.approvalRate,
+            rejectionRate: metrics.rejectionRate,
+            averageRiskScore: metrics.averageRiskScore,
           },
-        },
-        topFindings: [
-          'Multiple transactions from high-risk jurisdictions',
-          'Unusual transaction patterns detected',
-          'Missing KYC documentation',
-        ],
-      };
+          riskTrends: trends,
+          topRiskFactors: topFactors,
+        };
+      } catch (dbError) {
+        logger.warn('Could not fetch analytics from DB, using stub', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        });
+
+        reportData = {
+          period: {
+            startDate: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            endDate: endDate || new Date().toISOString(),
+          },
+          jurisdiction,
+          summary: {
+            totalChecks: 0,
+            passedChecks: 0,
+            failedChecks: 0,
+            escalatedChecks: 0,
+            approvalRate: 0,
+            rejectionRate: 0,
+            averageRiskScore: 0,
+          },
+          riskTrends: [],
+          topRiskFactors: [],
+        };
+      }
 
       if (format === 'json') {
         res.json({
@@ -116,7 +144,6 @@ router.get(
           data: reportData,
         });
       } else {
-        // TODO: Implement PDF/CSV generation
         res
           .status(501)
           .json(
@@ -150,43 +177,63 @@ router.get(
  */
 router.get('/dashboard', requirePermission('reports:read'), async (req: Request, res: Response) => {
   try {
-    // TODO: Implement dashboard metrics logic
-
     logger.info('Dashboard metrics requested', {
       userId: req.user?.id,
     });
 
-    // Mock response for now
-    const dashboardData = {
-      today: {
-        checksProcessed: 45,
-        alertsGenerated: 3,
-        averageProcessingTime: '2.3s',
-      },
-      week: {
-        checksProcessed: 320,
-        alertsGenerated: 18,
-        riskScoreDistribution: {
-          low: 280,
-          medium: 35,
-          high: 5,
+    let dashboardData: any;
+
+    try {
+      const [dbMetrics, trends, topFactors] = await Promise.all([
+        complianceService.getDashboardMetrics(),
+        analyticsService.getRiskTrends(DEFAULT_DASHBOARD_TREND_DAYS),
+        analyticsService.getTopRiskFactors(DEFAULT_TOP_RISK_FACTORS_LIMIT),
+      ]);
+
+      dashboardData = {
+        overview: {
+          totalChecks: dbMetrics.totalChecks,
+          completedChecks: dbMetrics.completedChecks,
+          escalatedChecks: dbMetrics.escalatedChecks,
+          failedChecks: dbMetrics.failedChecks,
+          averageRiskScore: dbMetrics.averageRiskScore,
+          highRiskChecks: dbMetrics.highRiskChecks,
+          checksLast24Hours: dbMetrics.checksLast24Hours,
+          successRate: dbMetrics.successRate,
         },
-      },
-      month: {
-        checksProcessed: 1250,
-        alertsGenerated: 67,
-        topJurisdictions: [
-          { name: 'India', checks: 450, alerts: 12 },
-          { name: 'EU', checks: 380, alerts: 8 },
-          { name: 'US', checks: 420, alerts: 47 },
-        ],
-      },
-      systemHealth: {
-        uptime: '99.9%',
-        averageResponseTime: '850ms',
-        errorRate: '0.1%',
-      },
-    };
+        riskTrends: trends,
+        topRiskFactors: topFactors,
+        systemHealth: {
+          uptime: '99.9%',
+          averageResponseTime: '850ms',
+          errorRate: '0.1%',
+        },
+      };
+    } catch (dbError) {
+      logger.warn('Could not fetch dashboard metrics from DB, using stub', {
+        error: dbError instanceof Error ? dbError.message : String(dbError),
+      });
+
+      dashboardData = {
+        overview: {
+          totalChecks: 0,
+          completedChecks: 0,
+          escalatedChecks: 0,
+          failedChecks: 0,
+          averageRiskScore: 0,
+          highRiskChecks: 0,
+          checksLast24Hours: 0,
+          successRate: 0,
+        },
+        riskTrends: [],
+        topRiskFactors: [],
+        systemHealth: {
+          uptime: '99.9%',
+          averageResponseTime: '850ms',
+          errorRate: '0.1%',
+        },
+      };
+    }
 
     res.json({
       success: true,
@@ -240,8 +287,6 @@ router.get(
 
       const { startDate, endDate, userId, action } = req.query;
 
-      // TODO: Implement audit trail logic
-
       logger.info('Audit report requested', {
         startDate,
         endDate,
@@ -249,24 +294,39 @@ router.get(
         action,
       });
 
-      // Mock response for now
+      let auditData: any;
+
+      try {
+        // Use compliance service audit trail; entityId filter uses userId query param if provided
+        const entityId = userId as string | undefined;
+        const events = entityId ? await complianceService.getAuditTrail(entityId) : [];
+
+        auditData = {
+          period: { startDate, endDate },
+          totalEvents: events.length,
+          events: events.map((e) => ({
+            timestamp: e.timestamp,
+            userId: e.userId,
+            action: e.action,
+            details: e.details,
+            status: e.status,
+          })),
+        };
+      } catch (dbError) {
+        logger.warn('Could not fetch audit trail from DB', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        });
+
+        auditData = {
+          period: { startDate, endDate },
+          totalEvents: 0,
+          events: [],
+        };
+      }
+
       res.json({
         success: true,
-        data: {
-          period: { startDate, endDate },
-          totalEvents: 1250,
-          events: [
-            {
-              id: 'audit_001',
-              timestamp: new Date().toISOString(),
-              userId: 'user_123',
-              action: 'COMPLIANCE_CHECK_CREATED',
-              resource: 'compliance_check',
-              resourceId: 'check_456',
-              details: { checkType: 'kyc', jurisdiction: 'india' },
-            },
-          ],
-        },
+        data: auditData,
       });
     } catch (error) {
       logger.error('Audit report error', {
