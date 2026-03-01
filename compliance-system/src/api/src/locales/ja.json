@@ -1,0 +1,148 @@
+{
+  "language": "日本語",
+  "languageCode": "ja",
+  "region": "日本",
+  "dateFormat": "YYYY/MM/DD",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "¥",
+  "decimalSeparator": ".",
+  "thousandsSeparator": ",",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "リクエストパラメータが無効です",
+      "MISSING_JURISDICTION": "管轄区域は必須です",
+      "INVALID_JURISDICTION": "無効な管轄区域コードです",
+      "AUTHENTICATION_FAILED": "認証に失敗しました",
+      "INSUFFICIENT_PERMISSIONS": "この操作に必要な権限がありません",
+      "RATE_LIMIT_EXCEEDED": "レート制限を超えました。後でもう一度お試しください",
+      "INTERNAL_SERVER_ERROR": "内部サーバーエラーが発生しました",
+      "SERVICE_UNAVAILABLE": "サービスは現在利用できません",
+      "TIMEOUT": "リクエストがタイムアウトしました",
+      "INVALID_DOCUMENT_TYPE": "管轄区域に無効なドキュメントタイプです",
+      "MISSING_REQUIRED_FIELDS": "必須フィールドが不足しています",
+      "INVALID_EMAIL_FORMAT": "メールアドレスの形式が無効です",
+      "INVALID_PHONE_FORMAT": "電話番号の形式が無効です",
+      "ENTITY_NOT_FOUND": "エンティティが見つかりません",
+      "RECORD_NOT_FOUND": "レコードが見つかりません",
+      "DUPLICATE_ENTITY": "エンティティは既に存在します",
+      "DATABASE_ERROR": "データベース操作に失敗しました"
+    },
+    "success": {
+      "KYC_VERIFIED": "KYC確認が成功しました",
+      "KYC_PENDING_REVIEW": "KYC確認はレビュー待ちです",
+      "KYC_REJECTED": "KYC確認が拒否されました",
+      "AML_CHECK_PASSED": "AMLチェックが通過しました",
+      "AML_CHECK_FLAGGED": "AMLチェックでリスクが検出されました",
+      "COMPLIANCE_CHECK_APPROVED": "コンプライアンスチェックが承認されました",
+      "COMPLIANCE_CHECK_ESCALATED": "コンプライアンスチェックがレビューのためエスカレートされました",
+      "COMPLIANCE_CHECK_REJECTED": "コンプライアンスチェックが拒否されました"
+    },
+    "messages": {
+      "PROCESSING": "リクエストを処理中です...",
+      "TRANSACTION_SUBMITTED": "トランザクションが正常に送信されました",
+      "DATA_SAVED": "データが正常に保存されました",
+      "RECORD_CREATED": "レコードが正常に作成されました",
+      "RECORD_UPDATED": "レコードが正常に更新されました",
+      "RECORD_DELETED": "レコードが正常に削除されました"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "顧客確認 (KYC)",
+      "description": "顧客の本人確認プロセス",
+      "document_types": {
+        "PASSPORT": "パスポート",
+        "GOVERNMENT_ID": "政府発行の身分証明書",
+        "DRIVERS_LICENSE": "運転免許証",
+        "ID_CARD": "IDカード",
+        "AADHAAR": "アダール",
+        "PAN": "PANカード",
+        "NATIONAL_ID": "国民ID"
+      },
+      "proof_of_address": "住所証明",
+      "source_of_funds": "資金源の申告",
+      "beneficial_ownership": "実質的所有者の認証",
+      "liveness_check": "生体確認",
+      "face_match": "顔照合確認",
+      "status": {
+        "PENDING": "保留中",
+        "IN_PROGRESS": "処理中",
+        "VERIFIED": "確認済み",
+        "REJECTED": "拒否済み",
+        "EXPIRED": "期限切れ"
+      }
+    },
+    "aml": {
+      "title": "マネーロンダリング対策 (AML)",
+      "description": "取引監視とリスク評価",
+      "risk_level": {
+        "LOW": "低リスク",
+        "MEDIUM": "中リスク",
+        "HIGH": "高リスク",
+        "CRITICAL": "重大リスク"
+      },
+      "sanctions_screening": "制裁リストスクリーニング",
+      "pep_screening": "政治的に露出した人物のスクリーニング",
+      "adverse_media": "ネガティブメディアスクリーニング",
+      "velocity_check": "取引速度チェック"
+    },
+    "status": {
+      "APPROVED": "承認済み",
+      "REJECTED": "拒否済み",
+      "ESCALATED": "レビューのためエスカレート",
+      "PENDING": "レビュー待ち"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "アラブ首長国連邦",
+      "regulator": "DFSA",
+      "requirements": "DFSA認可が必要",
+      "aml_report": "SAR提出が必要",
+      "refresh_interval": "毎年"
+    },
+    "US": {
+      "name": "アメリカ合衆国",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "SEC/FINRA登録",
+      "aml_report": "SAR提出が必要",
+      "refresh_interval": "毎年"
+    },
+    "EU": {
+      "name": "欧州連合",
+      "regulator": "ESMA / EBA",
+      "requirements": "AIFM/UCITS認可",
+      "aml_report": "FIU報告が必要",
+      "refresh_interval": "毎年"
+    },
+    "IN": {
+      "name": "インド",
+      "regulator": "SEBI / RBI",
+      "requirements": "SEBI登録が必要",
+      "aml_report": "FIU-IND報告が必要",
+      "refresh_interval": "隔年"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "無効なJWTトークン",
+    "AUTH002": "トークンの有効期限が切れています",
+    "AUTH003": "権限が不足しています",
+    "KYC001": "KYC確認に失敗しました",
+    "KYC002": "書類確認に失敗しました",
+    "KYC003": "生体確認に失敗しました",
+    "AML001": "制裁一致が検出されました",
+    "AML002": "PEP一致が検出されました",
+    "AML003": "ネガティブメディアが検出されました",
+    "AML004": "取引速度が超過しました",
+    "COMP001": "コンプライアンスチェックに失敗しました",
+    "COMP002": "管轄区域のルール違反",
+    "DB001": "データベース接続エラー",
+    "EXT001": "外部APIエラー",
+    "EXT002": "外部APIのタイムアウト",
+    "RATE001": "レート制限を超えました"
+  }
+}

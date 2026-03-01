@@ -6,6 +6,9 @@
  */
 
 import { Pool } from 'pg';
+import { TransactionMonitoringService } from '../services/transactionMonitoringService';
+import { KytTransaction } from '../types/kyt';
+import { Jurisdiction } from '../types/aml';
 
 /**
  * P2P Transfer interface
@@ -19,6 +22,7 @@ export interface P2PTransfer {
   timestamp: Date;
   transactionHash: string;
   chainId: number;
+  jurisdiction?: Jurisdiction;
 }
 
 /**
@@ -46,20 +50,90 @@ export interface AMLAssessmentResult {
   timestamp: Date;
 }
 
+/** Supported time-window options (minutes) for velocity analysis */
+const ALLOWED_TIME_WINDOWS_MINUTES: ReadonlySet<number> = new Set([15, 30, 60, 120, 360, 720, 1440]);
+
 /**
  * AML Anomaly Detector Agent
- * Stub implementation for development
- * TODO: Integrate with Marble API and LLM-based pattern detection
+ * Uses the TransactionMonitoringService to detect anomalous patterns in P2P transfers.
  */
 export class AMLAnomalyDetectorAgent {
   private logger: any;
+  private txMonitorService: TransactionMonitoringService;
 
   constructor(
     private dbClient: Pool,
     private besuProvider: any // ethers.js provider for blockchain queries
   ) {
-    // Initialize logger
     this.logger = console;
+    this.txMonitorService = new TransactionMonitoringService();
+  }
+
+  /**
+   * Map a P2PTransfer into the KytTransaction shape expected by TransactionMonitoringService.
+   */
+  private toKytTransaction(transfer: P2PTransfer): KytTransaction {
+    return {
+      id: transfer.transactionHash,
+      amount: transfer.amount,
+      currency: transfer.tokenSymbol,
+      timestamp: transfer.timestamp.toISOString(),
+      fromAddress: transfer.fromAddress,
+      toAddress: transfer.toAddress,
+    };
+  }
+
+  /**
+   * Derive an AMLAssessmentResult from a KYT analysis result.
+   */
+  private buildAssessment(kytResult: any): AMLAssessmentResult {
+    const riskScore = kytResult.score ?? 0;
+    const flags: string[] = (kytResult.alerts ?? []).map((a: any) => a.type as string);
+    const patterns: AMLPattern[] = (kytResult.alerts ?? []).map((a: any) => ({
+      pattern: a.type,
+      confidence: a.confidence,
+      indicators: a.evidence ? Object.values(a.evidence).map(String) : [],
+    }));
+
+    let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+    let escalationLevel: 'none' | 'review' | 'escalate' | 'manual_review' | 'block';
+    let shouldBlock = false;
+
+    if (riskScore >= 80) {
+      riskLevel = 'critical';
+      escalationLevel = 'block';
+      shouldBlock = true;
+    } else if (riskScore >= 60) {
+      riskLevel = 'high';
+      escalationLevel = 'manual_review';
+    } else if (riskScore >= 30) {
+      riskLevel = 'medium';
+      escalationLevel = 'review';
+    } else {
+      riskLevel = 'low';
+      escalationLevel = 'none';
+    }
+
+    const reasoning =
+      flags.length > 0
+        ? `Detected patterns: ${flags.join(', ')}. Risk score: ${riskScore}/100.`
+        : `No anomalous patterns detected. Risk score: ${riskScore}/100.`;
+
+    const recommendations: string[] =
+      kytResult.recommendations ?? (shouldBlock ? ['Block transfer for manual review'] : ['Proceed with standard monitoring']);
+
+    return {
+      riskScore,
+      overallRiskScore: riskScore,
+      riskLevel,
+      escalationLevel,
+      shouldBlock,
+      flags,
+      patterns,
+      reasoning,
+      recommendations,
+      timestamp: new Date(),
+    };
   }
 
   /**
@@ -70,30 +144,16 @@ export class AMLAnomalyDetectorAgent {
    */
   async assessHawalaRisk(transfer: P2PTransfer): Promise<AMLAssessmentResult> {
     try {
-      // Stub implementation - returns low risk by default
-      // TODO: Implement real pattern detection:
-      // 1. Check transaction history for rapid back-and-forth transfers
-      // 2. Analyze for round-number amounts (indicator of money switching)
-      // 3. Check for circular transfer patterns
-      // 4. Integrate with Marble API for behavioral analysis
-      // 5. Score against known hawala network patterns
+      const kytTx = this.toKytTransaction(transfer);
+      const jurisdiction = (transfer.jurisdiction ?? 'AE') as Jurisdiction;
 
-      const riskScore = 15; // Low risk by default
-      const flags: string[] = [];
-      const reasoning = 'No anomalous patterns detected (stub implementation)';
+      const kytResult = await this.txMonitorService.analyzeTransactions({
+        entityId: transfer.fromAddress,
+        transactions: [kytTx],
+        jurisdiction,
+      });
 
-      return {
-        riskScore,
-        overallRiskScore: riskScore,
-        riskLevel: 'low',
-        escalationLevel: 'none',
-        shouldBlock: false,
-        flags,
-        patterns: [],
-        reasoning,
-        recommendations: ['Proceed with transfer'],
-        timestamp: new Date(),
-      };
+      return this.buildAssessment(kytResult);
     } catch (error: any) {
       this.logger.error('Error assessing hawala risk:', error);
       throw error;
@@ -103,26 +163,75 @@ export class AMLAnomalyDetectorAgent {
   /**
    * Analyze transaction velocity for anomalies
    * @param address Wallet address
-   * @param timeWindowMinutes Time window to analyze
+   * @param timeWindowMinutes Time window to analyze (must be one of the allowed values)
+   * @param jurisdiction Jurisdiction for risk rules
    */
   async analyzeVelocity(
     address: string,
-    timeWindowMinutes: number = 60
+    timeWindowMinutes: number = 60,
+    jurisdiction: Jurisdiction = 'AE' as Jurisdiction
   ): Promise<AMLAssessmentResult> {
     try {
-      // Stub implementation
-      return {
-        riskScore: 20,
-        overallRiskScore: 20,
-        riskLevel: 'low',
-        escalationLevel: 'none',
-        shouldBlock: false,
-        flags: [],
-        patterns: [],
-        reasoning: 'Velocity within normal parameters (stub)',
-        recommendations: ['Monitor for continued activity'],
-        timestamp: new Date(),
-      };
+      // Validate and sanitize the time window against an allowlist to prevent SQL injection
+      const safeWindowMinutes = ALLOWED_TIME_WINDOWS_MINUTES.has(timeWindowMinutes)
+        ? timeWindowMinutes
+        : 60;
+
+      // Fetch recent transactions for the address from DB if available
+      let transactions: KytTransaction[] = [];
+
+      try {
+        const result = await this.dbClient.query<{
+          tx_hash: string;
+          amount: number;
+          currency: string;
+          created_at: Date;
+          from_address: string;
+          to_address: string;
+        }>(
+          `SELECT tx_hash, amount, currency, created_at, from_address, to_address
+           FROM blockchain_monitoring
+           WHERE (from_address = $1 OR to_address = $1)
+             AND created_at >= NOW() - ($2 || ' minutes')::INTERVAL
+           ORDER BY created_at DESC
+           LIMIT 100`,
+          [address, String(safeWindowMinutes)]
+        );
+
+        transactions = result.rows.map((row) => ({
+          id: row.tx_hash,
+          amount: row.amount,
+          currency: row.currency,
+          timestamp: row.created_at.toISOString(),
+          fromAddress: row.from_address,
+          toAddress: row.to_address,
+        }));
+      } catch {
+        // DB unavailable – proceed with empty transaction list
+      }
+
+      if (transactions.length === 0) {
+        return {
+          riskScore: 0,
+          overallRiskScore: 0,
+          riskLevel: 'low',
+          escalationLevel: 'none',
+          shouldBlock: false,
+          flags: [],
+          patterns: [],
+          reasoning: 'No recent transactions found for velocity analysis.',
+          recommendations: ['Monitor for continued activity'],
+          timestamp: new Date(),
+        };
+      }
+
+      const kytResult = await this.txMonitorService.analyzeTransactions({
+        entityId: address,
+        transactions,
+        jurisdiction,
+      });
+
+      return this.buildAssessment(kytResult);
     } catch (error: any) {
       this.logger.error('Error analyzing velocity:', error);
       throw error;
@@ -132,25 +241,72 @@ export class AMLAnomalyDetectorAgent {
   /**
    * Detect structured transactions (smurfing)
    * @param address Wallet address
+   * @param jurisdiction Jurisdiction for risk rules
    */
-  async detectStructuring(address: string): Promise<AMLAssessmentResult> {
+  async detectStructuring(
+    address: string,
+    jurisdiction: Jurisdiction = 'AE' as Jurisdiction
+  ): Promise<AMLAssessmentResult> {
     try {
-      // Stub implementation
-      return {
-        riskScore: 10,
-        overallRiskScore: 10,
-        riskLevel: 'low',
-        escalationLevel: 'none',
-        shouldBlock: false,
-        flags: [],
-        patterns: [],
-        reasoning: 'No structuring patterns detected (stub)',
-        recommendations: ['Proceed with transfer'],
-        timestamp: new Date(),
-      };
+      let transactions: KytTransaction[] = [];
+
+      try {
+        const result = await this.dbClient.query<{
+          tx_hash: string;
+          amount: number;
+          currency: string;
+          created_at: Date;
+          from_address: string;
+          to_address: string;
+        }>(
+          `SELECT tx_hash, amount, currency, created_at, from_address, to_address
+           FROM blockchain_monitoring
+           WHERE from_address = $1
+             AND created_at >= NOW() - INTERVAL '30 days'
+           ORDER BY created_at DESC
+           LIMIT 200`,
+          [address]
+        );
+
+        transactions = result.rows.map((row) => ({
+          id: row.tx_hash,
+          amount: row.amount,
+          currency: row.currency,
+          timestamp: row.created_at.toISOString(),
+          fromAddress: row.from_address,
+          toAddress: row.to_address,
+        }));
+      } catch {
+        // DB unavailable – proceed with empty transaction list
+      }
+
+      if (transactions.length === 0) {
+        return {
+          riskScore: 0,
+          overallRiskScore: 0,
+          riskLevel: 'low',
+          escalationLevel: 'none',
+          shouldBlock: false,
+          flags: [],
+          patterns: [],
+          reasoning: 'No transactions found for structuring analysis.',
+          recommendations: ['Proceed with transfer'],
+          timestamp: new Date(),
+        };
+      }
+
+      const kytResult = await this.txMonitorService.analyzeTransactions({
+        entityId: address,
+        transactions,
+        jurisdiction,
+      });
+
+      return this.buildAssessment(kytResult);
     } catch (error: any) {
       this.logger.error('Error detecting structuring:', error);
       throw error;
     }
   }
 }
+
+

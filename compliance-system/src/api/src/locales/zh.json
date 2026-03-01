@@ -1,0 +1,148 @@
+{
+  "language": "中文",
+  "languageCode": "zh",
+  "region": "中国",
+  "dateFormat": "YYYY/MM/DD",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "¥",
+  "decimalSeparator": ".",
+  "thousandsSeparator": ",",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "请求参数无效",
+      "MISSING_JURISDICTION": "需要提供管辖区",
+      "INVALID_JURISDICTION": "无效的管辖区代码",
+      "AUTHENTICATION_FAILED": "身份验证失败",
+      "INSUFFICIENT_PERMISSIONS": "此操作权限不足",
+      "RATE_LIMIT_EXCEEDED": "超过速率限制。请稍后重试",
+      "INTERNAL_SERVER_ERROR": "发生内部服务器错误",
+      "SERVICE_UNAVAILABLE": "服务当前不可用",
+      "TIMEOUT": "请求超时",
+      "INVALID_DOCUMENT_TYPE": "该管辖区的文档类型无效",
+      "MISSING_REQUIRED_FIELDS": "缺少必填字段",
+      "INVALID_EMAIL_FORMAT": "无效的电子邮件格式",
+      "INVALID_PHONE_FORMAT": "无效的电话号码格式",
+      "ENTITY_NOT_FOUND": "未找到实体",
+      "RECORD_NOT_FOUND": "未找到记录",
+      "DUPLICATE_ENTITY": "实体已存在",
+      "DATABASE_ERROR": "数据库操作失败"
+    },
+    "success": {
+      "KYC_VERIFIED": "KYC验证成功",
+      "KYC_PENDING_REVIEW": "KYC验证待审核",
+      "KYC_REJECTED": "KYC验证被拒绝",
+      "AML_CHECK_PASSED": "反洗钱检查通过",
+      "AML_CHECK_FLAGGED": "反洗钱检查发现风险",
+      "COMPLIANCE_CHECK_APPROVED": "合规检查已批准",
+      "COMPLIANCE_CHECK_ESCALATED": "合规检查已升级审查",
+      "COMPLIANCE_CHECK_REJECTED": "合规检查被拒绝"
+    },
+    "messages": {
+      "PROCESSING": "正在处理您的请求...",
+      "TRANSACTION_SUBMITTED": "交易提交成功",
+      "DATA_SAVED": "数据保存成功",
+      "RECORD_CREATED": "记录创建成功",
+      "RECORD_UPDATED": "记录更新成功",
+      "RECORD_DELETED": "记录删除成功"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "了解您的客户 (KYC)",
+      "description": "客户身份验证流程",
+      "document_types": {
+        "PASSPORT": "护照",
+        "GOVERNMENT_ID": "政府颁发的身份证件",
+        "DRIVERS_LICENSE": "驾驶证",
+        "ID_CARD": "身份证",
+        "AADHAAR": "阿达尔卡",
+        "PAN": "PAN卡",
+        "NATIONAL_ID": "国民身份证"
+      },
+      "proof_of_address": "地址证明",
+      "source_of_funds": "资金来源声明",
+      "beneficial_ownership": "实际控制人认证",
+      "liveness_check": "活体检测",
+      "face_match": "人脸比对验证",
+      "status": {
+        "PENDING": "待处理",
+        "IN_PROGRESS": "处理中",
+        "VERIFIED": "已验证",
+        "REJECTED": "已拒绝",
+        "EXPIRED": "已过期"
+      }
+    },
+    "aml": {
+      "title": "反洗钱 (AML)",
+      "description": "交易监控和风险评估",
+      "risk_level": {
+        "LOW": "低风险",
+        "MEDIUM": "中等风险",
+        "HIGH": "高风险",
+        "CRITICAL": "严重风险"
+      },
+      "sanctions_screening": "制裁名单筛查",
+      "pep_screening": "政治公众人物筛查",
+      "adverse_media": "负面媒体筛查",
+      "velocity_check": "交易速度检查"
+    },
+    "status": {
+      "APPROVED": "已批准",
+      "REJECTED": "已拒绝",
+      "ESCALATED": "已升级审查",
+      "PENDING": "待审核"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "阿拉伯联合酋长国",
+      "regulator": "迪拜金融服务局",
+      "requirements": "需要DFSA授权",
+      "aml_report": "需要提交SAR报告",
+      "refresh_interval": "每年"
+    },
+    "US": {
+      "name": "美国",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "SEC/FINRA注册",
+      "aml_report": "需要提交SAR报告",
+      "refresh_interval": "每年"
+    },
+    "EU": {
+      "name": "欧盟",
+      "regulator": "ESMA / EBA",
+      "requirements": "AIFM/UCITS授权",
+      "aml_report": "需要向FIU报告",
+      "refresh_interval": "每年"
+    },
+    "IN": {
+      "name": "印度",
+      "regulator": "SEBI / RBI",
+      "requirements": "需要SEBI注册",
+      "aml_report": "需要提交FIU-IND报告",
+      "refresh_interval": "每两年"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "无效的JWT令牌",
+    "AUTH002": "令牌已过期",
+    "AUTH003": "权限不足",
+    "KYC001": "KYC验证失败",
+    "KYC002": "文件验证失败",
+    "KYC003": "活体检测失败",
+    "AML001": "检测到制裁匹配",
+    "AML002": "检测到PEP匹配",
+    "AML003": "检测到负面媒体",
+    "AML004": "交易速度超限",
+    "COMP001": "合规检查失败",
+    "COMP002": "违反管辖区规则",
+    "DB001": "数据库连接错误",
+    "EXT001": "外部API错误",
+    "EXT002": "外部API超时",
+    "RATE001": "超过速率限制"
+  }
+}

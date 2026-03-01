@@ -1,0 +1,148 @@
+{
+  "language": "العربية",
+  "languageCode": "ar",
+  "region": "الإمارات العربية المتحدة",
+  "dateFormat": "DD/MM/YYYY",
+  "timeFormat": "HH:mm:ss",
+  "currencySymbol": "د.إ",
+  "decimalSeparator": ".",
+  "thousandsSeparator": ",",
+
+  "api": {
+    "errors": {
+      "INVALID_REQUEST": "معاملات الطلب غير صالحة",
+      "MISSING_JURISDICTION": "الاختصاص القضائي مطلوب",
+      "INVALID_JURISDICTION": "رمز الاختصاص القضائي غير صالح",
+      "AUTHENTICATION_FAILED": "فشل التحقق من الهوية",
+      "INSUFFICIENT_PERMISSIONS": "صلاحيات غير كافية لهذه العملية",
+      "RATE_LIMIT_EXCEEDED": "تم تجاوز حد المعدل. يرجى المحاولة لاحقاً",
+      "INTERNAL_SERVER_ERROR": "حدث خطأ داخلي في الخادم",
+      "SERVICE_UNAVAILABLE": "الخدمة غير متاحة حالياً",
+      "TIMEOUT": "انتهت مهلة الطلب",
+      "INVALID_DOCUMENT_TYPE": "نوع المستند غير صالح للاختصاص القضائي",
+      "MISSING_REQUIRED_FIELDS": "الحقول المطلوبة مفقودة",
+      "INVALID_EMAIL_FORMAT": "تنسيق البريد الإلكتروني غير صالح",
+      "INVALID_PHONE_FORMAT": "تنسيق رقم الهاتف غير صالح",
+      "ENTITY_NOT_FOUND": "الكيان غير موجود",
+      "RECORD_NOT_FOUND": "السجل غير موجود",
+      "DUPLICATE_ENTITY": "الكيان موجود بالفعل",
+      "DATABASE_ERROR": "فشلت عملية قاعدة البيانات"
+    },
+    "success": {
+      "KYC_VERIFIED": "تم التحقق من هوية العميل بنجاح",
+      "KYC_PENDING_REVIEW": "التحقق من هوية العميل قيد المراجعة",
+      "KYC_REJECTED": "تم رفض التحقق من هوية العميل",
+      "AML_CHECK_PASSED": "اجتاز فحص مكافحة غسل الأموال",
+      "AML_CHECK_FLAGGED": "اكتشف فحص مكافحة غسل الأموال مخاطر",
+      "COMPLIANCE_CHECK_APPROVED": "تمت الموافقة على فحص الامتثال",
+      "COMPLIANCE_CHECK_ESCALATED": "تم تصعيد فحص الامتثال للمراجعة",
+      "COMPLIANCE_CHECK_REJECTED": "تم رفض فحص الامتثال"
+    },
+    "messages": {
+      "PROCESSING": "جارٍ معالجة طلبك...",
+      "TRANSACTION_SUBMITTED": "تم إرسال المعاملة بنجاح",
+      "DATA_SAVED": "تم حفظ البيانات بنجاح",
+      "RECORD_CREATED": "تم إنشاء السجل بنجاح",
+      "RECORD_UPDATED": "تم تحديث السجل بنجاح",
+      "RECORD_DELETED": "تم حذف السجل بنجاح"
+    }
+  },
+
+  "compliance": {
+    "kyc": {
+      "title": "اعرف عميلك (KYC)",
+      "description": "عملية التحقق من هوية العميل",
+      "document_types": {
+        "PASSPORT": "جواز السفر",
+        "GOVERNMENT_ID": "بطاقة هوية حكومية",
+        "DRIVERS_LICENSE": "رخصة القيادة",
+        "ID_CARD": "بطاقة الهوية",
+        "AADHAAR": "بطاقة آدهار",
+        "PAN": "بطاقة PAN",
+        "NATIONAL_ID": "الهوية الوطنية"
+      },
+      "proof_of_address": "إثبات العنوان",
+      "source_of_funds": "إقرار مصدر الأموال",
+      "beneficial_ownership": "شهادة الملكية النفعية",
+      "liveness_check": "التحقق من الحيوية",
+      "face_match": "التحقق من تطابق الوجه",
+      "status": {
+        "PENDING": "قيد الانتظار",
+        "IN_PROGRESS": "جارٍ التنفيذ",
+        "VERIFIED": "تم التحقق",
+        "REJECTED": "مرفوض",
+        "EXPIRED": "منتهي الصلاحية"
+      }
+    },
+    "aml": {
+      "title": "مكافحة غسل الأموال (AML)",
+      "description": "مراقبة المعاملات وتقييم المخاطر",
+      "risk_level": {
+        "LOW": "خطر منخفض",
+        "MEDIUM": "خطر متوسط",
+        "HIGH": "خطر عالٍ",
+        "CRITICAL": "خطر حرج"
+      },
+      "sanctions_screening": "فحص قائمة العقوبات",
+      "pep_screening": "فحص الشخصيات السياسية البارزة",
+      "adverse_media": "فحص وسائل الإعلام السلبية",
+      "velocity_check": "فحص سرعة المعاملات"
+    },
+    "status": {
+      "APPROVED": "موافق عليه",
+      "REJECTED": "مرفوض",
+      "ESCALATED": "مُصعَّد للمراجعة",
+      "PENDING": "قيد المراجعة"
+    }
+  },
+
+  "jurisdiction_specific": {
+    "AE": {
+      "name": "الإمارات العربية المتحدة",
+      "regulator": "هيئة الخدمات المالية في دبي",
+      "requirements": "مطلوب ترخيص DFSA",
+      "aml_report": "مطلوب تقديم تقرير الأنشطة المشبوهة",
+      "refresh_interval": "سنوي"
+    },
+    "US": {
+      "name": "الولايات المتحدة الأمريكية",
+      "regulator": "FinCEN / OFAC",
+      "requirements": "تسجيل SEC/FINRA",
+      "aml_report": "مطلوب تقديم تقرير الأنشطة المشبوهة",
+      "refresh_interval": "سنوي"
+    },
+    "EU": {
+      "name": "الاتحاد الأوروبي",
+      "regulator": "ESMA / EBA",
+      "requirements": "ترخيص AIFM/UCITS",
+      "aml_report": "مطلوب تقديم تقرير لوحدة الاستخبارات المالية",
+      "refresh_interval": "سنوي"
+    },
+    "IN": {
+      "name": "الهند",
+      "regulator": "SEBI / RBI",
+      "requirements": "مطلوب تسجيل SEBI",
+      "aml_report": "مطلوب تقديم تقرير FIU-IND",
+      "refresh_interval": "كل عامين"
+    }
+  },
+
+  "error_codes": {
+    "AUTH001": "رمز JWT غير صالح",
+    "AUTH002": "انتهت صلاحية الرمز",
+    "AUTH003": "صلاحيات غير كافية",
+    "KYC001": "فشل التحقق من هوية العميل",
+    "KYC002": "فشل التحقق من المستند",
+    "KYC003": "فشل التحقق من الحيوية",
+    "AML001": "تم اكتشاف تطابق في العقوبات",
+    "AML002": "تم اكتشاف تطابق PEP",
+    "AML003": "تم اكتشاف وسائل إعلام سلبية",
+    "AML004": "تم تجاوز سرعة المعاملة",
+    "COMP001": "فشل فحص الامتثال",
+    "COMP002": "انتهاك قواعد الاختصاص القضائي",
+    "DB001": "خطأ في اتصال قاعدة البيانات",
+    "EXT001": "خطأ في واجهة برمجة التطبيقات الخارجية",
+    "EXT002": "انتهت مهلة واجهة برمجة التطبيقات الخارجية",
+    "RATE001": "تم تجاوز حد المعدل"
+  }
+}

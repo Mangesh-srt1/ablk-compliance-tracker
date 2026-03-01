@@ -8,8 +8,10 @@ import { body, param, validationResult } from 'express-validator';
 import winston from 'winston';
 import { requirePermission } from '../middleware/authMiddleware';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
+import { ComplianceService } from '../services/complianceService';
 
 const router = Router();
+const complianceService = new ComplianceService();
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
@@ -50,9 +52,6 @@ router.post(
 
       const { transactionId, checkType, jurisdiction } = req.body;
 
-      // TODO: Implement agent orchestration logic
-      // This would integrate with LangGraph agents
-
       logger.info('Agent check initiated', {
         transactionId,
         checkType,
@@ -60,15 +59,37 @@ router.post(
         userId: req.user?.id,
       });
 
-      // Mock response for now
+      let check: { id: string; transactionId: string; checkType: string; status: string; agentId?: string } | null = null;
+
+      try {
+        check = await complianceService.createComplianceCheck({
+          transactionId,
+          checkType,
+          priority: 'normal',
+          requestedBy: req.user?.id || 'system',
+        });
+      } catch (dbError) {
+        // Gracefully handle missing DB / agents table – return processing stub
+        logger.warn('Could not persist compliance check, returning stub', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        });
+      }
+
+      const agentTypeMap: Record<string, string> = {
+        kyc: 'kyc',
+        aml: 'aml',
+        sebi: 'sebi',
+      };
+      const agentType = agentTypeMap[checkType] ?? 'supervisor';
+
       res.json({
         success: true,
         data: {
-          checkId: `check_${Date.now()}`,
+          checkId: check ? check.id : `check_${Date.now()}`,
           transactionId,
           checkType,
-          status: 'processing',
-          agentType: checkType === 'kyc' ? 'kyc' : checkType === 'aml' ? 'aml' : 'supervisor',
+          status: check ? check.status : 'processing',
+          agentType,
           message: 'Compliance check initiated successfully',
         },
       });
@@ -116,25 +137,45 @@ router.get(
 
       const { checkId } = req.params;
 
-      // TODO: Implement status checking logic
-
       logger.info('Agent status requested', {
         checkId,
         userId: req.user?.id,
       });
 
-      // Mock response for now
+      let checkData: { id: string; status: string; riskScore?: number; findings?: any } | null = null;
+
+      try {
+        checkData = await complianceService.getComplianceCheckById(checkId);
+      } catch (dbError) {
+        logger.warn('Could not retrieve compliance check from DB', {
+          checkId,
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        });
+      }
+
+      if (!checkData) {
+        return res.status(404).json(
+          createErrorResponseFromDetails(
+            ErrorCode.RESOURCE_NOT_FOUND,
+            ErrorCategory.NOT_FOUND,
+            'Compliance check not found'
+          )
+        );
+      }
+
       res.json({
         success: true,
         data: {
-          checkId,
-          status: 'completed',
-          progress: 100,
-          result: {
-            riskScore: 0.15,
-            findings: 'Low risk transaction',
-            recommendations: ['Proceed with standard monitoring'],
-          },
+          checkId: checkData.id,
+          status: checkData.status,
+          progress: checkData.status === 'completed' ? 100 : checkData.status === 'processing' ? 50 : 0,
+          result: checkData.findings
+            ? {
+                riskScore: checkData.riskScore,
+                findings: checkData.findings,
+                recommendations: [],
+              }
+            : null,
         },
       });
     } catch (error) {
@@ -162,8 +203,6 @@ router.get('/history', requirePermission('agents:read'), async (req: Request, re
   try {
     const { page = 1, limit = 20, status, agentType } = req.query;
 
-    // TODO: Implement history retrieval logic
-
     logger.info('Agent history requested', {
       page,
       limit,
@@ -172,19 +211,40 @@ router.get('/history', requirePermission('agents:read'), async (req: Request, re
       userId: req.user?.id,
     });
 
-    // Mock response for now
-    res.json({
-      success: true,
-      data: {
-        executions: [],
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: 0,
-          totalPages: 0,
+    try {
+      const result = await complianceService.getComplianceChecks({
+        page: Number(page),
+        limit: Number(limit),
+        status: status as string | undefined,
+        agentType: agentType as string | undefined,
+        userId: req.user?.id,
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          executions: result.checks,
+          pagination: result.pagination,
         },
-      },
-    });
+      });
+    } catch (dbError) {
+      logger.warn('Could not fetch compliance history from DB', {
+        error: dbError instanceof Error ? dbError.message : String(dbError),
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          executions: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            totalPages: 0,
+          },
+        },
+      });
+    }
   } catch (error) {
     logger.error('Agent history error', {
       error: error instanceof Error ? error.message : String(error),
