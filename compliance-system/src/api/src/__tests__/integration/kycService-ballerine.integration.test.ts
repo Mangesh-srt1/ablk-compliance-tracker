@@ -3,13 +3,13 @@
  * End-to-end tests for KYC workflow with Ballerine API
  */
 
-import { KycService } from '../../../services/kycService';
-import { BallerineClient } from '../../../agents/src/tools/ballerineClient';
+import { KycService } from '../../services/kycService';
+import { BallerineClient } from '../../../../agents/src/tools/ballerineClient';
 import axios from 'axios';
 
 jest.mock('axios');
-jest.mock('../../../config/database');
-jest.mock('../../../agents/src/tools/ballerineClient');
+jest.mock('../../config/database');
+jest.mock('../../../../agents/src/tools/ballerineClient');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 const MockedBallerineClient = BallerineClient as jest.MockedClass<typeof BallerineClient>;
@@ -215,11 +215,10 @@ describe('KYC Service - Ballerine API Integration', () => {
 
     // Test 7: Handle missing workflow
     it('should handle non-existent workflow gracefully', async () => {
-      const notFoundError = {
-        response: {
-          status: 404,
-          data: { message: 'Workflow not found' },
-        },
+      const notFoundError = new Error('Workflow not found');
+      (notFoundError as any).response = {
+        status: 404,
+        data: { message: 'Workflow not found' },
       };
 
       (ballerineClient as any).getWorkflowStatus.mockRejectedValue(notFoundError);
@@ -231,11 +230,10 @@ describe('KYC Service - Ballerine API Integration', () => {
 
     // Test 8: Handle invalid document upload
     it('should handle invalid document upload', async () => {
-      const invalidDocError = {
-        response: {
-          status: 422,
-          data: { message: 'Invalid document format' },
-        },
+      const invalidDocError = new Error('Invalid document format');
+      (invalidDocError as any).response = {
+        status: 422,
+        data: { message: 'Invalid document format' },
       };
 
       (ballerineClient as any).submitDocument.mockRejectedValue(invalidDocError);
@@ -250,12 +248,11 @@ describe('KYC Service - Ballerine API Integration', () => {
 
     // Test 9: Handle rate limiting
     it('should respect Ballerine rate limiting', async () => {
-      const rateLimitError = {
-        response: {
-          status: 429,
-          headers: { 'retry-after': '60' },
-          data: { message: 'Too many requests' },
-        },
+      const rateLimitError = new Error('Too many requests');
+      (rateLimitError as any).response = {
+        status: 429,
+        headers: { 'retry-after': '60' },
+        data: { message: 'Too many requests' },
       };
 
       (ballerineClient as any).createWorkflow.mockRejectedValue(rateLimitError);
@@ -276,11 +273,10 @@ describe('KYC Service - Ballerine API Integration', () => {
 
     // Test 10: Handle authentication error
     it('should handle Ballerine authentication failure', async () => {
-      const authError = {
-        response: {
-          status: 401,
-          data: { message: 'Invalid API key' },
-        },
+      const authError = new Error('Invalid API key');
+      (authError as any).response = {
+        status: 401,
+        data: { message: 'Invalid API key' },
       };
 
       (ballerineClient as any).createWorkflow.mockRejectedValue(authError);

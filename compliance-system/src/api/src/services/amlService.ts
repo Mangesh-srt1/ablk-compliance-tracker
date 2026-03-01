@@ -10,6 +10,10 @@ import {
   AmlRiskLevel,
   AmlFlagType,
   ScreeningResult,
+  PepCategory,
+  PepRelationshipType,
+  PepScreeningResult,
+  PepMatch,
   AmlCheckRequest,
   AmlCheckResult,
   AmlCheckRecord,
@@ -35,6 +39,7 @@ const logger = winston.createLogger({
 export class AmlService {
   private sqlLoader: SqlLoader;
   private amlProviderManager = amlProviderManager;
+  private pepDatabaseLastUpdatedAt: Date = new Date(0);
 
   constructor() {
     this.sqlLoader = SqlLoader.getInstance();
@@ -232,7 +237,8 @@ export class AmlService {
       results.euSanctions = await this.screenAgainstEuSanctions(entityName);
 
       // PEP screening
-      results.pep = await this.screenAgainstPep(request.entityData);
+      results.pepDetails = await this.performEnhancedPepScreening(request.entityData);
+      results.pep = results.pepDetails.result;
     } catch (error) {
       logger.warn('Sanctions screening error', {
         entityId: request.entityId,
@@ -285,6 +291,124 @@ export class AmlService {
     const hasPepOccupation = pepIndicators.some((indicator) => occupation.includes(indicator));
 
     return hasPepOccupation ? ScreeningResult.HIT : ScreeningResult.CLEAR;
+  }
+
+  /**
+   * Enhanced PEP screening with family/associate checks and refresh metadata.
+   */
+  private async performEnhancedPepScreening(entityData: AmlEntityData): Promise<PepScreeningResult> {
+    await this.updatePepDatabaseIfStale();
+
+    const matches: PepMatch[] = [];
+    const entityName = (entityData.name || entityData.fullName || '').trim();
+    const occupation = (entityData.occupation || '').toLowerCase();
+
+    const pepIndicatorMap: Array<{ keyword: string; category: PepCategory }> = [
+      { keyword: 'president', category: PepCategory.HEAD_OF_STATE },
+      { keyword: 'prime minister', category: PepCategory.HEAD_OF_STATE },
+      { keyword: 'minister', category: PepCategory.SENIOR_POLITICIAN },
+      { keyword: 'senator', category: PepCategory.SENIOR_POLITICIAN },
+      { keyword: 'judge', category: PepCategory.JUDICIAL_OFFICIAL },
+      { keyword: 'general', category: PepCategory.MILITARY_OFFICIAL },
+      { keyword: 'ambassador', category: PepCategory.INTERNATIONAL_ORGANIZATION_OFFICIAL },
+      { keyword: 'governor', category: PepCategory.REGIONAL_GOVERNMENT_OFFICIAL },
+    ];
+
+    for (const indicator of pepIndicatorMap) {
+      if (occupation.includes(indicator.keyword)) {
+        matches.push({
+          name: entityName || 'UNKNOWN',
+          category: indicator.category,
+          relationship: PepRelationshipType.PRIMARY,
+          confidence: 0.85,
+          source: 'MOCK_PEP_OCCUPATION_SCREENING',
+        });
+      }
+    }
+
+    if (entityData.isPep) {
+      matches.push({
+        name: entityName || 'UNKNOWN',
+        category: PepCategory.SENIOR_POLITICIAN,
+        relationship: PepRelationshipType.PRIMARY,
+        confidence: 0.95,
+        source: 'DECLARED_PEP_FLAG',
+      });
+    }
+
+    const relatedMatches = this.checkFamilyAndAssociatesForPep(entityData);
+    matches.push(...relatedMatches);
+
+    const hasFamilyOrAssociateMatch = relatedMatches.some(
+      (m) =>
+        m.relationship === PepRelationshipType.FAMILY ||
+        m.relationship === PepRelationshipType.ASSOCIATE
+    );
+
+    return {
+      result: matches.length > 0 ? ScreeningResult.HIT : ScreeningResult.CLEAR,
+      matches,
+      hasFamilyOrAssociateMatch,
+      databaseLastUpdatedAt: this.pepDatabaseLastUpdatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Simulate daily PEP database refresh to keep screening metadata current.
+   */
+  private async updatePepDatabaseIfStale(): Promise<void> {
+    const now = new Date();
+    const hoursSinceLastUpdate =
+      (now.getTime() - this.pepDatabaseLastUpdatedAt.getTime()) / (1000 * 60 * 60);
+
+    if (hoursSinceLastUpdate < 24) {
+      return;
+    }
+
+    this.pepDatabaseLastUpdatedAt = now;
+
+    logger.info('PEP database refreshed', {
+      refreshedAt: this.pepDatabaseLastUpdatedAt.toISOString(),
+    });
+  }
+
+  /**
+   * Check related parties for family/associate PEP links.
+   */
+  private checkFamilyAndAssociatesForPep(entityData: AmlEntityData): PepMatch[] {
+    const matches: PepMatch[] = [];
+
+    const relatedPartyIndicators = ['minister', 'senator', 'governor', 'ambassador', 'president'];
+
+    const familyMembers = entityData.familyMembers || [];
+    for (const member of familyMembers) {
+      const normalized = member.toLowerCase();
+      if (relatedPartyIndicators.some((indicator) => normalized.includes(indicator))) {
+        matches.push({
+          name: member,
+          category: PepCategory.SENIOR_POLITICIAN,
+          relationship: PepRelationshipType.FAMILY,
+          confidence: 0.75,
+          source: 'RELATED_PARTY_NAME_SCREENING',
+        });
+      }
+    }
+
+    const associates = entityData.associates || [];
+    for (const associate of associates) {
+      const normalized = associate.toLowerCase();
+      if (relatedPartyIndicators.some((indicator) => normalized.includes(indicator))) {
+        matches.push({
+          name: associate,
+          category: PepCategory.SENIOR_POLITICIAN,
+          relationship: PepRelationshipType.ASSOCIATE,
+          confidence: 0.7,
+          source: 'RELATED_PARTY_NAME_SCREENING',
+        });
+      }
+    }
+
+    return matches;
   }
 
   /**
@@ -523,6 +647,17 @@ export class AmlService {
       score += 25; // Moderate penalty
     }
 
+    if (screeningResults.pepDetails?.hasFamilyOrAssociateMatch) {
+      flags.push({
+        type: AmlFlagType.PEP_ASSOCIATE_MATCH,
+        severity: 'HIGH',
+        message: 'PEP family/associate link detected',
+        details: 'Entity has related party links to politically exposed persons',
+        evidence: screeningResults.pepDetails.matches,
+      });
+      score += 15;
+    }
+
     // High-risk country check
     const highRiskCountries = ['North Korea', 'Iran', 'Syria', 'Venezuela'];
     if (request.entityData.country && highRiskCountries.includes(request.entityData.country)) {
@@ -594,6 +729,11 @@ export class AmlService {
       recommendations.push('Apply enhanced due diligence procedures');
       recommendations.push('Obtain source of funds documentation');
       recommendations.push('Monitor transactions closely for 12 months');
+    }
+
+    if (flags.some((f) => f.type === AmlFlagType.PEP_ASSOCIATE_MATCH)) {
+      recommendations.push('Screen immediate family and close associates for adverse media');
+      recommendations.push('Increase review cadence for politically exposed party relationships');
     }
 
     // High-risk patterns

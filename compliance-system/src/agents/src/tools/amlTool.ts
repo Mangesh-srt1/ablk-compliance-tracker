@@ -59,7 +59,7 @@ export interface AMLResult {
 /**
  * AMLTool: Screens entity against AML/sanctions lists
  */
-export class AMLTool extends StructuredTool {
+export class AMLTool extends StructuredTool<any> {
   name = 'aml_screening';
   description = `Screen entity against AML/sanctions databases using Chainalysis and OFAC.
     Checks for sanctions matches, PEP designations, risk scoring, velocity analysis.

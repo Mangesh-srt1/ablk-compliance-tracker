@@ -7,10 +7,10 @@
     "build": "tsc",
     "dev": "ts-node-dev --respawn src/index.ts",
     "start": "node dist/index.js",
-    "test": "jest",
-    "test:ci": "jest --ci --coverage --maxWorkers=2",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "jest --config jest.config.js",
+    "test:ci": "jest --config jest.config.js --ci --coverage --maxWorkers=2",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:coverage": "jest --config jest.config.js --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "typecheck": "tsc --noEmit"
@@ -76,31 +76,5 @@
     "dpdp"
   ],
   "author": "Compliance System Team",
-  "license": "MIT",
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "roots": ["<rootDir>/src", "<rootDir>/__tests__"],
-    "testMatch": [
-      "**/__tests__/**/*.test.ts",
-      "**/__tests__/**/*.test.js",
-      "**/*.test.ts",
-      "**/*.test.js"
-    ],
-    "transform": {
-      "^.+\\.tsx?$": ["ts-jest", {
-        "diagnostics": false,
-        "tsconfig": {
-          "strict": false,
-          "esModuleInterop": true,
-          "allowSyntheticDefaultImports": true,
-          "skipLibCheck": true
-        }
-      }]
-    },
-    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"],
-    "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
-    "collectCoverageFrom": ["src/**/*.ts", "!src/**/*.d.ts", "!src/**/index.ts"],
-    "coveragePathIgnorePatterns": ["/node_modules/", "/dist/"]
-  }
+  "license": "MIT"
 }

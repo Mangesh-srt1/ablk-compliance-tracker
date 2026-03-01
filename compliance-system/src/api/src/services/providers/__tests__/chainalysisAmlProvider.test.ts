@@ -12,21 +12,42 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('ChainalysisAmlProvider', () => {
   let provider: ChainalysisAmlProvider;
+  let mockClient: any;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    process.env.CHAINALYSIS_API_KEY = 'test-api-key';
-    process.env.CHAINALYSIS_BASE_URL = 'https://api.test.chainalysis.com/v1';
-
-    mockedAxios.create.mockReturnValue({
+  // Create ONE stable mockClient for all tests
+  beforeAll(() => {
+    mockClient = {
       post: jest.fn(),
       get: jest.fn(),
       interceptors: {
+        request: {
+          use: jest.fn((success, error) => {}),
+        },
         response: {
           use: jest.fn((success, error) => {}),
         },
       },
-    } as any);
+    };
+    mockedAxios.create.mockReturnValue(mockClient as any);
+  });
+
+  beforeEach(() => {
+    // Clear mock call history
+    mockClient.post.mockClear();
+    mockClient.get.mockClear();
+    
+    // Set up default mock responses that all tests can use
+    mockClient.post.mockResolvedValue({
+      status: 200,
+      data: {},
+    });
+    mockClient.get.mockResolvedValue({
+      status: 200,
+      data: {},
+    });
+    
+    process.env.CHAINALYSIS_API_KEY = 'test-api-key';
+    process.env.CHAINALYSIS_BASE_URL = 'https://api.test.chainalysis.com/v1';
 
     provider = new ChainalysisAmlProvider();
   });
@@ -44,7 +65,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.screenEntity({
         walletAddress: '0x1234567890123456789012345678901234567890',
@@ -74,7 +95,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.screenEntity({
         walletAddress: '0xSanctionedAddress1234567890123456789012',
@@ -104,7 +125,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.screenEntity({
         walletAddress: '0xPEPWallet123456789012345678901234567890',
@@ -134,7 +155,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.screenEntity({
         walletAddress: '0xExchangeWallet12345678901234567890123456',
@@ -145,40 +166,48 @@ describe('ChainalysisAmlProvider', () => {
       expect(result.flags).toContain('EXCHANGE_WALLET');
     });
 
-    // Test 5: Handle API errors gracefully
-    it('should handle Chainalysis API errors', async () => {
-      const mockError = {
-        response: {
-          status: 400,
-          data: { message: 'Invalid wallet address' },
-        },
-      };
+    describe('Error Handling', () => {
+      beforeEach(() => {
+        // Set retries to 0 for immediate error propagation  
+        process.env.CHAINALYSIS_RETRIES = '0';
+        provider = new ChainalysisAmlProvider();
+      });
 
-      (provider as any).client.post.mockRejectedValue(mockError);
+      // Test 5: Handle API errors gracefully
+      it('should handle Chainalysis API errors', async () => {
+        const mockError = {
+          response: {
+            status: 400,
+            data: { message: 'Invalid wallet address' },
+          },
+        };
 
-      await expect(
-        provider.screenEntity({
-          walletAddress: 'invalid-address',
-          entityType: 'individual',
-          transactionHistory: [],
-        })
-      ).rejects.toThrow();
-    });
+        mockClient.post.mockRejectedValue(mockError);
 
-    // Test 6: Timeout handling
-    it('should handle timeout errors during screening', async () => {
-      const mockError = new Error('Request timeout');
-      (mockError as any).code = 'ECONNABORTED';
+        await expect(
+          provider.screenEntity({
+            walletAddress: 'invalid-address',
+            entityType: 'individual',
+            transactionHistory: [],
+          })
+        ).rejects.toThrow();
+      });
 
-      (provider as any).client.post.mockRejectedValue(mockError);
+      // Test 6: Timeout handling
+      it('should handle timeout errors during screening', async () => {
+        const mockError = new Error('Request timeout');
+        (mockError as any).code = 'ECONNABORTED';
 
-      await expect(
-        provider.screenEntity({
-          walletAddress: '0x1234567890123456789012345678901234567890',
-          entityType: 'individual',
-          transactionHistory: [],
-        })
-      ).rejects.toThrow();
+        mockClient.post.mockRejectedValue(mockError);
+
+        await expect(
+          provider.screenEntity({
+            walletAddress: '0x1234567890123456789012345678901234567890',
+            entityType: 'individual',
+            transactionHistory: [],
+          })
+        ).rejects.toThrow();
+      });
     });
   });
 
@@ -198,7 +227,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.analyzeTransactions({
         walletAddress: '0x1234567890123456789012345678901234567890',
@@ -236,7 +265,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.analyzeTransactions({
         walletAddress: '0x1234567890123456789012345678901234567890',
@@ -262,7 +291,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.analyzeTransactions({
         walletAddress: '0x1234567890123456789012345678901234567890',
@@ -287,7 +316,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.analyzeTransactions({
         walletAddress: '0x1234567890123456789012345678901234567890',
@@ -312,7 +341,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.analyzeTransactions({
         walletAddress: '0x1234567890123456789012345678901234567890',
@@ -322,23 +351,31 @@ describe('ChainalysisAmlProvider', () => {
       expect(result.riskScore).toBeDefined();
     });
 
-    // Test 12: Handle analysis API errors
-    it('should handle API errors in transaction analysis', async () => {
-      const mockError = {
-        response: {
-          status: 503,
-          data: { message: 'Service temporarily unavailable' },
-        },
-      };
+    describe('Error Handling', () => {
+      beforeEach(() => {
+        // Set retries to 0 for immediate error propagation  
+        process.env.CHAINALYSIS_RETRIES = '0';
+        provider = new ChainalysisAmlProvider();
+      });
 
-      (provider as any).client.post.mockRejectedValue(mockError);
+      // Test 12: Handle analysis API errors
+      it('should handle API errors in transaction analysis', async () => {
+        const mockError = {
+          response: {
+            status: 503,
+            data: { message: 'Service temporarily unavailable' },
+          },
+        };
 
-      await expect(
-        provider.analyzeTransactions({
-          walletAddress: '0x1234567890123456789012345678901234567890',
-          transactions: [],
-        })
-      ).rejects.toThrow();
+        mockClient.post.mockRejectedValue(mockError);
+
+        await expect(
+          provider.analyzeTransactions({
+            walletAddress: '0x1234567890123456789012345678901234567890',
+            transactions: [],
+          })
+        ).rejects.toThrow();
+      });
     });
   });
 
@@ -346,10 +383,11 @@ describe('ChainalysisAmlProvider', () => {
     // Test 13: Provider health check - healthy
     it('should return healthy status when API is accessible', async () => {
       const mockResponse = {
-        data: { status: 'healthy', responseTime: 150 },
+        status: 200,
+        data: { status: 'OK', responseTime: 150 },
       };
 
-      (provider as any).client.get.mockResolvedValue(mockResponse);
+      mockClient.get.mockResolvedValue(mockResponse);
 
       const result = await provider.isHealthy();
 
@@ -364,7 +402,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.get.mockRejectedValue(mockError);
+      mockClient.get.mockRejectedValue(mockError);
 
       const result = await provider.isHealthy();
 
@@ -376,7 +414,7 @@ describe('ChainalysisAmlProvider', () => {
       const mockError = new Error('Timeout');
       (mockError as any).code = 'ECONNABORTED';
 
-      (provider as any).client.get.mockRejectedValue(mockError);
+      mockClient.get.mockRejectedValue(mockError);
 
       const result = await provider.isHealthy();
 
@@ -409,7 +447,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.screenEntity({
         walletAddress: '0xCleanWallet12345678901234567890123456789',
@@ -431,7 +469,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockResolvedValue(mockResponse);
+      mockClient.post.mockResolvedValue(mockResponse);
 
       const result = await provider.screenEntity({
         walletAddress: '0xSanctioned1234567890123456789012345678',
@@ -444,6 +482,13 @@ describe('ChainalysisAmlProvider', () => {
   });
 
   describe('Error Resilience', () => {
+    beforeEach(() => {
+      // Set retries to 0 for immediate error propagation in these tests
+      process.env.CHAINALYSIS_RETRIES = '0';
+      // Recreate provider with updated config
+      provider = new ChainalysisAmlProvider();
+    });
+
     // Test 19: Rate limit handling
     it('should handle rate limiting responses', async () => {
       const mockError = {
@@ -454,7 +499,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockRejectedValue(mockError);
+      mockClient.post.mockRejectedValue(mockError);
 
       await expect(
         provider.screenEntity({
@@ -474,7 +519,7 @@ describe('ChainalysisAmlProvider', () => {
         },
       };
 
-      (provider as any).client.post.mockRejectedValue(mockError);
+      mockClient.post.mockRejectedValue(mockError);
 
       await expect(
         provider.screenEntity({
@@ -486,3 +531,4 @@ describe('ChainalysisAmlProvider', () => {
     });
   });
 });
+

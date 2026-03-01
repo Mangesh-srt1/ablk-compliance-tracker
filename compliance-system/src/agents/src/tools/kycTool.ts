@@ -42,7 +42,7 @@ export interface KYCResult {
 /**
  * KYCTool: Verifies entity identity via Ballerine integration
  */
-export class KYCTool extends StructuredTool {
+export class KYCTool extends StructuredTool<any> {
   name = 'kyc_verification';
   description = `Verify entity identity using KYC service. 
     Checks identity documents, applies liveness verification if needed.

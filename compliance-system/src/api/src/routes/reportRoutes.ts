@@ -4,12 +4,14 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { query, validationResult } from 'express-validator';
+import { body, query, validationResult } from 'express-validator';
 import winston from 'winston';
 import { requirePermission } from '../middleware/authMiddleware';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
+import { getComplianceReportingSystem } from '../services/complianceReportingSystem';
 
 const router = Router();
+const reportingSystem = getComplianceReportingSystem();
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
@@ -277,6 +279,131 @@ router.get(
             ErrorCode.SERVICE_UNAVAILABLE,
             ErrorCategory.INTERNAL,
             'Audit report generation failed'
+          )
+        );
+    }
+  }
+);
+
+/**
+ * POST /api/reports/regulatory/sar-auto
+ * Automatically draft + submit a STR/SAR filing.
+ */
+router.post(
+  '/regulatory/sar-auto',
+  requirePermission('reports:audit'),
+  [
+    body('entityId').isString().isLength({ min: 1, max: 255 }),
+    body('jurisdiction').isIn(['AE', 'IN', 'US', 'SA']),
+    body('trigger').isIn(['AML_SCORE_HIGH', 'HAWALA_SCORE_HIGH', 'SANCTIONS_HIT', 'MANUAL_ESCALATION']),
+    body('transactionIds').optional().isArray(),
+    body('amlScore').optional().isNumeric(),
+    body('hawalaScore').optional().isNumeric(),
+    body('narrative').optional().isString(),
+    body('sanctionsDetails').optional().isString(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res
+          .status(400)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_INPUT,
+              ErrorCategory.VALIDATION,
+              'Validation failed',
+              400,
+              errors.array()
+            )
+          );
+      }
+
+      const draft = reportingSystem.draftSTR(req.body);
+      const filing = reportingSystem.submitSTR(draft);
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          draft,
+          filing,
+        },
+      });
+    } catch (error) {
+      logger.error('SAR auto filing error', {
+        error: error instanceof Error ? error.message : String(error),
+        userId: req.user?.id,
+      });
+
+      return res
+        .status(500)
+        .json(
+          createErrorResponseFromDetails(
+            ErrorCode.SERVICE_UNAVAILABLE,
+            ErrorCategory.INTERNAL,
+            'SAR auto filing failed'
+          )
+        );
+    }
+  }
+);
+
+/**
+ * POST /api/reports/regulatory/ctr-auto
+ * Automatically draft + submit a CTR filing.
+ */
+router.post(
+  '/regulatory/ctr-auto',
+  requirePermission('reports:audit'),
+  [
+    body('entityId').isString().isLength({ min: 1, max: 255 }),
+    body('jurisdiction').isIn(['AE', 'IN', 'US', 'SA']),
+    body('currency').isString().isLength({ min: 3, max: 10 }),
+    body('thresholdAmount').isNumeric(),
+    body('aggregatedAmount').isNumeric(),
+    body('transactionIds').isArray({ min: 1 }),
+    body('narrative').optional().isString(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res
+          .status(400)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_INPUT,
+              ErrorCategory.VALIDATION,
+              'Validation failed',
+              400,
+              errors.array()
+            )
+          );
+      }
+
+      const draft = reportingSystem.draftCTR(req.body);
+      const filing = reportingSystem.submitCTR(draft);
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          draft,
+          filing,
+        },
+      });
+    } catch (error) {
+      logger.error('CTR auto filing error', {
+        error: error instanceof Error ? error.message : String(error),
+        userId: req.user?.id,
+      });
+
+      return res
+        .status(500)
+        .json(
+          createErrorResponseFromDetails(
+            ErrorCode.SERVICE_UNAVAILABLE,
+            ErrorCategory.INTERNAL,
+            'CTR auto filing failed'
           )
         );
     }

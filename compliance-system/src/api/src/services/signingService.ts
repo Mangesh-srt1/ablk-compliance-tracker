@@ -222,9 +222,14 @@ export class SigningService {
   /**
    * Set keys (for runtime configuration)
    */
-  public setKeys(privateKey: string, publicKey: string): void {
-    this.privateKey = privateKey;
-    this.publicKey = publicKey;
+  public setKeys(privateKeyOrKeyPair: string | { privateKey: string; publicKey: string }, publicKey?: string): void {
+    if (typeof privateKeyOrKeyPair === 'object' && privateKeyOrKeyPair !== null) {
+      this.privateKey = privateKeyOrKeyPair.privateKey;
+      this.publicKey = privateKeyOrKeyPair.publicKey;
+    } else {
+      this.privateKey = privateKeyOrKeyPair as string;
+      this.publicKey = publicKey || null;
+    }
     logger.info('Signing keys updated');
   }
 

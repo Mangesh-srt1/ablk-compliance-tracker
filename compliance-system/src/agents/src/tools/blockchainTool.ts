@@ -56,7 +56,7 @@ export interface BlockchainAnalysisResult {
  * BlockchainTool: Monitors blockchain for compliance
  * OPTIONAL feature for Week 3 - can be deferred if time-constrained
  */
-export class BlockchainTool extends StructuredTool {
+export class BlockchainTool extends StructuredTool<any> {
   name = 'blockchain_monitoring';
   description = `Monitor blockchain transactions for compliance anomalies.
     Checks transaction patterns, detects unusual activity, identifies high-risk transactions.

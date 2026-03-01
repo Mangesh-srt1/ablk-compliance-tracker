@@ -4,9 +4,16 @@
  */
 
 export enum Jurisdiction {
+  AE = 'AE',
+  UAE = 'AE',
   INDIA = 'IN',
+  IN = 'IN',
   EUROPEAN_UNION = 'EU',
+  EU = 'EU',
   UNITED_STATES = 'US',
+  US = 'US',
+  SA = 'SA',
+  SAUDI_ARABIA = 'SA',
 }
 
 export enum KycStatus {

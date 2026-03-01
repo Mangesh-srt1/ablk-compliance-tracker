@@ -52,7 +52,7 @@ export interface ComplianceResult {
 /**
  * ComplianceTool: Aggregates compliance decisions based on rules
  */
-export class ComplianceTool extends StructuredTool {
+export class ComplianceTool extends StructuredTool<any> {
   name = 'compliance_decision';
   description = `Make final compliance decision by aggregating all checks.
     Applies jurisdiction-specific rules and risk thresholds.

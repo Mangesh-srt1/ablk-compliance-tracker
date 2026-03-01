@@ -62,7 +62,7 @@ export interface JurisdictionRules {
 /**
  * JurisdictionRulesTool: Loads and returns jurisdiction-specific rules
  */
-export class JurisdictionRulesTool extends StructuredTool {
+export class JurisdictionRulesTool extends StructuredTool<any> {
   name = 'jurisdiction_rules';
   description = `Load jurisdiction-specific compliance rules from configuration.
     Retrieves KYC requirements, AML thresholds, governance rules, risk scoring weights.

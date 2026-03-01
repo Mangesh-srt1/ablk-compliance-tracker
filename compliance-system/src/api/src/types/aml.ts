@@ -17,6 +17,7 @@ export enum AmlRiskLevel {
 export enum AmlFlagType {
   SANCTIONS_MATCH = 'SANCTIONS_MATCH',
   PEP_MATCH = 'PEP_MATCH',
+  PEP_ASSOCIATE_MATCH = 'PEP_ASSOCIATE_MATCH',
   HIGH_RISK_COUNTRY = 'HIGH_RISK_COUNTRY',
   UNUSUAL_TRANSACTION_PATTERN = 'UNUSUAL_TRANSACTION_PATTERN',
   LARGE_TRANSACTION = 'LARGE_TRANSACTION',
@@ -71,6 +72,39 @@ export interface AmlEntityData {
   businessType?: string;
   isPep?: boolean;
   isSanctioned?: boolean;
+  familyMembers?: string[];
+  associates?: string[];
+}
+
+export enum PepCategory {
+  HEAD_OF_STATE = 'HEAD_OF_STATE',
+  SENIOR_POLITICIAN = 'SENIOR_POLITICIAN',
+  JUDICIAL_OFFICIAL = 'JUDICIAL_OFFICIAL',
+  MILITARY_OFFICIAL = 'MILITARY_OFFICIAL',
+  STATE_OWNED_ENTERPRISE_EXECUTIVE = 'STATE_OWNED_ENTERPRISE_EXECUTIVE',
+  INTERNATIONAL_ORGANIZATION_OFFICIAL = 'INTERNATIONAL_ORGANIZATION_OFFICIAL',
+  REGIONAL_GOVERNMENT_OFFICIAL = 'REGIONAL_GOVERNMENT_OFFICIAL',
+}
+
+export enum PepRelationshipType {
+  PRIMARY = 'PRIMARY',
+  FAMILY = 'FAMILY',
+  ASSOCIATE = 'ASSOCIATE',
+}
+
+export interface PepMatch {
+  name: string;
+  category: PepCategory;
+  relationship: PepRelationshipType;
+  confidence: number; // 0-1
+  source: string;
+}
+
+export interface PepScreeningResult {
+  result: ScreeningResult;
+  matches: PepMatch[];
+  hasFamilyOrAssociateMatch: boolean;
+  databaseLastUpdatedAt: string;
 }
 
 export interface AmlFlag {
@@ -86,6 +120,7 @@ export interface ScreeningResults {
   ofac: ScreeningResult;
   euSanctions: ScreeningResult;
   pep: ScreeningResult;
+  pepDetails?: PepScreeningResult;
   sanctionsMatch?: boolean; // For test compatibility
   interpol?: ScreeningResult;
   unSc?: ScreeningResult;

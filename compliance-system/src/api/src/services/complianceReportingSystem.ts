@@ -60,6 +60,38 @@ export interface STRFilingResult {
   submittedAt: Date;
 }
 
+export interface CTRInput {
+  entityId: string;
+  jurisdiction: STRJurisdiction;
+  currency: string;
+  thresholdAmount: number;
+  aggregatedAmount: number;
+  transactionIds: string[];
+  narrative?: string;
+}
+
+export interface CTRDraft {
+  draftId: string;
+  entityId: string;
+  jurisdiction: STRJurisdiction;
+  filingTarget: string;
+  currency: string;
+  thresholdAmount: number;
+  aggregatedAmount: number;
+  narrative: string;
+  transactionIds: string[];
+  generatedAt: Date;
+}
+
+export interface CTRFilingResult {
+  filingId: string;
+  status: 'SUBMITTED' | 'PENDING_REVIEW' | 'FAILED';
+  filingReference: string; // CTR-{JurisdictionCode}-{Timestamp}
+  jurisdiction: STRJurisdiction;
+  filingTarget: string;
+  submittedAt: Date;
+}
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
@@ -337,6 +369,66 @@ export class ComplianceReportingSystem {
   }
 
   /**
+   * Draft a Currency Transaction Report (CTR) for threshold-crossing activity.
+   */
+  draftCTR(input: CTRInput): CTRDraft {
+    logger.info('Drafting CTR', {
+      entityId: input.entityId,
+      jurisdiction: input.jurisdiction,
+      aggregatedAmount: input.aggregatedAmount,
+      thresholdAmount: input.thresholdAmount,
+    });
+
+    const filingTarget = STR_FILING_TARGETS[input.jurisdiction];
+    const narrative =
+      input.narrative ||
+      this.buildCTRNarrative({
+        entityId: input.entityId,
+        jurisdiction: input.jurisdiction,
+        currency: input.currency,
+        aggregatedAmount: input.aggregatedAmount,
+        thresholdAmount: input.thresholdAmount,
+        transactionIds: input.transactionIds,
+      });
+
+    return {
+      draftId: uuidv4(),
+      entityId: input.entityId,
+      jurisdiction: input.jurisdiction,
+      filingTarget,
+      currency: input.currency,
+      thresholdAmount: input.thresholdAmount,
+      aggregatedAmount: input.aggregatedAmount,
+      narrative,
+      transactionIds: input.transactionIds,
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Submit a drafted CTR to the appropriate jurisdiction authority.
+   */
+  submitCTR(draft: CTRDraft): CTRFilingResult {
+    logger.info('Submitting CTR', {
+      draftId: draft.draftId,
+      jurisdiction: draft.jurisdiction,
+      filingTarget: draft.filingTarget,
+    });
+
+    const timestamp = Date.now();
+    const filingReference = `CTR-${draft.jurisdiction}-${timestamp}`;
+
+    return {
+      filingId: uuidv4(),
+      status: 'SUBMITTED',
+      filingReference,
+      jurisdiction: draft.jurisdiction,
+      filingTarget: draft.filingTarget,
+      submittedAt: new Date(),
+    };
+  }
+
+  /**
    * Build a jurisdiction-specific STR narrative from trigger data.
    */
   private buildSTRNarrative(input: STRInput): string {
@@ -366,6 +458,31 @@ export class ComplianceReportingSystem {
     const filingTarget = STR_FILING_TARGETS[input.jurisdiction];
     lines.push(`This report is filed with: ${filingTarget}.`);
 
+    return lines.join(' ');
+  }
+
+  /**
+   * Build a jurisdiction-specific CTR narrative from threshold activity.
+   */
+  private buildCTRNarrative(input: {
+    entityId: string;
+    jurisdiction: STRJurisdiction;
+    currency: string;
+    aggregatedAmount: number;
+    thresholdAmount: number;
+    transactionIds: string[];
+  }): string {
+    const filingTarget = STR_FILING_TARGETS[input.jurisdiction];
+    const lines: string[] = [
+      `Currency Transaction Report for entity ${input.entityId} (Jurisdiction: ${input.jurisdiction}).`,
+      `Aggregated amount ${input.aggregatedAmount} ${input.currency} exceeded threshold ${input.thresholdAmount} ${input.currency}.`,
+    ];
+
+    if (input.transactionIds.length > 0) {
+      lines.push(`Related transactions: ${input.transactionIds.join(', ')}.`);
+    }
+
+    lines.push(`This report is filed with: ${filingTarget}.`);
     return lines.join(' ');
   }
 }

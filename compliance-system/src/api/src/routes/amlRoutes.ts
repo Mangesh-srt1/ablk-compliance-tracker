@@ -188,4 +188,92 @@ router.get(
   }
 );
 
+/**
+ * POST /api/aml-pep-screen
+ * Execute AML check with enhanced PEP inputs (family/associates).
+ */
+router.post(
+  '/aml-pep-screen',
+  requirePermission('aml:execute'),
+  [
+    body('entityId')
+      .isString()
+      .isLength({ min: 1, max: 255 })
+      .withMessage('Entity ID must be a non-empty string (max 255 chars)'),
+    body('jurisdiction')
+      .isIn(Object.values(Jurisdiction))
+      .withMessage('Jurisdiction must be one of: ' + Object.values(Jurisdiction).join(', ')),
+    body('transactions').isArray().withMessage('Transactions must be an array'),
+    body('entityData').isObject().withMessage('entityData is required'),
+    body('entityData.familyMembers').optional().isArray().withMessage('familyMembers must be an array'),
+    body('entityData.associates').optional().isArray().withMessage('associates must be an array'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res
+          .status(400)
+          .json(
+            createErrorResponseFromDetails(
+              ErrorCode.INVALID_INPUT,
+              ErrorCategory.VALIDATION,
+              'Validation failed',
+              400,
+              errors.array()
+            )
+          );
+      }
+
+      const { entityId, jurisdiction, transactions, entityData } = req.body;
+
+      const result = await amlService.performAmlCheck(
+        {
+          entityId,
+          jurisdiction,
+          transactions,
+          entityData,
+        },
+        req.user?.id
+      );
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('AML enhanced PEP endpoint error', {
+        error: error instanceof Error ? error.message : String(error),
+        entityId: req.body.entityId,
+        userId: req.user?.id,
+      });
+
+      if (error instanceof Error && 'httpStatus' in error) {
+        const appError = error as any;
+        return res
+          .status(appError.httpStatus)
+          .json(
+            createErrorResponseFromDetails(
+              appError.code,
+              appError.category,
+              appError.message,
+              appError.httpStatus,
+              appError.details
+            )
+          );
+      }
+
+      res
+        .status(500)
+        .json(
+          createErrorResponseFromDetails(
+            ErrorCode.DATABASE_ERROR,
+            ErrorCategory.INTERNAL,
+            'Enhanced PEP screening failed'
+          )
+        );
+    }
+  }
+);
+
 export default router;

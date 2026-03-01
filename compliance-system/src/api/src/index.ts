@@ -37,7 +37,9 @@ import agentRoutes from './routes/agentRoutes';
 import reportRoutes from './routes/reportRoutes';
 import healthRoutes from './routes/healthRoutes';
 import kycRoutes from './routes/kycRoutes';
+import kybRoutes from './routes/kybRoutes';
 import amlRoutes from './routes/amlRoutes';
+import kytRoutes from './routes/kytRoutes';
 import monitoringRoutes from './routes/monitoringRoutes';
 import fraudRoutes from './routes/fraudRoutes';
 import scanRoutes from './routes/scanRoutes';
@@ -45,6 +47,9 @@ import rulesRoutes from './routes/rulesRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import advancedScanRoutes from './routes/advancedScanRoutes';
 import peTokenizationRoutes from './routes/peTokenizationRoutes';
+import sarCtrRoutes from './routes/sarCtrRoutes';
+import alertWorkflowRoutes from './routes/alertWorkflowRoutes';
+import workflowRoutes from './routes/workflowRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -178,9 +183,12 @@ async function initializeApp(): Promise<void> {
     app.use('/api/compliance', complianceRoutes);
     app.use('/api/agents', agentRoutes);
     app.use('/api/reports', reportRoutes);
+    app.use('/api/v1/reports', sarCtrRoutes);
     app.use('/api/health', healthRoutes);
     app.use('/api', kycRoutes);
+    app.use('/api', kybRoutes);
     app.use('/api', amlRoutes);
+    app.use('/api', kytRoutes);
     app.use('/api/monitoring', monitoringRoutes);
     app.use('/api', fraudRoutes);
     app.use('/api', scanRoutes);
@@ -188,6 +196,8 @@ async function initializeApp(): Promise<void> {
     app.use('/api/analytics', analyticsRoutes);
     app.use('/api/compliance', advancedScanRoutes);
     app.use('/api/pe', peTokenizationRoutes);
+    app.use('/api/v1', alertWorkflowRoutes);
+    app.use('/api/v1/workflows', workflowRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
