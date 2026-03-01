@@ -7,14 +7,38 @@
 import winston from 'winston';
 import path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-// Create logs directory if it doesn't exist
-const logsDir = process.env.LOGS_DIR || '/app/logs';
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+// Create logs directory if it doesn't exist.
+// Fall back to a local ./logs directory when the configured path isn't writable
+// (e.g. in test environments or when running outside Docker).
+function resolveLogsDir(): string {
+  const candidates = [
+    process.env.LOGS_DIR,
+    '/app/logs',
+    path.join(process.cwd(), 'logs'),
+  ].filter(Boolean) as string[];
+
+  for (const dir of candidates) {
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      // Verify the directory is writable
+      fs.accessSync(dir, fs.constants.W_OK);
+      return dir;
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  // Last-resort: use a temp directory so the process doesn't crash
+  return os.tmpdir();
 }
+
+const logsDir = resolveLogsDir();
 
 // Define log levels with severity
 const logLevels = {

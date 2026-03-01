@@ -273,4 +273,110 @@ describe('FraudDetectionService', () => {
       expect(result.riskScore).toBe(0);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Boundary and edge cases
+  // ---------------------------------------------------------------------------
+  describe('Boundary values', () => {
+    it('should NOT flag a transaction at exactly $9,999 as high-value', async () => {
+      const result = await service.detectFraud({
+        entityId: 'entity-boundary-1',
+        transactions: [makeTx('tx-1', 9999, 0)],
+      });
+
+      expect(result.flags.some((f) => f.type === 'HIGH_VALUE_TRANSACTION')).toBe(false);
+    });
+
+    it('should flag a transaction at exactly the high-value threshold ($10,000)', async () => {
+      const result = await service.detectFraud({
+        entityId: 'entity-boundary-2',
+        transactions: [makeTx('tx-1', 10000, 0)],
+      });
+
+      expect(result.flags.some((f) => f.type === 'HIGH_VALUE_TRANSACTION')).toBe(true);
+    });
+
+    it('should return riskScore capped at 100 for many combined risk factors', async () => {
+      // Combine: high-value + velocity + structuring + layering
+      const txs: ReturnType<typeof makeTx>[] = [];
+      // 25 transactions in 24h (velocity)
+      for (let i = 0; i < 25; i++) {
+        txs.push(makeTx(`tx-v${i}`, 9500, i * 60)); // also structuring candidates
+      }
+      // Add a high-value tx
+      txs.push(makeTx('tx-hv', 50000, 26 * 60));
+      // Rapid succession: 6 txs within 60s
+      for (let i = 0; i < 6; i++) {
+        txs.push(makeTx(`tx-r${i}`, 1000, 30 * 3600 + i * 5));
+      }
+
+      const result = await service.detectFraud({ entityId: 'entity-boundary-3', transactions: txs });
+
+      expect(result.riskScore).toBeLessThanOrEqual(100);
+      expect(result.riskScore).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should handle a single transaction with amount = 0 without error', async () => {
+      const result = await service.detectFraud({
+        entityId: 'entity-zero',
+        transactions: [makeTx('tx-zero', 0, 0)],
+      });
+
+      expect(result).toBeDefined();
+      expect(result.riskScore).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Result fields completeness
+  // ---------------------------------------------------------------------------
+  describe('Result completeness', () => {
+    it('should include a non-empty checkId', async () => {
+      const result = await service.detectFraud({
+        entityId: 'unique-entity-xyz',
+        transactions: [makeTx('tx-1', 100, 0)],
+      });
+
+      expect(result.checkId).toBeTruthy();
+      expect(result.checkId.length).toBeGreaterThan(0);
+    });
+
+    it('should return the same entityId as provided in the request', async () => {
+      const entityId = 'my-specific-entity-id';
+      const result = await service.detectFraud({
+        entityId,
+        transactions: [makeTx('tx-1', 500, 0)],
+      });
+
+      expect(result.entityId).toBe(entityId);
+    });
+
+    it('should include a valid ISO timestamp', async () => {
+      const result = await service.detectFraud({
+        entityId: 'ts-check',
+        transactions: [makeTx('tx-1', 500, 0)],
+      });
+
+      expect(() => new Date(result.timestamp)).not.toThrow();
+      expect(isNaN(new Date(result.timestamp).getTime())).toBe(false);
+    });
+
+    it('should always include the patterns array', async () => {
+      const result = await service.detectFraud({
+        entityId: 'patterns-check',
+        transactions: [makeTx('tx-1', 500, 0)],
+      });
+
+      expect(Array.isArray(result.patterns)).toBe(true);
+    });
+
+    it('should always include the recommendations array', async () => {
+      const result = await service.detectFraud({
+        entityId: 'recs-check',
+        transactions: [makeTx('tx-1', 500, 0)],
+      });
+
+      expect(Array.isArray(result.recommendations)).toBe(true);
+    });
+  });
 });

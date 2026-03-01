@@ -165,7 +165,16 @@ export class EncryptionService {
         'sha256'
       );
 
-      const isMatch = computedHash.toString('hex') === storedHash;
+      // Compare as hex strings using timing-safe equality to prevent timing attacks.
+      // Both buffers are derived from hex strings so they will always be the same length
+      // when the stored hash was produced by hashPassword().
+      const computedHashBuf = Buffer.from(computedHash.toString('hex'));
+      const storedHashBuf = Buffer.from(storedHash);
+
+      let isMatch = false;
+      if (computedHashBuf.length === storedHashBuf.length) {
+        isMatch = crypto.timingSafeEqual(computedHashBuf, storedHashBuf);
+      }
 
       if (!isMatch) {
         logger.warn('Password verification failed: hash mismatch');
