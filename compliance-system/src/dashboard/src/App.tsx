@@ -1,12 +1,31 @@
+import { useState } from 'react'
 import './index.css'
 import './App.css'
+import WorkflowBuilder from './components/WorkflowBuilder'
+
+type PageType = 'dashboard' | 'workflows'
 
 function App() {
+  const [currentPage, setCurrentPage] = useState<PageType>('dashboard')
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | undefined>()
+
+  if (currentPage === 'workflows') {
+    return <WorkflowBuilder workflowId={selectedWorkflowId} onSave={() => setCurrentPage('dashboard')} />
+  }
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>Ableka Lumina - Compliance Dashboard</h1>
         <p>AI-Driven Regulatory Technology Platform</p>
+        <nav className="app-nav">
+          <button className={`nav-btn ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentPage('dashboard')}>
+            Dashboard
+          </button>
+            <button className={`nav-btn ${(currentPage as string) === 'workflows' ? 'active' : ''}`} onClick={() => { setSelectedWorkflowId(undefined); setCurrentPage('workflows') }}>
+            Workflow Builder
+          </button>
+        </nav>
       </header>
 
       <main className="app-main">
