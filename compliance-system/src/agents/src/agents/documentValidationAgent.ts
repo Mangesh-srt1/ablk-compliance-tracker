@@ -246,7 +246,19 @@ export class DocumentValidationAgent {
         timestamp: new Date(),
       };
     }
-    const parsed = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : raw;
+    const parsed = typeof raw === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(raw);
+          } catch (e) {
+            logger.error('DocumentValidationAgent: Failed to parse document tool response', {
+              fallbackId,
+              error: e instanceof Error ? e.message : String(e),
+            });
+            return {};
+          }
+        })()
+      : raw;
     return parsed as DocumentValidationResult;
   }
 
@@ -265,7 +277,19 @@ export class DocumentValidationAgent {
         timestamp: new Date(),
       };
     }
-    const parsed = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : raw;
+    const parsed = typeof raw === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(raw);
+          } catch (e) {
+            logger.error('DocumentValidationAgent: Failed to parse asset tool response', {
+              fallbackId,
+              error: e instanceof Error ? e.message : String(e),
+            });
+            return {};
+          }
+        })()
+      : raw;
     return parsed as AssetValidationResult;
   }
 }

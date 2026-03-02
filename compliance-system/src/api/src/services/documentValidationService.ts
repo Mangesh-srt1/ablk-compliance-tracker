@@ -194,7 +194,7 @@ function analyzeDocument(input: DocumentValidationInput): { flags: ValidationFla
 
   // Required fields
   for (const field of DOCUMENT_REQUIRED_FIELDS[input.documentType] || []) {
-    if (!(input as any)[field]) {
+    if (!input[field as keyof DocumentValidationInput]) {
       flags.push({ code: `MISSING_FIELD_${field.toUpperCase()}`, severity: 'MEDIUM', description: `Required field '${field}' is missing.` });
       risk += 10;
     }

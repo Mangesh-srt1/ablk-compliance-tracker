@@ -282,6 +282,13 @@ function runStructuralAnalysis(
   return { flags, riskContribution: Math.min(risk, 100) };
 }
 
+// ─── Risk weighting constants ─────────────────────────────────────────────────
+
+/** Weight applied to structural (rule-based) risk contribution */
+const STRUCTURAL_RISK_WEIGHT = 0.6;
+/** Weight applied to LLM semantic risk contribution */
+const SEMANTIC_RISK_WEIGHT = 0.4;
+
 /**
  * Derive a simple authenticity score (0-100) and verdict from risk scores.
  * Weights:  structural 60 % | semantic (LLM) 40 %
@@ -292,7 +299,7 @@ function deriveVerdictAndScore(
   llmPerformed: boolean
 ): { authenticityScore: number; fraudRiskScore: number; verdict: AuthenticityVerdict } {
   const combined = llmPerformed
-    ? structuralRisk * 0.6 + semanticRisk * 0.4
+    ? structuralRisk * STRUCTURAL_RISK_WEIGHT + semanticRisk * SEMANTIC_RISK_WEIGHT
     : structuralRisk;
 
   const fraudRiskScore = Math.round(Math.min(combined, 100));

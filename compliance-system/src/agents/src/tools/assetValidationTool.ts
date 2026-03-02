@@ -308,6 +308,13 @@ function runAssetStructuralAnalysis(
   return { flags, riskContribution: Math.min(risk, 100) };
 }
 
+// ─── Risk weighting constants ─────────────────────────────────────────────────
+
+/** Weight applied to structural (rule-based) risk contribution */
+const STRUCTURAL_RISK_WEIGHT = 0.6;
+/** Weight applied to LLM semantic risk contribution */
+const SEMANTIC_RISK_WEIGHT = 0.4;
+
 /**
  * Derive verdict from combined risk score.
  */
@@ -317,7 +324,7 @@ function deriveAssetVerdictAndScore(
   llmPerformed: boolean
 ): { validityScore: number; riskScore: number; verdict: AssetVerdict } {
   const combined = llmPerformed
-    ? structuralRisk * 0.6 + semanticRisk * 0.4
+    ? structuralRisk * STRUCTURAL_RISK_WEIGHT + semanticRisk * SEMANTIC_RISK_WEIGHT
     : structuralRisk;
 
   const riskScore = Math.round(Math.min(combined, 100));

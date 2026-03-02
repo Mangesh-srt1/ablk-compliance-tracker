@@ -31,14 +31,14 @@ const logger = winston.createLogger({
   ],
 });
 
-// Singleton agent instance (created once per process)
-let validationAgent: any = null;
+// Singleton service instance (created once per process)
+let validationService: typeof documentValidationService | null = null;
 
-function getAgent(): any {
-  if (!validationAgent) {
-    validationAgent = documentValidationService;
+function getAgent(): typeof documentValidationService {
+  if (!validationService) {
+    validationService = documentValidationService;
   }
-  return validationAgent;
+  return validationService;
 }
 
 // ─── POST /api/v1/documents/validate ─────────────────────────────────────────
