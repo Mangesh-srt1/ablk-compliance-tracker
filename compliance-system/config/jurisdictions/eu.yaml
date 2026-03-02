@@ -224,6 +224,121 @@ errorCodeMapping:
   EU009: 'Customer profile inconsistent with transaction patterns'
   EU010: 'Strong customer authentication required for this transaction'
 
+moneyTransferRegulations:
+  applicableLaws:
+    - REGULATION_EU_2015_2366_PSD2               # Payment Services Directive 2
+    - REGULATION_EU_2015_847_WIRE_TRANSFERS       # Funds transfer information (FATF R.16)
+    - REGULATION_EU_2021_1230_CROSS_BORDER_PAYMENTS # Equal charges for cross-border euro payments
+    - AMLD5_DIRECTIVE_2018_843                    # 5th Anti-Money Laundering Directive
+    - AMLD6_DIRECTIVE_2018_1673                   # 6th Anti-Money Laundering Directive
+    - SEPA_CREDIT_TRANSFER_SCHEME_2023            # EPC SCT Rulebook
+    - SEPA_INSTANT_CREDIT_TRANSFER_SCHEME_2023    # EPC SCT Inst Rulebook
+    - MiFIR_REGULATION_EU_600_2014               # For investment-related transfers
+    - IBAN_STANDARD_ISO_13616                     # Mandatory for SEPA transfers
+
+  psd2Requirements:
+    description: >
+      PSD2 (Directive 2015/2366/EU) is the cornerstone EU payment services regulation.
+      It governs payment service providers, open banking, strong customer authentication,
+      and cross-border euro payments across the European Economic Area (EEA).
+    pspAuthorizationRequired: true
+    pspCategories:
+      - CREDIT_INSTITUTION                        # Banks
+      - ELECTRONIC_MONEY_INSTITUTION              # EMIs (e.g., Revolut, Wise)
+      - PAYMENT_INSTITUTION                       # PIs (non-bank PSPs)
+      - ACCOUNT_INFORMATION_SERVICE_PROVIDER      # AISPs
+      - PAYMENT_INITIATION_SERVICE_PROVIDER       # PISPs
+    capitalRequirementEUR:
+      payment_institution: 125000                 # Minimum for PIs
+      emi: 350000                                  # Minimum for EMIs
+    strongCustomerAuthentication:
+      required: true
+      exemptionThresholdEUR: 30                   # Contactless / low-value exemption
+      remoteTransactionThresholdEUR: 30           # SCA required above €30 for online
+      trustedBeneficiaryExemption: true
+      corporateExemption: AVAILABLE               # Dedicated corp payment processes
+    openBanking:
+      xsApiRequired: true
+      dedicatedInterfaceOrFallbackRequired: true
+    safeguardingRequired: true                    # Client funds ring-fenced or insured
+    complaintHandlingDeadlineDays: 15
+
+  wireFundsTransferRegulation:
+    description: >
+      Regulation (EU) 2015/847 on information accompanying transfers of funds implements
+      FATF Recommendation 16 (Travel Rule) across all EU PSPs.
+    travelRuleThresholdEUR: 0                     # No threshold — applies to ALL transfers
+    requiredOriginatorInfo:
+      - FULL_LEGAL_NAME
+      - PAYMENT_ACCOUNT_NUMBER_OR_IBAN
+      - PHYSICAL_ADDRESS_OR_OFFICIAL_ID_OR_DOB_BIRTHPLACE
+    requiredBeneficiaryInfo:
+      - FULL_LEGAL_NAME
+      - PAYMENT_ACCOUNT_NUMBER_OR_IBAN
+    intermediaryPSPRetentionRequired: true
+    batchTransferException:
+      enabled: true
+      conditionsMustBeMet:
+        - INDIVIDUAL_RECORDS_AVAILABLE_ON_REQUEST
+        - BATCH_FILE_CONTAINS_UNIQUE_REFERENCE
+    nonEEATransfersEnhancedVerification: true
+
+  crossBorderPaymentsRegulation:
+    description: >
+      Regulation (EU) 2021/1230 ensures that cross-border euro payments within the EU
+      are charged the same as equivalent domestic transactions.
+    equalChargingRequired: true                   # Cross-border = domestic rate
+    currencyCoverage: [EUR]
+    applicableJurisdictions: EU_MEMBER_STATES
+    currencyConversionTransparency: REQUIRED
+
+  sepaRules:
+    description: >
+      SEPA (Single Euro Payments Area) enables euro-denominated credit transfers and
+      direct debits under harmonized rules across 36 countries.
+    coverageCountries: 36                         # EU + EEA + some non-EU (UK, Switzerland, etc.)
+    ibanMandatory: true
+    bicOptional: true                             # BIC no longer required for SEPA since 2016
+    creditTransfer:
+      standardScheme: SCT                         # SEPA Credit Transfer
+      maxTransactionEUR: UNLIMITED
+      processingTimeDays: 1                       # D+1 clearing
+    instantTransfer:
+      scheme: SCT_INST
+      maxTransactionEUR: 100000                   # ECB cap — raised to €100k in 2023
+      processingTimeSeconds: 10                   # Near-instant (≤10 seconds)
+      availabilityHours: '24x7'
+    directDebit:
+      schemeCore: SDD_CORE
+      schemeB2B: SDD_B2B
+      mandateRequired: true
+
+  velocityLimitsEUR:
+    individual_single_transfer_max: 50000
+    individual_daily_max: 100000
+    individual_monthly_max: 500000
+    corporate_single_transfer_max: UNLIMITED      # Subject to PSP risk controls
+    instant_transfer_single_max: 100000           # SCT Inst cap
+
+  highRiskDestinations:
+    hardBlock: [IR, KP, SY, CU]                  # EU consolidated sanctions
+    enhancedDueDiligence: [IQ, LY, MM, SO, YE, AF]
+    fatfGreyList: ENHANCED_MONITORING             # Updated quarterly by FATF
+
+  errorCodeMapping:
+    MT_EU001: 'PSD2 PSP authorization missing — payment service not licensed'
+    MT_EU002: 'Strong Customer Authentication (SCA) not performed'
+    MT_EU003: 'Travel Rule: originator or beneficiary information missing'
+    MT_EU004: 'SEPA IBAN format invalid'
+    MT_EU005: 'Instant transfer amount exceeds SCT Inst cap (EUR 100,000)'
+    MT_EU006: 'Destination country under EU sanctions — transfer blocked'
+    MT_EU007: 'AMLD5 suspicious transaction — FIU report required'
+    MT_EU008: 'Cross-border fee exceeds equivalent domestic charge (Reg 2021/1230)'
+    MT_EU009: 'Safeguarding: client funds not segregated'
+    MT_EU010: 'SEPA mandate missing for direct debit transaction'
+    MT_EU011: 'High-risk third country — enhanced due diligence required (AMLD5)'
+    MT_EU012: 'Currency conversion pre-notification not provided (PSD2 Art. 45)'
+
 memberStateVariations:
   # Note: Some rules vary by specific EU member state
   # This config represents harmonized EU-wide minimum standards

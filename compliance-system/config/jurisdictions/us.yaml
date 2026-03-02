@@ -202,6 +202,117 @@ advancedFeatures:
   derivativesAllowed: false
   shortSellingAllowed: false
 
+moneyTransferRegulations:
+  applicableLaws:
+    - DODD_FRANK_ACT_SECTION_1073           # Remittance Transfer Rule (CFPB)
+    - REGULATION_E_12_CFR_PART_1005         # Electronic Fund Transfer Act
+    - BANK_SECRECY_ACT_31_CFR_PART_1022     # BSA for Money Services Businesses
+    - FINCEN_MSB_REGISTRATION_31_CFR_1022_380
+    - STATE_MSB_LICENSING_REQUIREMENTS      # Varies by state; 49 states require license
+    - WIRE_TRANSFER_RULE_31_CFR_103         # BSA wire transfer recordkeeping
+    - USA_PATRIOT_ACT_TITLE_III             # AML provisions for MSBs
+
+  doddFrank1073:
+    description: >
+      CFPB Remittance Transfer Rule (Regulation E subpart B, 12 CFR 1005.30–1005.36).
+      Applies to "remittance transfer providers" sending $15+ internationally on a
+      "normal course of business" basis (>100 transfers/year safe harbor removed 2020).
+    coverageThreshold: 15                   # USD minimum to trigger rule
+    prePaymentDisclosureRequired: true
+    receiptDisclosureRequired: true
+    combinedDisclosureAllowed: true         # Pre-payment + receipt can be combined
+
+    mandatoryDisclosures:
+      - TRANSFER_AMOUNT_IN_USD
+      - TRANSFER_FEES_ITEMIZED
+      - EXCHANGE_RATE_APPLIED
+      - AMOUNT_RECIPIENT_WILL_RECEIVE_IN_FOREIGN_CURRENCY
+      - TAXES_AND_FEES_CHARGED_BY_CORRESPONDENT
+      - ESTIMATED_DELIVERY_DATE
+
+    exchangeRateLockIn: true                # Rate must be locked for 30 min pre-payment
+    exchangeRateType: DISCLOSED_RATE        # Must disclose exact rate used
+
+    cancellationRights:
+      enabled: true
+      windowMinutes: 30                     # 30-minute cancellation window
+      refundDeadlineDays: 3                 # Business days for refund
+      exceptionIfFundsPickedUp: true        # No cancellation if recipient already collected
+
+    errorResolution:
+      required: true
+      reportingDeadlineDays: 180            # Customer has 180 days to report errors
+      investigationDeadlineDays: 90         # Provider has 90 days to investigate
+      provisionalCreditRequired: false      # Not mandatory for remittances (unlike debit cards)
+      resolutionTypes:
+        - INCORRECT_AMOUNT_SENT
+        - FUNDS_NOT_DELIVERED
+        - INCORRECT_ACCOUNT_CREDITED
+        - LATE_DELIVERY
+
+    recordRetentionYears: 2                 # Minimum under Reg E
+    applicableProviders: [BANKS, CREDIT_UNIONS, NBFI_MSB, FINTECH_REMITTANCE]
+
+  regulationE:
+    description: Electronic Fund Transfer Act (15 U.S.C. §1693 et seq.) — 12 CFR Part 1005
+    coversElectronicRemittances: true
+    periodicStatementRequired: true
+    unauthorizedTransferLiabilityCapUSD: 50
+    errorResolutionTimelineDays: 10
+    provisionalCreditWithin5Days: true
+
+  bsaMsbRequirements:
+    fincenRegistrationRequired: true
+    registrationRenewalYears: 2
+    agentListMaintainedRequired: true
+    amlProgramRequired: true
+    amlProgramComponents:
+      - INTERNAL_POLICIES_AND_PROCEDURES
+      - DESIGNATED_COMPLIANCE_OFFICER
+      - ONGOING_EMPLOYEE_TRAINING
+      - INDEPENDENT_AUDIT_FUNCTION
+    sarFilingThresholdUSD: 2000             # Lower than banks ($5k) for MSBs under FinCEN guidance
+    ctrFilingThresholdUSD: 10000
+    recordkeepingThresholdUSD: 3000         # Transmittal orders ≥$3,000: full originator/beneficiary info
+
+  stateLicensing:
+    required: true
+    note: >
+      49 US states + DC require MSB or money transmitter license.
+      Notable exceptions: Montana has no state license.
+      New York BitLicense required for virtual currency activities.
+    averageTimeToDaysToObtain: 180
+    surety_bond_required: true
+    netWorthRequirementUSD: 100000          # Minimum (varies widely by state)
+
+  velocityLimitsUSD:
+    individual_single_transfer_max: 10000   # Above this triggers enhanced review
+    individual_daily_max: 50000
+    individual_monthly_max: 150000
+    corporate_single_transfer_max: 1000000
+
+  crossBorderRules:
+    ofacScreeningRequired: true
+    screeningFrequency: REAL_TIME
+    destinationCountryRestrictions:
+      hardBlock: [IRAN, NORTH_KOREA, SYRIA, CUBA, CRIMEA]
+      enhancedDueDiligence: [MYANMAR, SUDAN, SOMALIA, YEMEN]
+    swiftRequired: true
+    ibanValidation: BEST_EFFORT            # US does not natively use IBAN
+    correspondentBankDueDiligence: REQUIRED
+
+  errorCodeMapping:
+    MT_US001: 'Dodd-Frank §1073 disclosure not provided before transfer'
+    MT_US002: 'Cancellation window expired — refund not eligible'
+    MT_US003: 'FinCEN MSB registration missing or expired'
+    MT_US004: 'CTR threshold exceeded — FinCEN filing required'
+    MT_US005: 'SAR threshold exceeded — suspicious activity report required'
+    MT_US006: 'OFAC/sanctions match — transfer blocked'
+    MT_US007: 'Destination country restricted under OFAC'
+    MT_US008: 'State MSB license missing for destination state'
+    MT_US009: 'Exchange rate disclosure not provided'
+    MT_US010: 'Error resolution deadline exceeded'
+
 errorCodeMapping:
   US001: 'Sanctions match detected - transaction blocked'
   US002: 'Entity on BIS Denied Party List'

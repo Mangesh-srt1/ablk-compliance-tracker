@@ -249,6 +249,134 @@ sebiAifCompliance:
   regulatoryCapital: 'Minimum investment by sponsor/manager'
   lockInPeriod: 'Min 4 years for Category I & III'
 
+moneyTransferRegulations:
+  applicableLaws:
+    - PAYMENT_AND_SETTLEMENT_SYSTEMS_ACT_2007      # PSS Act — RBI oversight of payment systems
+    - RBI_PAYMENT_AGGREGATOR_GATEWAY_GUIDELINES_2020 # PA/PG framework for online payments
+    - FEMA_1999_CROSS_BORDER_TRANSFERS             # Foreign Exchange Management Act
+    - FOREIGN_CONTRIBUTION_REGULATION_ACT_2010     # FCRA for foreign inflows to NGOs/certain entities
+    - PMLA_2002_WIRE_TRANSFER_RULES                # Anti-money laundering for payment service providers
+    - RBI_KYC_MASTER_DIRECTION_2016                # Unified KYC norms for regulated entities
+    - RBI_PREPAID_PAYMENT_INSTRUMENT_GUIDELINES    # PPIs (wallets, gift cards, prepaid cards)
+    - RBI_CROSS_BORDER_PAYMENT_GUIDELINES_2022     # Updated framework for inward/outward remittances
+    - FATF_RECOMMENDATION_16_TRAVEL_RULE           # Adopted through PMLA amendments
+
+  pssActRequirements:
+    description: >
+      The Payment and Settlement Systems Act 2007 (PSS Act) governs all payment systems
+      in India. Only entities authorised by the Reserve Bank of India (RBI) may operate
+      a payment system. Includes RTGS, NEFT, IMPS, UPI, and cross-border gateways.
+    rbiAuthorizationMandatory: true
+    authorizationCategories:
+      - PAYMENT_SYSTEM_OPERATOR_LICENSE
+      - PAYMENT_AGGREGATOR_LICENSE
+      - CROSS_BORDER_PAYMENT_AGGREGATOR_LICENSE   # Mandatory for PA-CB from April 2024
+    netWorthRequirementINR: 150000000              # ₹15 crore min net worth (PA guidelines)
+    escrowMandatory: true                          # Settlement funds must be in escrow
+    auditRequirement: ANNUAL_SYSTEM_AUDIT
+    grievanceRedressal: MANDATORY_30_DAY_RESOLUTION
+
+  moneyTransferServiceScheme:
+    description: >
+      MTSS (Money Transfer Service Scheme) governs inward personal remittances into India.
+      Foreign entities partner with Indian agents (banks/NBFCs) under RBI-approved MTSS.
+      ONLY inward remittances; no outward transfers under MTSS.
+    direction: INWARD_ONLY
+    maxSingleTransactionINR: 50000                 # INR per transaction cap
+    maxTransactionsPerYearPerSender: 30
+    requiresRBIAuthorization: true
+    agentsRequireBankPartner: true
+    purposeCodesRequired: true                     # RBI-mandated remittance purpose codes
+
+  liberalizedRemittanceScheme:
+    description: >
+      RBI's LRS allows resident individuals to remit up to $250,000 per financial year
+      for permissible capital and current account transactions.
+    maxPerYearUSD: 250000
+    applicableTo: RESIDENT_INDIVIDUALS_ONLY
+    notAllowedFor:
+      - PURCHASE_OF_LOTTERY_TICKETS
+      - MARGIN_TRADING_FOREX
+      - REMITTANCE_TO_FATF_BLACKLIST_COUNTRIES
+    purposeCodesRequired: true
+    formA2Required: true                           # AD-bank form mandatory
+    panMandatory: true
+    taxCollectedAtSource:
+      enabled: true
+      rate: 0.20                                   # 20% TCS on LRS above INR 700,000/year (Finance Act 2023)
+      thresholdINR: 700000
+
+  feamaCrossBorderRules:
+    description: >
+      FEMA 1999 and RBI circulars govern all cross-border capital and current account
+      transfers. AD Category-I banks are primary intermediaries.
+    inwardRemittances:
+      purposeCodesRequired: true
+      maximumWithoutDocumentationUSD: 25000
+      firaRequired: true                           # Foreign Inward Remittance Advice
+    outwardRemittances:
+      adBankApprovalRequired: CASE_BY_CASE
+      capitalAccountRestrictionsApply: true
+      form15CaRequired: true                       # For outward taxable payments
+      form15CbRequired: true                       # CA certificate for large remittances
+
+  travelRule:
+    description: >
+      India has incorporated FATF Recommendation 16 through amendments to PMLA (2023).
+      Payment Service Providers must transmit originator and beneficiary information
+      with cross-border wire transfers.
+    thresholdINR: 50000                            # ~$600 USD equivalent
+    requiredOriginatorInfo:
+      - FULL_LEGAL_NAME
+      - ACCOUNT_NUMBER
+      - PHYSICAL_ADDRESS_OR_PAN
+    requiredBeneficiaryInfo:
+      - FULL_LEGAL_NAME
+      - ACCOUNT_NUMBER
+    intermediaryRetentionRequired: true
+
+  domesticPaymentLimits:
+    rtgs:
+      minTransactionINR: 200000                    # RTGS minimum ₹2 lakh
+      maxTransactionINR: UNLIMITED
+      availabilityHours: '24x7'
+    neft:
+      minTransactionINR: 1
+      maxTransactionINR: UNLIMITED
+      availabilityHours: '24x7'
+    imps:
+      maxTransactionINR: 500000                    # ₹5 lakh per transaction
+      availabilityHours: '24x7'
+    upi:
+      maxTransactionINR: 100000                    # ₹1 lakh per transaction (₹2L for specific categories)
+      maxPerDayINR: 100000
+    ppi_wallets:
+      maxBalanceINR: 200000                        # Full KYC PPI wallet max balance
+
+  velocityLimitsINR:
+    individual_single_transfer_max: 500000
+    individual_daily_max: 1000000
+    individual_monthly_max: 5000000
+    corporate_single_transfer_max: UNLIMITED       # Subject to AD bank approval
+
+  highRiskDestinations:
+    hardBlock: [IR, KP, SY, CU]                   # FATF blacklist
+    enhancedDueDiligence: [PK, AF, BD_PARTIALLY]
+
+  errorCodeMapping:
+    MT_IN001: 'RBI PSS Act authorization missing — payment system operation not permitted'
+    MT_IN002: 'MTSS single-transaction limit exceeded (INR 50,000)'
+    MT_IN003: 'LRS annual limit of USD 250,000 exceeded'
+    MT_IN004: 'TCS on LRS not collected — Finance Act 2023 requirement'
+    MT_IN005: 'Form A2 missing for outward LRS remittance'
+    MT_IN006: 'Travel Rule: originator/beneficiary information incomplete'
+    MT_IN007: 'PAN not linked — remittance above threshold blocked'
+    MT_IN008: 'FIRA (Foreign Inward Remittance Advice) not generated'
+    MT_IN009: 'Purpose code missing for cross-border transfer'
+    MT_IN010: 'FATF blacklist country — transfer blocked'
+    MT_IN011: 'UPI daily limit exceeded'
+    MT_IN012: 'PMLA suspicious transaction reporting required'
+
 notes:
   - 'SEBI AIF rules supersede general FEMA rules for registered AIFs'
   - 'NRI and FPI regulations evolve frequently - check SEBI website'

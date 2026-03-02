@@ -418,6 +418,118 @@ complianceOfficer:
   phone: '+971-XX-XXX-XXXX'
   regulatoryLiability: true
 
+moneyTransferRegulations:
+  applicableLaws:
+    - CBUAE_PAYMENT_SYSTEMS_REGULATION_2021       # Central Bank UAE — licensed PSPs
+    - UAE_FEDERAL_DECREE_LAW_20_2018_AML          # AML/CFT for MSBs and exchange houses
+    - CBUAE_LICENSED_EXCHANGE_BUSINESS_GUIDELINES # Exchange house oversight
+    - UAE_FEDERAL_LAW_6_2010_PAYMENT_SYSTEMS       # Foundational payments law
+    - DFSA_CLIENT_MONEY_RULES                      # DIFC-specific client money protection
+    - CBUAE_RETAIL_PAYMENT_SERVICES_REGULATIONS_2021
+    - UAE_HAWALA_REGISTRATION_REQUIREMENT          # Registered Hawala providers (CBUAE)
+    - FATF_RECOMMENDATION_16_WIRE_TRANSFERS        # Travel Rule adopted via UAE AML law
+
+  cbuaeRetailPayments:
+    description: >
+      CBUAE Retail Payment Services and Card Schemes Regulation (2021).
+      Governs all Payment Service Providers (PSPs), including money transfer operators,
+      payment initiators, and account information service providers in the UAE.
+    licenseTypes:
+      - PAYMENT_SERVICE_PROVIDER_LICENSE
+      - RETAIL_PAYMENT_SERVICE_LICENSE
+      - CARD_SCHEME_LICENSE
+    capitalRequirementAED: 5000000            # Minimum paid-up capital for PSPs
+    safeguardingRequired: true                # Client funds must be ring-fenced
+    operationalResilienceRequired: true
+
+  crossBorderRemittanceRules:
+    description: >
+      CBUAE requirements for international money transfers executed by licensed
+      exchange houses and PSPs operating in the UAE.
+    disclosureRequired: true
+    mandatoryDisclosures:
+      - TRANSFER_AMOUNT_IN_AED_AND_FOREIGN_CURRENCY
+      - FEES_AND_CHARGES_ITEMIZED
+      - EXCHANGE_RATE_APPLIED
+      - AMOUNT_RECIPIENT_WILL_RECEIVE
+      - ESTIMATED_DELIVERY_DATE_OR_TIME
+      - TERMS_AND_CONDITIONS_SUMMARY
+    preTransferDisclosureRequired: true
+    receiptRequired: true
+    receiptRetentionYears: 5
+
+    cancellationRights:
+      enabled: true
+      windowHours: 24                         # 24-hour cooling-off period
+      exceptionIfFundsPaidOut: true
+
+    maxSingleTransferAED: 500000              # Single transaction limit for retail customers
+    enhancedDueDiligenceThresholdAED: 100000  # EDD required above this amount
+
+  exchangeHouseRegulations:
+    description: >
+      Rules governing CBUAE-licensed Exchange Business operators — the primary
+      channel for retail remittances in the UAE (e.g., Al Ansari Exchange, UAE Exchange).
+    registrationWithCBUAE: MANDATORY
+    annualRenewalRequired: true
+    amlProgramRequired: true
+    amlProgramComponents:
+      - WRITTEN_AML_CTF_POLICY
+      - DESIGNATED_MLRO_OFFICER
+      - CUSTOMER_DUE_DILIGENCE_PROCEDURES
+      - TRANSACTION_MONITORING_SYSTEM
+      - ONGOING_STAFF_TRAINING
+      - INDEPENDENT_COMPLIANCE_AUDIT
+    sourceOfFundsRequired: true
+    sourceFundsThresholdAED: 50000
+
+  hawalaDealerRules:
+    description: >
+      Hawala (informal value transfer) operators must register with CBUAE and comply
+      with AML/CFT obligations under UAE Federal Decree-Law No. 20 of 2018.
+    cbuaeRegistrationMandatory: true
+    annualRegistrationFee: true
+    amlObligations: SAME_AS_EXCHANGE_HOUSES
+    sanctionScreeningRequired: true
+    recordRetentionYears: 5
+
+  travelRule:
+    description: >
+      UAE has adopted FATF Recommendation 16 (Travel Rule) for wire transfers.
+      Originating PSPs must pass full originator and beneficiary information.
+    thresholdAED: 3500                        # ~$1,000 USD equivalent
+    requiredOriginatorInfo:
+      - FULL_LEGAL_NAME
+      - ACCOUNT_NUMBER_OR_REFERENCE
+      - PHYSICAL_ADDRESS_OR_NATIONAL_ID
+    requiredBeneficiaryInfo:
+      - FULL_LEGAL_NAME
+      - ACCOUNT_NUMBER_OR_REFERENCE
+    intermediaryPSPRetentionRequired: true
+    sanctionScreeningAtEachHop: true
+
+  velocityLimitsAED:
+    individual_single_transfer_max: 500000
+    individual_daily_max: 500000
+    individual_monthly_max: 1500000
+    corporate_single_transfer_max: 5000000
+
+  highRiskDestinations:
+    hardBlock: [IR, KP, SY, CU]
+    enhancedDueDiligence: [PK, AF, IQ, LY, SO, YE]
+
+  errorCodeMapping:
+    MT_AE001: 'CBUAE license missing or expired for money transfer operation'
+    MT_AE002: 'Transfer amount exceeds single-transaction limit (500,000 AED)'
+    MT_AE003: 'Travel Rule information incomplete — originator/beneficiary data missing'
+    MT_AE004: 'Source of funds documentation required above AED 50,000'
+    MT_AE005: 'Sanctions match — transfer to restricted jurisdiction blocked'
+    MT_AE006: 'Exchange rate disclosure not provided before transfer'
+    MT_AE007: 'Hawala operator not registered with CBUAE'
+    MT_AE008: 'Enhanced due diligence required for high-risk destination'
+    MT_AE009: 'AML/CTF program documentation not on file'
+    MT_AE010: 'Transaction monitoring alert — suspicious velocity pattern'
+
 configVersion: '1.0.0-AE'
 lastUpdated: '2026-02-25'
 nextReviewDate: '2026-06-30'
