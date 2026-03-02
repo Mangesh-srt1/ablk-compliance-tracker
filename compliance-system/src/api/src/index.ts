@@ -54,6 +54,7 @@ import rwaComplianceRoutes from './routes/rwaComplianceRoutes';
 import blockchainRoutes from './routes/blockchainRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import caseManagementRoutes from './routes/caseManagementRoutes';
+import documentValidationRoutes from './routes/documentValidationRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -206,6 +207,7 @@ async function initializeApp(): Promise<void> {
     app.use('/api/v1/blockchain', blockchainRoutes);
     app.use('/api/v1/webhooks', webhookRoutes);
     app.use('/api/v1/cases', caseManagementRoutes);
+    app.use('/api/v1', documentValidationRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
