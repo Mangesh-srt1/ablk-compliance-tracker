@@ -259,7 +259,7 @@ moneyTransferRegulations:
       corporateExemption: AVAILABLE               # Dedicated corp payment processes
     openBanking:
       xsApiRequired: true
-      dedictatedInterfaceOrFallbackRequired: true
+      dedicatedInterfaceOrFallbackRequired: true
     safeguardingRequired: true                    # Client funds ring-fenced or insured
     complaintHandlingDeadlineDays: 15
 

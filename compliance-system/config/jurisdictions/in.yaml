@@ -306,7 +306,7 @@ moneyTransferRegulations:
       rate: 0.20                                   # 20% TCS on LRS above INR 700,000/year (Finance Act 2023)
       thresholdINR: 700000
 
-  feamaCrossBoderRules:
+  feamaCrossBorderRules:
     description: >
       FEMA 1999 and RBI circulars govern all cross-border capital and current account
       transfers. AD Category-I banks are primary intermediaries.
