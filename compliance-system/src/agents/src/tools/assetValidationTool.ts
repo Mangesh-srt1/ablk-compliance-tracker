@@ -38,6 +38,8 @@ export const ASSET_TYPES = [
   'intellectual_property',
   'vehicle',
   'art_collectible',
+  // ── Private Equity Tokenisation ──────────────────────────────────────────
+  'pe_fund_token',   // Tokenized limited-partner interest / fund unit
   'other',
 ] as const;
 
@@ -154,6 +156,8 @@ const MIN_VALUATION_THRESHOLDS: Partial<Record<AssetType, number>> = {
   tokenized_security: 100,
   private_equity_fund: 10000,
   debt_instrument: 100,
+  // PE fund tokens carry a high minimum – typical LP minimum commitment
+  pe_fund_token: 50000,
 };
 
 function computeSha256(text: string): string {
@@ -202,6 +206,7 @@ function runAssetStructuralAnalysis(
     'tokenized_security',
     'private_equity_fund',
     'debt_instrument',
+    'pe_fund_token',   // must supply on-chain token contract / ISIN
   ];
   if (registryRequired.includes(input.assetType) && !input.registryReference) {
     flags.push({

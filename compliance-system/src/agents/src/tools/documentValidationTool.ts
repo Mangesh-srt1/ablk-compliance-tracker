@@ -39,6 +39,12 @@ export const DOCUMENT_TYPES = [
   'financial_statement',
   'property_certificate',
   'tax_document',
+  // ── Private Equity Tokenisation ──────────────────────────────────────────
+  'subscription_agreement',         // LP capital-commitment agreement
+  'limited_partnership_agreement',  // Core LPA governing the PE fund
+  'private_placement_memorandum',   // PPM / offering memorandum
+  'capital_call_notice',            // GP → LP capital-call instruction
+  'distribution_notice',            // GP → LP distribution notification
   'other',
 ] as const;
 
@@ -139,6 +145,12 @@ const SUSPICIOUS_KEYWORDS: Record<DocumentType, string[]> = {
   financial_statement: ['restated', 'qualified opinion', 'disclaimer', 'adverse opinion'],
   property_certificate: ['disputed', 'encumbered', 'void', 'specimen'],
   tax_document: ['void', 'specimen', 'amended', 'under investigation'],
+  // ── Private Equity Tokenisation ─────────────────────────────────────────
+  subscription_agreement: ['void', 'cancelled', 'revoked', 'rescinded', 'specimen', 'draft', 'withdrawn'],
+  limited_partnership_agreement: ['void', 'terminated', 'dissolved', 'amended', 'specimen', 'draft'],
+  private_placement_memorandum: ['withdrawn', 'cancelled', 'outdated', 'superseded', 'specimen', 'draft', 'void'],
+  capital_call_notice: ['cancelled', 'void', 'withdrawn', 'reversed', 'specimen'],
+  distribution_notice: ['cancelled', 'void', 'reversed', 'withheld', 'specimen', 'clawback'],
   other: ['void', 'specimen', 'cancelled', 'invalid'],
 };
 
@@ -154,6 +166,12 @@ const REQUIRED_FIELDS: Record<DocumentType, string[]> = {
   financial_statement: ['issuerName', 'entityName', 'issuedDate'],
   property_certificate: ['issuerName', 'entityName', 'issuedDate'],
   tax_document: ['issuerName', 'entityName', 'issuedDate'],
+  // ── Private Equity Tokenisation ─────────────────────────────────────────
+  subscription_agreement: ['issuerName', 'entityName', 'issuedDate'],
+  limited_partnership_agreement: ['issuerName', 'entityName', 'issuedDate'],
+  private_placement_memorandum: ['issuerName', 'entityName', 'issuedDate', 'expiryDate'],
+  capital_call_notice: ['issuerName', 'entityName', 'issuedDate'],
+  distribution_notice: ['issuerName', 'entityName', 'issuedDate'],
   other: [],
 };
 

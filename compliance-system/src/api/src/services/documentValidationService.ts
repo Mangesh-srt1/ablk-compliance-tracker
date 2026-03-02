@@ -34,6 +34,12 @@ export const DOCUMENT_TYPES = [
   'financial_statement',
   'property_certificate',
   'tax_document',
+  // ── Private Equity Tokenisation ──────────────────────────────────────────
+  'subscription_agreement',         // LP capital-commitment agreement
+  'limited_partnership_agreement',  // Core LPA governing the PE fund
+  'private_placement_memorandum',   // PPM / offering memorandum
+  'capital_call_notice',            // GP → LP capital-call instruction
+  'distribution_notice',            // GP → LP distribution notification
   'other',
 ] as const;
 
@@ -48,6 +54,8 @@ export const ASSET_TYPES = [
   'intellectual_property',
   'vehicle',
   'art_collectible',
+  // ── Private Equity Tokenisation ──────────────────────────────────────────
+  'pe_fund_token',   // Tokenized limited-partner interest / fund unit
   'other',
 ] as const;
 
@@ -144,6 +152,12 @@ const DOCUMENT_SUSPICIOUS_KEYWORDS: Record<DocumentType, string[]> = {
   financial_statement: ['restated', 'qualified opinion', 'disclaimer', 'adverse opinion'],
   property_certificate: ['disputed', 'encumbered', 'void', 'specimen'],
   tax_document: ['void', 'specimen', 'amended', 'under investigation'],
+  // ── Private Equity Tokenisation ─────────────────────────────────────────
+  subscription_agreement: ['void', 'cancelled', 'revoked', 'rescinded', 'specimen', 'draft', 'withdrawn'],
+  limited_partnership_agreement: ['void', 'terminated', 'dissolved', 'amended', 'specimen', 'draft'],
+  private_placement_memorandum: ['withdrawn', 'cancelled', 'outdated', 'superseded', 'specimen', 'draft', 'void'],
+  capital_call_notice: ['cancelled', 'void', 'withdrawn', 'reversed', 'specimen'],
+  distribution_notice: ['cancelled', 'void', 'reversed', 'withheld', 'specimen', 'clawback'],
   other: ['void', 'specimen', 'cancelled', 'invalid'],
 };
 
@@ -158,6 +172,12 @@ const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, string[]> = {
   financial_statement: ['issuerName', 'entityName', 'issuedDate'],
   property_certificate: ['issuerName', 'entityName', 'issuedDate'],
   tax_document: ['issuerName', 'entityName', 'issuedDate'],
+  // ── Private Equity Tokenisation ─────────────────────────────────────────
+  subscription_agreement: ['issuerName', 'entityName', 'issuedDate'],
+  limited_partnership_agreement: ['issuerName', 'entityName', 'issuedDate'],
+  private_placement_memorandum: ['issuerName', 'entityName', 'issuedDate', 'expiryDate'],
+  capital_call_notice: ['issuerName', 'entityName', 'issuedDate'],
+  distribution_notice: ['issuerName', 'entityName', 'issuedDate'],
   other: [],
 };
 
@@ -172,10 +192,13 @@ const ASSET_MIN_VALUATION: Partial<Record<AssetType, number>> = {
   tokenized_security: 100,
   private_equity_fund: 10000,
   debt_instrument: 100,
+  // PE fund tokens carry a high minimum – typical LP minimum commitment
+  pe_fund_token: 50000,
 };
 
 const ASSET_REGISTRY_REQUIRED: AssetType[] = [
   'real_estate', 'tokenized_security', 'private_equity_fund', 'debt_instrument',
+  'pe_fund_token',   // must supply on-chain token contract / ISIN
 ];
 
 function sha256(text: string): string {

@@ -792,3 +792,307 @@ describe('DocumentValidationAgent (injected tools)', () => {
     expect(callOrder).toHaveLength(2);
   });
 });
+
+// ─── Private Equity Tokenisation – Document types ─────────────────────────────
+
+describe('PE Tokenisation – DocumentValidationTool new document types', () => {
+  let tool: DocumentValidationTool;
+
+  beforeEach(() => {
+    delete process.env.ANTHROPIC_API_KEY;
+    tool = initializeDocumentValidationTool();
+  });
+
+  it('should expose all five PE document types', () => {
+    expect(DOCUMENT_TYPES).toContain('subscription_agreement');
+    expect(DOCUMENT_TYPES).toContain('limited_partnership_agreement');
+    expect(DOCUMENT_TYPES).toContain('private_placement_memorandum');
+    expect(DOCUMENT_TYPES).toContain('capital_call_notice');
+    expect(DOCUMENT_TYPES).toContain('distribution_notice');
+  });
+
+  describe('subscription_agreement', () => {
+    it('should return AUTHENTIC for a clean LP subscription agreement', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-sub-01',
+        documentType: 'subscription_agreement',
+        content: 'Subscription Agreement between ABC Capital Partners LP (the "Fund") and Investor Name. The LP agrees to commit USD 500,000 to the Fund.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        entityName: 'Investor Name',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-01-15',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      expect(result.verdict).toBe('AUTHENTIC');
+      expect(result.fraudRiskScore).toBeLessThan(35);
+    });
+
+    it('should flag "rescinded" subscription agreement as suspicious keyword', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-sub-02',
+        documentType: 'subscription_agreement',
+        content: 'This subscription agreement has been rescinded and is no longer valid.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        entityName: 'Investor Name',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-01-15',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      // The suspicious keyword flag must be raised even if score is below SUSPICIOUS threshold
+      expect(codes.some(c => c === 'SUSPICIOUS_KEYWORD')).toBe(true);
+    });
+
+    it('should flag missing entityName for subscription_agreement', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-sub-03',
+        documentType: 'subscription_agreement',
+        content: 'Subscription agreement content without investor name.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        // entityName missing
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-01-15',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      expect(codes.some(c => c.includes('MISSING_FIELD'))).toBe(true);
+    });
+  });
+
+  describe('limited_partnership_agreement', () => {
+    it('should return AUTHENTIC for a clean LPA', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-lpa-01',
+        documentType: 'limited_partnership_agreement',
+        content: 'Limited Partnership Agreement for XYZ PE Fund II LP. This agreement governs the rights and obligations of the General Partner and Limited Partners.',
+        issuerName: 'XYZ PE Fund II GP LLC',
+        entityName: 'XYZ PE Fund II LP',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2023-03-01',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      expect(result.verdict).toBe('AUTHENTIC');
+    });
+
+    it('should flag "terminated" LPA', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-lpa-02',
+        documentType: 'limited_partnership_agreement',
+        content: 'This limited partnership agreement has been terminated by mutual consent of all partners.',
+        issuerName: 'XYZ PE Fund II GP LLC',
+        entityName: 'XYZ PE Fund II LP',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2023-03-01',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      expect(codes.some(c => c === 'SUSPICIOUS_KEYWORD')).toBe(true);
+    });
+  });
+
+  describe('private_placement_memorandum', () => {
+    it('should return AUTHENTIC for a valid PPM with expiry date', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-ppm-01',
+        documentType: 'private_placement_memorandum',
+        content: 'Private Placement Memorandum for Acme Venture Fund III. This memorandum contains information about the offering of limited partnership interests.',
+        issuerName: 'Acme Venture Management LLC',
+        entityName: 'Acme Venture Fund III LP',
+        issuerJurisdiction: 'US',
+        issuedDate: '2024-01-01',
+        expiryDate: '2025-01-01',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      expect(result.verdict).toBe('AUTHENTIC');
+    });
+
+    it('should flag a "superseded" PPM', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-ppm-02',
+        documentType: 'private_placement_memorandum',
+        content: 'This PPM has been superseded by a later version dated March 2025.',
+        issuerName: 'Acme Venture Management LLC',
+        entityName: 'Acme Venture Fund III LP',
+        issuerJurisdiction: 'US',
+        issuedDate: '2024-01-01',
+        expiryDate: '2025-01-01',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      expect(codes.some(c => c === 'SUSPICIOUS_KEYWORD')).toBe(true);
+    });
+
+    it('should flag missing expiryDate for private_placement_memorandum', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-ppm-03',
+        documentType: 'private_placement_memorandum',
+        content: 'Private Placement Memorandum content without expiry date.',
+        issuerName: 'Fund Manager LLC',
+        entityName: 'Fund Name LP',
+        issuerJurisdiction: 'US',
+        issuedDate: '2024-01-01',
+        // expiryDate missing – required for PPM
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      expect(codes.some(c => c === 'MISSING_FIELD_EXPIRYDATE')).toBe(true);
+    });
+  });
+
+  describe('capital_call_notice', () => {
+    it('should return AUTHENTIC for a valid capital call notice', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-ccn-01',
+        documentType: 'capital_call_notice',
+        content: 'Capital Call Notice #3. The General Partner hereby calls USD 250,000 from each LP. Due date: 2024-06-01.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        entityName: 'LP Investor Fund',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-05-01',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      expect(result.verdict).toBe('AUTHENTIC');
+    });
+
+    it('should flag a "reversed" capital call notice', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-ccn-02',
+        documentType: 'capital_call_notice',
+        content: 'This capital call has been reversed pending regulatory review.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        entityName: 'LP Investor Fund',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-05-01',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      expect(codes.some(c => c === 'SUSPICIOUS_KEYWORD')).toBe(true);
+    });
+  });
+
+  describe('distribution_notice', () => {
+    it('should return AUTHENTIC for a valid distribution notice', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-dn-01',
+        documentType: 'distribution_notice',
+        content: 'Distribution Notice. The General Partner distributes USD 1,200,000 to limited partners pro rata. Payment date: 2024-07-01.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        entityName: 'LP Investor Fund',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-06-15',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      expect(result.verdict).toBe('AUTHENTIC');
+    });
+
+    it('should flag distribution notice with "clawback" keyword', async () => {
+      const raw = await tool._call({
+        documentId: 'pe-dn-02',
+        documentType: 'distribution_notice',
+        content: 'This distribution is subject to a clawback provision and may be reversed.',
+        issuerName: 'ABC Capital Partners GP LLC',
+        entityName: 'LP Investor Fund',
+        issuerJurisdiction: 'AE',
+        issuedDate: '2024-06-15',
+      });
+      const result: DocumentValidationResult = JSON.parse(raw);
+      const codes = result.flags.map(f => f.code);
+      expect(codes.some(c => c === 'SUSPICIOUS_KEYWORD')).toBe(true);
+    });
+  });
+});
+
+// ─── Private Equity Tokenisation – Asset type ─────────────────────────────────
+
+describe('PE Tokenisation – AssetValidationTool pe_fund_token asset type', () => {
+  let tool: AssetValidationTool;
+
+  beforeEach(() => {
+    delete process.env.ANTHROPIC_API_KEY;
+    tool = initializeAssetValidationTool();
+  });
+
+  it('should expose pe_fund_token in ASSET_TYPES', () => {
+    expect(ASSET_TYPES).toContain('pe_fund_token');
+  });
+
+  it('should return VALID for a well-formed PE fund token with all fields', async () => {
+    const raw = await tool._call({
+      assetId: 'pe-token-01',
+      assetType: 'pe_fund_token',
+      assetDescription: 'Tokenized LP interest in ABC Capital Partners Fund III. ERC-20 token on Hyperledger Besu. Token symbol: ABCF3.',
+      ownerName: 'Investor Holdings LLC',
+      ownerJurisdiction: 'AE',
+      registryReference: '0xAbCd1234567890AbCd1234567890AbCd12345678',
+      registrationDate: '2024-02-01',
+      valuationAmount: 500000,
+    });
+    const result: AssetValidationResult = JSON.parse(raw);
+    expect(result.verdict).toBe('VALID');
+    expect(result.riskScore).toBeLessThan(35);
+  });
+
+  it('should flag MISSING_REGISTRY_REFERENCE for pe_fund_token without token address', async () => {
+    const raw = await tool._call({
+      assetId: 'pe-token-02',
+      assetType: 'pe_fund_token',
+      assetDescription: 'Tokenized LP interest in a PE fund without on-chain reference.',
+      ownerName: 'Investor Holdings LLC',
+      ownerJurisdiction: 'AE',
+      // registryReference missing
+      registrationDate: '2024-02-01',
+      valuationAmount: 500000,
+    });
+    const result: AssetValidationResult = JSON.parse(raw);
+    const codes = result.flags.map(f => f.code);
+    expect(codes.some(c => c === 'MISSING_REGISTRY_REFERENCE')).toBe(true);
+  });
+
+  it('should flag IMPLAUSIBLY_LOW_VALUATION for pe_fund_token below $50,000', async () => {
+    const raw = await tool._call({
+      assetId: 'pe-token-03',
+      assetType: 'pe_fund_token',
+      assetDescription: 'Tokenized LP interest representing a very small commitment.',
+      ownerName: 'Retail Investor',
+      ownerJurisdiction: 'AE',
+      registryReference: '0xAbCd1234567890AbCd1234567890AbCd12345678',
+      registrationDate: '2024-02-01',
+      valuationAmount: 1000, // below the $50,000 minimum
+    });
+    const result: AssetValidationResult = JSON.parse(raw);
+    const codes = result.flags.map(f => f.code);
+    expect(codes.some(c => c === 'IMPLAUSIBLY_LOW_VALUATION')).toBe(true);
+  });
+
+  it('should return INVALID for pe_fund_token with "void" description', async () => {
+    const raw = await tool._call({
+      assetId: 'pe-token-04',
+      assetType: 'pe_fund_token',
+      assetDescription: 'void token – this PE fund token has been cancelled and is no longer valid. fraudulent issuance.',
+      ownerName: 'Fraudulent Claimant',
+      ownerJurisdiction: 'AE',
+      registryReference: '0xAbCd1234567890AbCd1234567890AbCd12345678',
+      registrationDate: '2024-02-01',
+      valuationAmount: 500000,
+    });
+    const result: AssetValidationResult = JSON.parse(raw);
+    // void + fraudulent keywords should push risk high enough for INVALID
+    expect(result.verdict).not.toBe('VALID');
+  });
+
+  it('should flag FUTURE_REGISTRATION_DATE for pe_fund_token with future date', async () => {
+    const raw = await tool._call({
+      assetId: 'pe-token-05',
+      assetType: 'pe_fund_token',
+      assetDescription: 'Tokenized LP interest with a future registration date.',
+      ownerName: 'Investor LLC',
+      ownerJurisdiction: 'AE',
+      registryReference: '0xAbCd1234567890AbCd1234567890AbCd12345678',
+      registrationDate: '2099-01-01',
+      valuationAmount: 500000,
+    });
+    const result: AssetValidationResult = JSON.parse(raw);
+    const codes = result.flags.map(f => f.code);
+    expect(codes.some(c => c === 'FUTURE_REGISTRATION_DATE')).toBe(true);
+  });
+});
