@@ -164,4 +164,79 @@ describe('EncryptionService', () => {
       expect(decrypted).toBe(specialData);
     });
   });
+
+  describe('Security: tampered ciphertext and auth tag', () => {
+    it('should throw when auth tag is tampered (GCM integrity check)', () => {
+      const originalData = 'Sensitive compliance decision';
+      const encrypted = service.encrypt(originalData);
+
+      // Flip a single byte in the auth tag
+      const authTagBytes = Buffer.from(encrypted.authTag, 'hex');
+      authTagBytes[0] ^= 0xff;
+      const tampered = { ...encrypted, authTag: authTagBytes.toString('hex') };
+
+      expect(() => service.decrypt(tampered)).toThrow();
+    });
+
+    it('should throw when encrypted ciphertext is tampered', () => {
+      const originalData = 'Sensitive compliance decision';
+      const encrypted = service.encrypt(originalData);
+
+      // Flip a byte in the ciphertext
+      const cipherBytes = Buffer.from(encrypted.encrypted, 'hex');
+      cipherBytes[0] ^= 0xff;
+      const tampered = { ...encrypted, encrypted: cipherBytes.toString('hex') };
+
+      expect(() => service.decrypt(tampered)).toThrow();
+    });
+
+    it('should throw when IV is tampered', () => {
+      const originalData = 'Sensitive compliance decision';
+      const encrypted = service.encrypt(originalData);
+
+      const ivBytes = Buffer.from(encrypted.iv, 'hex');
+      ivBytes[0] ^= 0xff;
+      const tampered = { ...encrypted, iv: ivBytes.toString('hex') };
+
+      expect(() => service.decrypt(tampered)).toThrow();
+    });
+
+    it('should produce different ciphertexts for the same plaintext (random IV)', () => {
+      const data = 'Same plaintext';
+      const enc1 = service.encrypt(data);
+      const enc2 = service.encrypt(data);
+
+      expect(enc1.encrypted).not.toBe(enc2.encrypted);
+      expect(enc1.iv).not.toBe(enc2.iv);
+    });
+  });
+
+  describe('Security: timing-safe password verification', () => {
+    it('should reject password with a hash that has a different length stored hash', () => {
+      // Craft a hash string with an intentionally wrong hash length
+      const malformedHash = 'pbkdf2$100000$aabbccdd$deadbeef'; // too short stored hash
+      const result = service.verifyPassword('anypassword', malformedHash);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for a hash with an unknown algorithm prefix', () => {
+      const fakeHash = 'bcrypt$12$somesalt$somehashhex';
+      const result = service.verifyPassword('password', fakeHash);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for a completely invalid hash format', () => {
+      const result = service.verifyPassword('password', 'notahash');
+      expect(result).toBe(false);
+    });
+
+    it('should use timing-safe comparison (verify two different wrong passwords both fail)', () => {
+      const password = 'CorrectPassword!1';
+      const hash = service.hashPassword(password);
+
+      expect(service.verifyPassword('WrongPasswordA!1', hash)).toBe(false);
+      expect(service.verifyPassword('WrongPasswordB!2', hash)).toBe(false);
+      expect(service.verifyPassword(password, hash)).toBe(true);
+    });
+  });
 });
