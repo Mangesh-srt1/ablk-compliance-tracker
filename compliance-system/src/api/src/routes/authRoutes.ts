@@ -1,15 +1,18 @@
 /**
  * Authentication Routes
  * Login, logout, and token management endpoints
+ * FR-8.2: JWT Token Blacklisting on logout
  */
 
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import db from '../config/database';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
+import { authenticateToken, blacklistToken } from '../middleware/authMiddleware';
 
 const router = Router();
 const logger = winston.createLogger({
@@ -80,12 +83,13 @@ router.post(
           );
       }
 
-      // Generate JWT token
+      // Generate JWT token (include jti for blacklist support - FR-8.2)
       const tokenPayload = {
         id: user.id,
         email: user.email,
         role: user.role,
         permissions: user.permissions || [],
+        jti: uuidv4(),
       };
 
       const token = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'default-secret', {
@@ -215,15 +219,35 @@ router.post(
 
 /**
  * POST /api/auth/logout
- * Logout endpoint (client-side token removal)
+ * Logout endpoint - blacklists the current JWT token (FR-8.2)
  */
-router.post('/logout', (req: Request, res: Response) => {
-  // In a stateless JWT system, logout is handled client-side
-  // For enhanced security, you could implement token blacklisting here
-  res.json({
-    success: true,
-    message: 'Logged out successfully',
-  });
+router.post('/logout', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+    if (user?.jti) {
+      // Blacklist the token until it would naturally expire
+      await blacklistToken(user.jti, user.exp);
+      logger.info('User logged out, token blacklisted', {
+        userId: user.id,
+        jti: user.jti,
+        ip: req.ip,
+      });
+    }
+    res.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    logger.error('Logout error - token may not be blacklisted', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Token will expire naturally; inform the client of the degraded state
+    res.json({
+      success: true,
+      message: 'Logged out successfully',
+      warning: 'Token revocation may be delayed; please discard your token immediately.',
+    });
+  }
 });
 
 export default router;

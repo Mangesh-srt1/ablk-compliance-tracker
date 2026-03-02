@@ -1,11 +1,13 @@
 /**
  * JWT Authentication Middleware
  * Validates JWT tokens and extracts user information
+ * FR-8.2: JWT Token Blacklisting on logout
  */
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import winston from 'winston';
+import { getRedisClient } from '../config/redis';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -16,6 +18,9 @@ const logger = winston.createLogger({
   ],
 });
 
+// Redis key prefix for blacklisted JWT IDs (FR-8.2)
+const BLACKLIST_PREFIX = 'jwt_blacklist:';
+
 // Extend Express Request interface
 declare global {
   namespace Express {
@@ -25,6 +30,7 @@ declare global {
         email: string;
         role: string;
         permissions: string[];
+        jti?: string;
         iat: number;
         exp: number;
       };
@@ -37,100 +43,168 @@ export interface JWTPayload {
   email: string;
   role: string;
   permissions: string[];
+  jti?: string;
   iat: number;
   exp: number;
 }
 
 /**
+ * Add a JWT ID (jti) to the Redis blacklist.
+ * TTL is set to the remaining token lifetime so entries auto-expire (FR-8.2).
+ */
+export async function blacklistToken(jti: string, expSeconds: number): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const ttl = Math.max(expSeconds - now, 1);
+  try {
+    const redis = getRedisClient();
+    await redis.set(`${BLACKLIST_PREFIX}${jti}`, '1', 'EX', ttl);
+    logger.info('Token blacklisted', { jti, ttlSeconds: ttl });
+  } catch (error) {
+    logger.error('Failed to blacklist token', {
+      error: error instanceof Error ? error.message : String(error),
+      jti,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Check whether a JWT ID is blacklisted.
+ */
+async function isTokenBlacklisted(jti: string): Promise<boolean> {
+  try {
+    const redis = getRedisClient();
+    const value = await redis.get(`${BLACKLIST_PREFIX}${jti}`);
+    return value !== null;
+  } catch (error) {
+    // Fail open: if Redis is unavailable, do not block legitimate requests
+    logger.error('Redis blacklist check failed, failing open', {
+      error: error instanceof Error ? error.message : String(error),
+      jti,
+    });
+    return false;
+  }
+}
+
+/**
  * JWT token validation middleware
+ * FR-8.2: Also checks Redis blacklist to reject revoked tokens within 100ms.
  */
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1]; // Bearer TOKEN
+  (async () => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.split(' ')[1]; // Bearer TOKEN
 
-    if (!token) {
-      logger.warn('No token provided', {
-        ip: req.ip,
-        path: req.path,
-        method: req.method,
-      });
-      res.status(401).json({
-        error: 'Access token required',
-        code: 'TOKEN_MISSING',
-        message: 'Authorization header with Bearer token is required',
-      });
-      return;
-    }
+      if (!token) {
+        logger.warn('No token provided', {
+          ip: req.ip,
+          path: req.path,
+          method: req.method,
+        });
+        res.status(401).json({
+          error: 'Access token required',
+          code: 'TOKEN_MISSING',
+          message: 'Authorization header with Bearer token is required',
+        });
+        return;
+      }
 
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      logger.error('JWT_SECRET not configured');
-      res.status(500).json({
-        error: 'Server configuration error',
-        code: 'CONFIG_ERROR',
-      });
-      return;
-    }
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        logger.error('JWT_SECRET not configured');
+        res.status(500).json({
+          error: 'Server configuration error',
+          code: 'CONFIG_ERROR',
+        });
+        return;
+      }
 
-    // Verify token
-    const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
+      // Verify token
+      const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
 
-    // Check if token is expired
-    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
-      logger.warn('Expired token used', {
+      // Check if token is expired
+      if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+        logger.warn('Expired token used', {
+          userId: decoded.id,
+          ip: req.ip,
+        });
+        res.status(401).json({
+          error: 'Token expired',
+          code: 'TOKEN_EXPIRED',
+          message: 'Please refresh your token',
+        });
+        return;
+      }
+
+      // FR-8.2: Check Redis blacklist for revoked tokens
+      if (decoded.jti) {
+        const blacklisted = await isTokenBlacklisted(decoded.jti);
+        if (blacklisted) {
+          logger.warn('Blacklisted token used', {
+            userId: decoded.id,
+            jti: decoded.jti,
+            ip: req.ip,
+          });
+          res.status(401).json({
+            error: 'Token revoked',
+            code: 'TOKEN_BLACKLISTED',
+            message: 'This token has been revoked. Please log in again.',
+          });
+          return;
+        }
+      }
+
+      // Attach user to request
+      req.user = decoded;
+
+      logger.debug('Token authenticated successfully', {
         userId: decoded.id,
-        ip: req.ip,
+        role: decoded.role,
+        path: req.path,
       });
-      res.status(401).json({
-        error: 'Token expired',
-        code: 'TOKEN_EXPIRED',
-        message: 'Please refresh your token',
-      });
-      return;
+
+      next();
+    } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        logger.warn('Invalid token', {
+          error: (error as Error).message,
+          ip: req.ip,
+        });
+        res.status(401).json({
+          error: 'Invalid token',
+          code: 'TOKEN_INVALID',
+          message: 'The provided token is not valid',
+        });
+      } else if (error instanceof jwt.TokenExpiredError) {
+        logger.warn('Token expired', {
+          ip: req.ip,
+        });
+        res.status(401).json({
+          error: 'Token expired',
+          code: 'TOKEN_EXPIRED',
+          message: 'Please refresh your token',
+        });
+      } else {
+        logger.error('Token verification error', {
+          error: error instanceof Error ? error.message : String(error),
+          ip: req.ip,
+        });
+        res.status(500).json({
+          error: 'Authentication error',
+          code: 'AUTH_ERROR',
+        });
+      }
     }
-
-    // Attach user to request
-    req.user = decoded;
-
-    logger.debug('Token authenticated successfully', {
-      userId: decoded.id,
-      role: decoded.role,
-      path: req.path,
+  })().catch((err) => {
+    logger.error('Unexpected authentication error', {
+      error: err instanceof Error ? err.message : String(err),
+      ip: req.ip,
     });
-
-    next();
-  } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      logger.warn('Invalid token', {
-        error: error.message,
-        ip: req.ip,
-      });
-      res.status(401).json({
-        error: 'Invalid token',
-        code: 'TOKEN_INVALID',
-        message: 'The provided token is not valid',
-      });
-    } else if (error instanceof jwt.TokenExpiredError) {
-      logger.warn('Token expired', {
-        ip: req.ip,
-      });
-      res.status(401).json({
-        error: 'Token expired',
-        code: 'TOKEN_EXPIRED',
-        message: 'Please refresh your token',
-      });
-    } else {
-      logger.error('Token verification error', {
-        error: error instanceof Error ? error.message : String(error),
-        ip: req.ip,
-      });
-      res.status(500).json({
-        error: 'Authentication error',
-        code: 'AUTH_ERROR',
-      });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Authentication error', code: 'AUTH_ERROR' });
     }
-  }
+  });
 };
 
 /**
