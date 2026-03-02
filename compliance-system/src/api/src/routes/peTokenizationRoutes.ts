@@ -5,6 +5,7 @@
  * Endpoints:
  *   POST /api/pe/token/transfer-check       FR-201: Transfer whitelist & compliance
  *   POST /api/pe/token/register             FR-203: Register token lifecycle
+ *   POST /api/pe/token/p2p-screening        P2P: Custodian-bypass & hawala detection
  *   POST /api/pe/corporate-action           FR-204: Corporate action compliance
  *   POST /api/pe/asset/register             FR-402: Asset registration (double-dip prevention)
  *   POST /api/pe/asset/valuation-check      FR-401: Oracle property valuation verification
@@ -16,6 +17,7 @@ import { body, validationResult } from 'express-validator';
 import { requirePermission } from '../middleware/authMiddleware';
 import peTokenizationService from '../services/peTokenizationService';
 import oracleVerificationService from '../services/oracleVerificationService';
+import p2pTradingComplianceService from '../services/p2pTradingComplianceService';
 
 const router = Router();
 
@@ -152,6 +154,82 @@ router.post(
       res.status(500).json({
         code: 'INTERNAL_ERROR',
         message: error instanceof Error ? error.message : 'Token registration failed',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// P2P Transfer Screening: Custodian bypass & hawala/layering detection
+// ─────────────────────────────────────────────────────────────────────────────
+
+const p2pScreeningValidation = [
+  body('fromAddress')
+    .matches(/^0x[a-fA-F0-9]{40}$/)
+    .withMessage('fromAddress must be a valid Ethereum address (0x...)'),
+  body('toAddress')
+    .matches(/^0x[a-fA-F0-9]{40}$/)
+    .withMessage('toAddress must be a valid Ethereum address (0x...)'),
+  body('tokenId')
+    .isString()
+    .notEmpty()
+    .withMessage('tokenId is required'),
+  body('amount')
+    .isFloat({ min: 0 })
+    .withMessage('amount must be a positive number'),
+  body('amountUSD')
+    .isFloat({ min: 0 })
+    .withMessage('amountUSD must be a positive number'),
+  body('jurisdiction')
+    .isLength({ min: 2, max: 3 })
+    .withMessage('jurisdiction must be a 2-3 character ISO code'),
+  body('isCustodianInvolved')
+    .isBoolean()
+    .withMessage('isCustodianInvolved must be true or false'),
+];
+
+router.post(
+  '/token/p2p-screening',
+  requirePermission('compliance:execute'),
+  p2pScreeningValidation,
+  async (req: Request, res: Response) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const result = await p2pTradingComplianceService.screenP2PTransfer({
+        fromAddress: req.body.fromAddress,
+        toAddress: req.body.toAddress,
+        tokenId: req.body.tokenId,
+        amount: req.body.amount,
+        amountUSD: req.body.amountUSD,
+        jurisdiction: req.body.jurisdiction,
+        isCustodianInvolved: req.body.isCustodianInvolved,
+        transactionHash: req.body.transactionHash,
+        timestamp: new Date(),
+      });
+
+      const statusCode = result.status === 'APPROVED' ? 200
+        : result.status === 'ESCALATED' ? 202
+        : 403;
+
+      res.status(statusCode).json({
+        success: result.status === 'APPROVED',
+        requestId: result.requestId,
+        status: result.status,
+        riskScore: result.riskScore,
+        custodianBypassed: result.custodianBypassed,
+        layeringRisk: result.layeringRisk,
+        hawalaSuspicion: result.hawalaSuspicion,
+        sanctionsRisk: result.sanctionsRisk,
+        reasoning: result.reasoning,
+        requiredActions: result.requiredActions,
+        timestamp: result.timestamp.toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: error instanceof Error ? error.message : 'P2P screening failed',
         timestamp: new Date().toISOString(),
       });
     }
