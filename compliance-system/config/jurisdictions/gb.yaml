@@ -1,0 +1,229 @@
+jurisdiction:
+  code: GB
+  name: 'United Kingdom'
+  region: EUROPE
+  launchDate: '2026-05-01'
+  timeZone: 'Europe/London'
+  currencyCode: 'GBP'
+  currencySymbol: '£'
+
+regulatoryFramework:
+  primaryRegulator: 'FCA'
+  secondaryRegulator: 'PRA'
+  applicableLaws:
+    - MONEY_LAUNDERING_REGULATIONS_2017
+    - PROCEEDS_OF_CRIME_ACT_2002
+    - TERRORISM_ACT_2000
+    - UK_GDPR_2021
+    - FINANCIAL_SERVICES_AND_MARKETS_ACT_2000
+    - SANCTIONS_AND_ANTI_MONEY_LAUNDERING_ACT_2018
+
+regulatoryBodies:
+  - id: FCA
+    name: 'Financial Conduct Authority'
+    jurisdiction: UK_NATIONWIDE
+    website: 'https://www.fca.org.uk'
+    reportingEmail: 'supervision@fca.org.uk'
+    contactPhone: '+44-20-7066-1000'
+    reportingFormats: [ONLINE_PORTAL, EMAIL, XML]
+    sarsDeadline: 0 # Immediate - TPIM reporting required
+
+  - id: NCA
+    name: 'National Crime Agency (UKFIU)'
+    jurisdiction: UK_NATIONWIDE
+    website: 'https://www.nationalcrimeagency.gov.uk'
+    reportingEmail: 'ukfiu@nca.gov.uk'
+    reportingFormats: [ONLINE_PORTAL]
+    notes: 'Submit SARs via UK Financial Intelligence Unit portal'
+
+  - id: OFSI
+    name: 'Office of Financial Sanctions Implementation'
+    jurisdiction: UK_NATIONWIDE
+    website: 'https://www.gov.uk/ofsi'
+    reportingEmail: 'ofsi@hmtreasury.gov.uk'
+    reportingFormats: [EMAIL, ONLINE_PORTAL]
+    blockingDeadline: IMMEDIATE
+
+  - id: PRA
+    name: 'Prudential Regulation Authority'
+    jurisdiction: UK_NATIONWIDE
+    website: 'https://www.bankofengland.co.uk/pra'
+    reportingEmail: 'pra.authorisations@bankofengland.co.uk'
+    reportingFormats: [ONLINE_PORTAL]
+
+fundStructure:
+  requiredLegalEntity: 'FCA_AUTHORISED_OR_EXEMPT_MANAGER'
+  minFundSize: 500000 # GBP
+  maxInvestors: UNLIMITED
+  minInvestors: 1
+  allowedFundTypes:
+    - UCITS_FUND
+    - UK_NURS_FUND
+    - QIS_FUND
+    - LTAF_LONG_TERM_ASSET_FUND
+    - AUTHORISED_CONTRACTUAL_SCHEME
+
+  lpEligibility:
+    - PROFESSIONAL_CLIENT
+    - ELIGIBLE_COUNTERPARTY
+    - HIGH_NET_WORTH_INDIVIDUAL
+    - SELF_CERTIFIED_SOPHISTICATED_INVESTOR
+    - INSTITUTIONAL_INVESTOR
+
+  professionalClientDefinition: 'Per FCA COBS 3.5: Entities with assets >€10M or 2+ of: portfolio >€500k, financial sector experience >1 year, >10 trades per quarter'
+  minInvestmentAmount: 0 # No universal minimum; fund-specific
+
+kyc:
+  providerIntegration: 'ballerine'
+  livenessCheck: true
+  faceMatch: true
+  docLanguages: [EN]
+
+  docRequirements:
+    individual:
+      - PASSPORT_OR_UK_DRIVING_LICENCE
+      - PROOF_OF_ADDRESS_UTILITY_OR_BANK
+      - NATIONAL_INSURANCE_NUMBER
+      - SOURCE_OF_FUNDS_DECLARATION
+      - BENEFICIAL_OWNERSHIP_DECLARATION
+
+    corporate:
+      - CERTIFICATE_OF_INCORPORATION
+      - COMPANIES_HOUSE_FILING
+      - BOARD_RESOLUTION_FOR_INVESTMENT
+      - REGISTER_OF_DIRECTORS
+      - PSC_REGISTER # Persons with Significant Control
+      - PROOF_OF_ADDRESS
+      - AUDITED_FINANCIALS
+
+    trust_estate:
+      - TRUST_DEED
+      - TRUSTEE_IDENTIFICATION
+      - BENEFICIARY_DECLARATION
+      - SOURCE_OF_WEALTH_TRUST
+
+  sanctionsList:
+    - OFAC_SDN
+    - UN_SECURITY_COUNCIL
+    - EU_CONSOLIDATED
+    - UK_HM_TREASURY_SANCTIONS # Post-Brexit UK sanctions list
+    - INTERPOL_RED_NOTICES
+    - FCA_FINANCIAL_SERVICES_REGISTER_WARNINGS
+
+  pepDefinition: 'UK: Prominent public function holder including MPs, senior civil servants, senior judiciary, senior military officers and their immediate family/close associates'
+  pepCheck: true
+  pepRelativeCheck: true
+  pepRelativeLevels: 2
+
+  adverseMediaScreening: true
+  pscCheck: true # Persons with Significant Control register check
+
+  kycRefreshInterval: 365 # Annual review required per MLR 2017
+  kycExpiryNotification: 60 # 60 days before expiry notification
+
+  enhancedDueDigence:
+    high_risk_countries: [IRAN, NORTH_KOREA, MYANMAR, HAITI, SOUTH_SUDAN]
+    transaction_threshold_for_edd: 25000 # GBP
+    high_risk_business_types: [MONEY_SERVICES_BUSINESS, GAMBLING, REAL_ESTATE]
+
+aml:
+  sarThreshold: 0 # Any suspicious amount must be reported
+  sarFilingDeadline: 7 # Days for DAML (Defence Against Money Laundering)
+  ctrThreshold: 10000 # GBP - enhanced monitoring threshold
+  ctrFilingDeadline: 15 # Days
+
+  suspiciousActivityIndicators:
+    - UNUSUAL_CASH_TRANSACTIONS
+    - STRUCTURING_TO_AVOID_REPORTING
+    - RAPID_MOVEMENT_THROUGH_ACCOUNT
+    - BUSINESS_NOT_MATCHING_ACTIVITY
+    - UNEXPLAINED_WEALTH
+    - HIGH_RISK_COUNTRY_TRANSACTIONS
+    - LAYERING_PATTERNS
+    - SMURFING # Breaking large amounts into smaller deposits
+
+  velocityLimits:
+    individual_daily_volume: 85000 # GBP
+    individual_monthly_volume: 500000
+    corporate_daily_volume: 1000000
+    corporate_monthly_volume: 10000000
+
+  riskScoring:
+    high_risk_threshold: 70
+    medium_risk_threshold: 40
+    sanctions_match_score: 100
+    pep_match_score: 80
+    adverse_media_score: 65
+    high_risk_country_score: 60
+
+governance:
+  majorChangesRequireVote: true
+  gpCanInitiateMajorChanges: false
+  distributionsAllowed: true
+  earlyWithdrawal: true
+
+  majorChangeDefinitions:
+    - FUND_CLOSURE
+    - STRATEGY_CHANGE
+    - FEE_INCREASE_ABOVE_0_5_PERCENT
+    - CHANGE_OF_DEPOSITARY
+    - CHANGE_OF_INVESTMENT_MANAGER
+    - CHANGE_TO_INVESTMENT_RESTRICTIONS
+
+reporting:
+  annualReportRequired: true
+  quarterlyReportFrequency: MANDATORY_FOR_AIFS
+  kycCheckFrequency: ANNUAL
+  complianceAuditFrequency: ANNUAL
+  regulatoryReportingDeadline: 120 # Days after fiscal year end for FCA SUP reporting
+
+dataResidency:
+  allowedCountries: [GB, EEA] # UK GDPR allows EEA transfers
+  customerDataInUK: true
+  encryptionRequired: true
+  ukGdprCompliance: true
+  retentionPeriod: 5 # Years minimum per MLR 2017; 10 years recommended
+  rightToErasure: true # UK GDPR Article 17
+
+compliance:
+  regulatoryContact: 'Must have nominated FCA-approved MLRO (Money Laundering Reporting Officer)'
+  mlroRequired: true
+  licenseRequired: 'FCA authorisation or exemption required'
+  insuranceRequired: 'Professional Indemnity Insurance required for most regulated activities'
+  auditingRequired: 'Annual independent audit required for larger funds'
+
+taxCompliance:
+  formRequired: [HMRC_SELF_ASSESSMENT, HMRC_CT600_CORPORATE, FORM_8966_FATCA]
+  vatRegistrationThreshold: 85000 # GBP
+  fatcaReporting: true
+  crsReporting: true
+
+expansion:
+  multiRegionAllowed: true # UK + Crown Dependencies (Jersey, Guernsey, Isle of Man)
+  internationalFundingAllowed: true
+  passportingAllowed: false # Post-Brexit: no automatic EEA passporting
+
+advancedFeatures:
+  secondaryMarketAllowed: true
+  leverageAllowed: true # With limits per COBS
+  cryptocurrencyAllowed: true # FCA registration required under crypto asset registration regime
+  derivativesAllowed: true
+  shortSellingAllowed: true
+
+cryptoCompliance:
+  registrationRequired: true # FCA crypto asset registration (MLR 2017 Schedule 3ZA)
+  travelRuleThreshold: 1000 # GBP - FATF Travel Rule applies
+  stablecoinRegulated: true
+  nftCompliance: CASE_BY_CASE
+
+errorCodeMapping:
+  GB001: 'UK sanctions match - transaction blocked'
+  GB002: 'SAR required - suspicious activity above threshold'
+  GB003: 'PSC (Persons with Significant Control) verification failed'
+  GB004: 'MLRO review required for high-risk entity'
+  GB005: 'PEP detected - enhanced due diligence required'
+  GB006: 'High-risk third country transaction - EDD mandatory'
+  GB007: 'Structuring pattern detected - defensive SAR required'
+  GB008: 'FCA register check failed - entity not authorised'
+  GB009: 'UK GDPR data residency violation'
+  GB010: 'Crypto asset registration verification required'

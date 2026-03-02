@@ -1,0 +1,225 @@
+jurisdiction:
+  code: SG
+  name: 'Singapore'
+  region: APAC
+  launchDate: '2026-05-15'
+  timeZone: 'Asia/Singapore'
+  currencyCode: 'SGD'
+  currencySymbol: 'S$'
+
+regulatoryFramework:
+  primaryRegulator: 'MAS'
+  secondaryRegulator: 'CAD_SPF'
+  applicableLaws:
+    - MONETARY_AUTHORITY_OF_SINGAPORE_ACT
+    - SECURITIES_AND_FUTURES_ACT_2001
+    - FINANCIAL_ADVISERS_ACT_2001
+    - ANTI_MONEY_LAUNDERING_COUNTERING_FINANCING_OF_TERRORISM_ACT_2020
+    - PERSONAL_DATA_PROTECTION_ACT_2012
+    - PAYMENT_SERVICES_ACT_2019
+    - TRUST_COMPANIES_ACT_2005
+
+regulatoryBodies:
+  - id: MAS
+    name: 'Monetary Authority of Singapore'
+    jurisdiction: SINGAPORE_NATIONWIDE
+    website: 'https://www.mas.gov.sg'
+    reportingEmail: 'compliance@mas.gov.sg'
+    contactPhone: '+65-6225-5577'
+    reportingFormats: [MASNET_PORTAL, EMAIL, XML]
+    sarsDeadline: 0 # Immediate - STRO reporting required
+
+  - id: STRO
+    name: 'Suspicious Transaction Reporting Office (CAD)'
+    jurisdiction: SINGAPORE_NATIONWIDE
+    website: 'https://www.police.gov.sg/advisories/crime/commercial-crimes/suspicious-transaction-reporting-office'
+    reportingEmail: 'stro@spf.gov.sg'
+    reportingFormats: [STRO_ONLINE_PORTAL]
+    notes: 'All STRs filed via STRO Online Notices Portal (SONP)'
+
+  - id: PDPC
+    name: 'Personal Data Protection Commission'
+    jurisdiction: SINGAPORE_NATIONWIDE
+    website: 'https://www.pdpc.gov.sg'
+    reportingEmail: 'pdpc_info@mddi.gov.sg'
+    reportingFormats: [ONLINE_PORTAL, EMAIL]
+
+fundStructure:
+  requiredLegalEntity: 'MAS_LICENSED_FUND_MANAGEMENT_COMPANY'
+  minFundSize: 250000 # SGD
+  maxInvestors: UNLIMITED
+  minInvestors: 1
+  allowedFundTypes:
+    - VARIABLE_CAPITAL_COMPANY # VCC - Singapore's fund vehicle
+    - LIMITED_PARTNERSHIP_FUND
+    - UNIT_TRUST
+    - RECOGNISED_SCHEME_FOR_RETAIL_INVESTORS
+    - RESTRICTED_SCHEME_FOR_ACCREDITED_INVESTORS
+
+  lpEligibility:
+    - ACCREDITED_INVESTOR # >S$2M net personal assets or >S$300k annual income
+    - INSTITUTIONAL_INVESTOR # Banks, insurers, licensed fund managers
+    - EXPERT_INVESTOR # Specific to CMS-licensed persons
+    - RETAIL_INVESTOR # Only for retail-approved products
+
+  accreditedInvestorDefinition: 'Net personal assets >S$2M (of which no more than S$1M is primary residence) OR net financial assets >S$1M OR annual income >S$300k'
+  minInvestmentAmount: 200000 # SGD for accredited investor products
+
+kyc:
+  providerIntegration: 'ballerine'
+  livenessCheck: true
+  faceMatch: true
+  singpassMyinfo: true # Singapore digital identity integration
+  docLanguages: [EN, ZH, MS, TA]
+
+  docRequirements:
+    individual:
+      - SINGAPORE_NRIC # National Registration Identity Card
+      - PASSPORT_FOR_FOREIGNERS
+      - PROOF_OF_RESIDENTIAL_ADDRESS
+      - SOURCE_OF_WEALTH_DECLARATION
+      - TAX_IDENTIFICATION_NUMBER
+
+    corporate:
+      - ACRA_BIZFILE_PROFILE # Accounting and Corporate Regulatory Authority extract
+      - CERTIFICATE_OF_INCORPORATION
+      - MEMORANDUM_AND_ARTICLES_OF_ASSOCIATION
+      - BOARD_RESOLUTION_FOR_INVESTMENT
+      - REGISTER_OF_DIRECTORS_AND_SHAREHOLDERS
+      - REGISTER_OF_UBO_BEYOND_25_PERCENT
+      - AUDITED_FINANCIALS
+
+    vcc: # Variable Capital Company (Singapore fund vehicle)
+      - VCC_REGISTRATION_CERTIFICATE
+      - VCC_CONSTITUTION
+      - SUB_FUND_PROSPECTUS_OR_INFORMATION_MEMO
+      - FUND_MANAGER_CMS_LICENCE
+
+  sanctionsList:
+    - OFAC_SDN
+    - UN_SECURITY_COUNCIL
+    - MAS_TARGETED_FINANCIAL_SANCTIONS # MAS list under TMLF Regs 2020
+    - INTERPOL_RED_NOTICES
+    - FATF_GREY_BLACK_LISTS
+
+  pepDefinition: 'MAS Notice PSN01/SFA04-N18/FAN09: Prominent public function at international or domestic level, or immediate family and known close associates'
+  pepCheck: true
+  pepRelativeCheck: true
+  pepRelativeLevels: 2
+
+  adverseMediaScreening: true
+  singpassVerification: true # Verify via Singpass API for Singapore residents
+
+  kycRefreshInterval: 365 # Annual review per MAS Notice SFA04-N18
+  kycExpiryNotification: 60
+
+  enhancedDueDigence:
+    high_risk_countries: [IRAN, NORTH_KOREA, MYANMAR, HAITI]
+    transaction_threshold_for_edd: 20000 # SGD
+    high_risk_business_types: [MONEY_CHANGERS, PAWNBROKERS, PRECIOUS_METALS_DEALERS]
+
+aml:
+  sarThreshold: 0 # Any suspicious amount - STR required under CDSA Section 39
+  sarFilingDeadline: 0 # Immediate (ASAP) per CDSA Section 39
+  ctrThreshold: 20000 # SGD - enhanced monitoring
+  ctrFilingDeadline: 15
+
+  suspiciousActivityIndicators:
+    - UNUSUAL_CASH_TRANSACTIONS
+    - STRUCTURING_BELOW_REPORTING_THRESHOLD
+    - RAPID_FUND_MOVEMENT
+    - INCONSISTENT_BUSINESS_ACTIVITY
+    - THIRD_PARTY_FUND_TRANSFERS
+    - COMPLEX_LAYERING_STRUCTURES
+    - CROSS_BORDER_FUND_FLOWS_WITHOUT_CLEAR_PURPOSE
+    - CRYPTO_FIAT_CYCLING
+
+  velocityLimits:
+    individual_daily_volume: 50000 # SGD
+    individual_monthly_volume: 300000
+    corporate_daily_volume: 1000000
+    corporate_monthly_volume: 10000000
+
+  riskScoring:
+    high_risk_threshold: 70
+    medium_risk_threshold: 40
+    sanctions_match_score: 100
+    pep_match_score: 80
+    adverse_media_score: 65
+    high_risk_country_score: 60
+    cash_intensive_business_score: 50
+
+governance:
+  majorChangesRequireVote: true
+  gpCanInitiateMajorChanges: false
+  distributionsAllowed: true
+  earlyWithdrawal: true
+
+  majorChangeDefinitions:
+    - FUND_CLOSURE
+    - CHANGE_OF_INVESTMENT_OBJECTIVES
+    - CHANGE_OF_FUND_MANAGER
+    - SIGNIFICANT_INVESTMENT_RESTRICTION_CHANGE
+    - MERGER_WITH_ANOTHER_FUND
+
+reporting:
+  annualReportRequired: true
+  quarterlyReportFrequency: MANDATORY_FOR_REGISTERED_FUNDS
+  kycCheckFrequency: ANNUAL
+  complianceAuditFrequency: ANNUAL
+  regulatoryReportingDeadline: 90 # Days after fiscal year end
+  masAnnualReturn: true # Filed via MASNET
+
+dataResidency:
+  allowedCountries: [SG] # PDPA requires data to remain in Singapore unless adequate protection offshore
+  customerDataInSG: true
+  encryptionRequired: true
+  pdpaCompliance: true
+  retentionPeriod: 5 # Years minimum per MAS Notices
+  dataTransferAllowed: true # With adequate protection safeguards
+  crossBorderTransferNotice: true # PDPA Section 26 - notice required
+
+compliance:
+  regulatoryContact: 'MAS-appointed Compliance Officer required for all CMS-licensed entities'
+  cmsLicenceRequired: true # Capital Markets Services licence for fund management
+  amlCftPoliciesRequired: true
+  auditingRequired: 'Annual external audit required for registered funds'
+
+taxCompliance:
+  gstRegistrationThreshold: 1000000 # SGD annual taxable turnover
+  crsReporting: true # Common Reporting Standard
+  fatcaReporting: true
+  withholdingTax: true
+
+expansion:
+  multiRegionAllowed: true # Singapore as hub for ASEAN expansion
+  internationalFundingAllowed: true
+  aseanPassporting: true # ASEAN CIS (Collective Investment Schemes) framework
+
+advancedFeatures:
+  secondaryMarketAllowed: true
+  leverageAllowed: true # With MAS leverage limits
+  cryptocurrencyAllowed: true # Under Payment Services Act 2019 - requires MAS DPT licence
+  derivativesAllowed: true
+  shortSellingAllowed: true
+
+cryptoCompliance:
+  dptLicenceRequired: true # Digital Payment Token service provider licence
+  travelRuleThreshold: 1500 # SGD - FATF Travel Rule
+  stablecoinRegulated: true # MAS stablecoin regulatory framework 2023
+  nftCompliance: CASE_BY_CASE
+  cryptoExchangeRequiresLicence: true
+
+errorCodeMapping:
+  SG001: 'MAS targeted financial sanctions match - transaction blocked'
+  SG002: 'STR required - suspicious transaction above reporting obligation'
+  SG003: 'VCC constitution verification failed'
+  SG004: 'MAS CMS licence check failed - entity not authorised'
+  SG005: 'PEP detected - enhanced due diligence required per MAS Notice'
+  SG006: 'FATF high-risk jurisdiction transaction - EDD mandatory'
+  SG007: 'Structuring pattern - STR required under CDSA Section 39'
+  SG008: 'DPT service provider licence required for crypto activity'
+  SG009: 'PDPA data residency requirement not met'
+  SG010: 'ACRA registry verification failed - entity not registered'
+  SG011: 'Singpass verification failed - identity could not be confirmed'
+  SG012: 'Accredited investor threshold not met'

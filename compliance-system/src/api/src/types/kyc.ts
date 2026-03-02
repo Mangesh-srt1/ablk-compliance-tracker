@@ -14,6 +14,10 @@ export enum Jurisdiction {
   US = 'US',
   SA = 'SA',
   SAUDI_ARABIA = 'SA',
+  GB = 'GB',
+  UNITED_KINGDOM = 'GB',
+  SG = 'SG',
+  SINGAPORE = 'SG',
 }
 
 export enum KycStatus {
