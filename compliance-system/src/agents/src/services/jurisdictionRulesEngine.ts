@@ -106,6 +106,35 @@ export interface JurisdictionConfig {
     piiEncryption?: string;
     jurisdictionalDataStorage?: string;
   };
+  moneyTransferRegulations?: {
+    applicableLaws?: string[];
+    crossBorderRules?: {
+      ofacScreeningRequired?: boolean;
+      screeningFrequency?: string;
+      destinationCountryRestrictions?: {
+        hardBlock?: string[];
+        enhancedDueDiligence?: string[];
+      };
+      swiftRequired?: boolean;
+      travelRuleThreshold?: number;
+    };
+    velocityLimits?: {
+      [key: string]: number | string;
+    };
+    highRiskDestinations?: {
+      hardBlock?: string[];
+      enhancedDueDiligence?: string[];
+    };
+    reportingThresholds?: {
+      sarThreshold?: number;
+      ctrThreshold?: number;
+      sarFilingDeadlineDays?: number;
+    };
+    errorCodeMapping?: {
+      [errorCode: string]: string;
+    };
+    [key: string]: any; // Allow jurisdiction-specific sub-sections
+  };
   oracles?: {
     proofOfReserve?: {
       enabled?: boolean;
@@ -723,6 +752,51 @@ export class JurisdictionRulesEngine extends EventEmitter {
       cachedJurisdictions: this.rulesCache.size,
       jurisdictionCodes: Array.from(this.rulesCache.keys()),
       totalCacheSize: JSON.stringify(Array.from(this.rulesCache.values())).length,
+    };
+  }
+
+  /**
+   * Get money transfer regulations for a jurisdiction
+   * Returns applicable laws, cross-border rules, velocity limits, and error codes
+   * specific to money transfer / remittance operations.
+   */
+  async getMoneyTransferRegulations(jurisdictionCode: string): Promise<{
+    applicableLaws: string[];
+    travelRuleThresholdLocal: number | null;
+    crossBorderOfacRequired: boolean;
+    hardBlockedDestinations: string[];
+    enhancedDueDiligenceDestinations: string[];
+    errorCodes: { [code: string]: string };
+  }> {
+    const rules = await this.loadJurisdiction(jurisdictionCode);
+    const mtr = rules.moneyTransferRegulations || {};
+
+    const crossBorder = mtr.crossBorderRules || {};
+    const highRisk = mtr.highRiskDestinations || {};
+
+    // Resolve travel rule threshold: top-level crossBorderRules or jurisdiction-specific section
+    let travelRuleThreshold: number | null = crossBorder.travelRuleThreshold ?? null;
+    // Some YAMLs store travel rule inside a nested key (e.g. travelRule.thresholdAED/INR/EUR)
+    const travelRuleSection = mtr.travelRule;
+    if (travelRuleThreshold === null && travelRuleSection) {
+      const sectionKeys = Object.keys(travelRuleSection);
+      const thresholdKey = sectionKeys.find((k) => k.toLowerCase().startsWith('threshold'));
+      if (thresholdKey && typeof travelRuleSection[thresholdKey] === 'number') {
+        travelRuleThreshold = travelRuleSection[thresholdKey] as number;
+      }
+    }
+
+    return {
+      applicableLaws: mtr.applicableLaws || [],
+      travelRuleThresholdLocal: travelRuleThreshold,
+      crossBorderOfacRequired: crossBorder.ofacScreeningRequired !== false,
+      hardBlockedDestinations:
+        highRisk.hardBlock || crossBorder.destinationCountryRestrictions?.hardBlock || [],
+      enhancedDueDiligenceDestinations:
+        highRisk.enhancedDueDiligence ||
+        crossBorder.destinationCountryRestrictions?.enhancedDueDiligence ||
+        [],
+      errorCodes: mtr.errorCodeMapping || {},
     };
   }
 

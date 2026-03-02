@@ -622,6 +622,183 @@ describe('JurisdictionRulesTool', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('Money Transfer Regulations', () => {
+    beforeAll(() => {
+      // Point the tool to the actual jurisdiction config directory
+      process.env.JURISDICTION_RULES_PATH = require('path').resolve(
+        __dirname,
+        '../../../../../config/jurisdictions'
+      );
+    });
+
+    afterAll(() => {
+      delete process.env.JURISDICTION_RULES_PATH;
+    });
+
+    beforeEach(() => {
+      // Re-create tool so it picks up the updated JURISDICTION_RULES_PATH
+      tool = new JurisdictionRulesTool();
+      tool.clearCache();
+    });
+    it('should include moneyTransferRegulations for AE (Dubai)', async () => {
+      const input = { jurisdiction: 'AE' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      expect(parsed.moneyTransferRegulations).toBeDefined();
+      expect(Array.isArray(parsed.moneyTransferRegulations.applicableLaws)).toBe(true);
+      expect(parsed.moneyTransferRegulations.applicableLaws.length).toBeGreaterThan(0);
+    });
+
+    it('AE regulations should reference CBUAE payment laws', async () => {
+      const input = { jurisdiction: 'AE' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const laws: string[] = parsed.moneyTransferRegulations?.applicableLaws ?? [];
+      const hasCbuae = laws.some((law: string) => law.includes('CBUAE'));
+      expect(hasCbuae).toBe(true);
+    });
+
+    it('AE regulations should include Travel Rule section', async () => {
+      const input = { jurisdiction: 'AE' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      expect(parsed.moneyTransferRegulations.travelRule).toBeDefined();
+      expect(parsed.moneyTransferRegulations.travelRule.thresholdAED).toBeGreaterThan(0);
+    });
+
+    it('should include moneyTransferRegulations for US', async () => {
+      const input = { jurisdiction: 'US' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      expect(parsed.moneyTransferRegulations).toBeDefined();
+      expect(Array.isArray(parsed.moneyTransferRegulations.applicableLaws)).toBe(true);
+    });
+
+    it('US regulations should reference Dodd-Frank Act Section 1073', async () => {
+      const input = { jurisdiction: 'US' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const laws: string[] = parsed.moneyTransferRegulations?.applicableLaws ?? [];
+      const hasDoddFrank = laws.some((law: string) => law.includes('DODD_FRANK'));
+      expect(hasDoddFrank).toBe(true);
+    });
+
+    it('US regulations should include Regulation E details', async () => {
+      const input = { jurisdiction: 'US' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      expect(parsed.moneyTransferRegulations.regulationE).toBeDefined();
+      expect(parsed.moneyTransferRegulations.doddFrank1073).toBeDefined();
+    });
+
+    it('US Dodd-Frank 1073 should mandate pre-payment disclosures', async () => {
+      const input = { jurisdiction: 'US' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const df1073 = parsed.moneyTransferRegulations?.doddFrank1073;
+      expect(df1073).toBeDefined();
+      expect(df1073.prePaymentDisclosureRequired).toBe(true);
+      expect(df1073.cancellationRights.enabled).toBe(true);
+      expect(df1073.cancellationRights.windowMinutes).toBe(30);
+    });
+
+    it('should include moneyTransferRegulations for IN (India)', async () => {
+      const input = { jurisdiction: 'IN' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      expect(parsed.moneyTransferRegulations).toBeDefined();
+      expect(Array.isArray(parsed.moneyTransferRegulations.applicableLaws)).toBe(true);
+    });
+
+    it('IN regulations should reference PSS Act and LRS', async () => {
+      const input = { jurisdiction: 'IN' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const laws: string[] = parsed.moneyTransferRegulations?.applicableLaws ?? [];
+      const hasPssAct = laws.some((law: string) => law.includes('PAYMENT_AND_SETTLEMENT_SYSTEMS_ACT'));
+      const hasLrs = laws.some((law: string) => law.includes('FEMA') || law.includes('RBI_CROSS_BORDER'));
+      expect(hasPssAct).toBe(true);
+      expect(hasLrs).toBe(true);
+    });
+
+    it('IN LRS should specify annual limit of USD 250,000', async () => {
+      const input = { jurisdiction: 'IN' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const lrs = parsed.moneyTransferRegulations?.liberalizedRemittanceScheme;
+      expect(lrs).toBeDefined();
+      expect(lrs.maxPerYearUSD).toBe(250000);
+    });
+
+    it('should include moneyTransferRegulations for EU', async () => {
+      const input = { jurisdiction: 'EU' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      expect(parsed.moneyTransferRegulations).toBeDefined();
+      expect(Array.isArray(parsed.moneyTransferRegulations.applicableLaws)).toBe(true);
+    });
+
+    it('EU regulations should reference PSD2 and Wire Transfer Regulation', async () => {
+      const input = { jurisdiction: 'EU' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const laws: string[] = parsed.moneyTransferRegulations?.applicableLaws ?? [];
+      const hasPsd2 = laws.some((law: string) => law.includes('PSD2'));
+      const hasWireFunds = laws.some((law: string) => law.includes('2015_847'));
+      expect(hasPsd2).toBe(true);
+      expect(hasWireFunds).toBe(true);
+    });
+
+    it('EU SEPA rules should enforce IBAN as mandatory', async () => {
+      const input = { jurisdiction: 'EU' };
+
+      const result = await tool._call(input);
+      const parsed = JSON.parse(result);
+
+      const sepa = parsed.moneyTransferRegulations?.sepaRules;
+      expect(sepa).toBeDefined();
+      expect(sepa.ibanMandatory).toBe(true);
+    });
+
+    it('all four jurisdictions should have error codes in moneyTransferRegulations', async () => {
+      const jurisdictions = ['AE', 'US', 'IN', 'EU'];
+
+      for (const jurisdiction of jurisdictions) {
+        const result = await tool._call({ jurisdiction });
+        const parsed = JSON.parse(result);
+
+        const errorCodes = parsed.moneyTransferRegulations?.errorCodeMapping;
+        expect(errorCodes).toBeDefined();
+        expect(typeof errorCodes).toBe('object');
+        expect(Object.keys(errorCodes).length).toBeGreaterThan(0);
+      }
+    });
+  });
 });
 
 describe('BlockchainTool', () => {
