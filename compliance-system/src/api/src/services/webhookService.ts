@@ -136,6 +136,18 @@ export class WebhookService {
     return items;
   }
 
+  /**
+   * Delete (deactivate) a webhook registration (FR-9.1).
+   */
+  deleteWebhook(webhookId: string): boolean {
+    const existed = this.registrations.has(webhookId);
+    if (existed) {
+      this.registrations.delete(webhookId);
+      logger.info('Webhook deleted', { webhookId });
+    }
+    return existed;
+  }
+
   resetForTests(): void {
     this.registrations.clear();
     this.deliveryLog = [];

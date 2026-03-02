@@ -50,6 +50,10 @@ import peTokenizationRoutes from './routes/peTokenizationRoutes';
 import sarCtrRoutes from './routes/sarCtrRoutes';
 import alertWorkflowRoutes from './routes/alertWorkflowRoutes';
 import workflowRoutes from './routes/workflowRoutes';
+import rwaComplianceRoutes from './routes/rwaComplianceRoutes';
+import blockchainRoutes from './routes/blockchainRoutes';
+import webhookRoutes from './routes/webhookRoutes';
+import caseManagementRoutes from './routes/caseManagementRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -198,6 +202,10 @@ async function initializeApp(): Promise<void> {
     app.use('/api/pe', peTokenizationRoutes);
     app.use('/api/v1', alertWorkflowRoutes);
     app.use('/api/v1/workflows', workflowRoutes);
+    app.use('/api/compliance', rwaComplianceRoutes);
+    app.use('/api/v1/blockchain', blockchainRoutes);
+    app.use('/api/v1/webhooks', webhookRoutes);
+    app.use('/api/v1/cases', caseManagementRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
