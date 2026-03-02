@@ -1913,5 +1913,3 @@ Before running SonarQube:
 
 For detailed troubleshooting, decision trees, and GitHub Actions integration:
 See .github/SONARQUBE_GUIDE.md
-
-``
