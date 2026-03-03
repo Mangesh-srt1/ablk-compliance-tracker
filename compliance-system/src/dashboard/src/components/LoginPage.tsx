@@ -9,9 +9,10 @@ import '../styles/LoginPage.css';
 
 interface LoginPageProps {
   onLogin: (claims: TokenClaims) => void;
+  onSwitchToRegister?: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -91,6 +92,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <p className="login-hint-b2b">
             B2B partners use API Keys or OAuth2 Client Credentials (see API Keys page after login).
           </p>
+          {onSwitchToRegister && (
+            <p className="login-register-link">
+              New to Ableka Lumina?{' '}
+              <button
+                type="button"
+                className="login-link-btn"
+                onClick={onSwitchToRegister}
+              >
+                Create an account
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

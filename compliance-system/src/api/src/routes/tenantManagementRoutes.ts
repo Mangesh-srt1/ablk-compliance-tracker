@@ -178,7 +178,7 @@ router.post(
     param('tenantId').notEmpty(),
     body('email').isEmail().normalizeEmail(),
     body('full_name').isLength({ min: 2, max: 255 }),
-    body('role').isIn(['admin', 'compliance_officer', 'analyst', 'client']),
+    body('role').isIn(['admin', 'tenant_admin', 'compliance_officer', 'compliance_analyst', 'operator', 'read_only', 'analyst', 'client']),
     body('products').optional().isArray(),
     body('password')
       .optional()

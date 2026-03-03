@@ -3,6 +3,7 @@ import './index.css'
 import './App.css'
 import WorkflowBuilder from './components/WorkflowBuilder'
 import LoginPage from './components/LoginPage'
+import RegisterPage from './components/RegisterPage'
 import TenantBadge from './components/TenantBadge'
 import ApiKeysPage from './components/ApiKeysPage'
 import TenantOnboardingPage from './components/TenantOnboardingPage'
@@ -11,11 +12,13 @@ import ArchitecturePage from './components/ArchitecturePage'
 import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './services/authAPI'
 
 type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture'
+type AuthView = 'login' | 'register'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard')
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | undefined>()
   const [claims, setClaims] = useState<TokenClaims | null>(null)
+  const [authView, setAuthView] = useState<AuthView>('login')
 
   // On mount, restore session from localStorage
   useEffect(() => {
@@ -27,17 +30,32 @@ function App() {
   const handleLogin = (c: TokenClaims) => {
     setClaims(c)
     setCurrentPage('dashboard')
+    setAuthView('login')
   }
 
   const handleLogout = async () => {
     await authAPI.logout().catch(() => {/* ignore network errors */})
     setClaims(null)
+    setAuthView('login')
     setCurrentPage('dashboard')
   }
 
   // ── Not authenticated ────────────────────────────────────────────────────
   if (!claims) {
-    return <LoginPage onLogin={handleLogin} />
+    if (authView === 'register') {
+      return (
+        <RegisterPage
+          onRegister={handleLogin}
+          onSwitchToLogin={() => setAuthView('login')}
+        />
+      )
+    }
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        onSwitchToRegister={() => setAuthView('register')}
+      />
+    )
   }
 
   // ── Workflow builder (full-screen) ────────────────────────────────────────
@@ -45,7 +63,13 @@ function App() {
     return <WorkflowBuilder workflowId={selectedWorkflowId} onSave={() => setCurrentPage('dashboard')} />
   }
 
-  const isAdmin = claims.role === 'admin'
+  const role = claims.role
+  const isAdmin = role === 'admin'
+  const isTenantAdmin = role === 'tenant_admin' || isAdmin
+  // Roles that can access API keys: tenant_admin, admin
+  const canManageApiKeys = isTenantAdmin
+  // Roles that can trigger workflow builder: compliance_officer, tenant_admin, admin
+  const canEditWorkflows = ['admin', 'tenant_admin', 'compliance_officer'].includes(role)
 
   return (
     <div className="app">
@@ -65,18 +89,22 @@ function App() {
           >
             📊 Dashboard
           </button>
-          <button
-            className={`nav-btn ${(currentPage as string) === 'workflows' ? 'active' : ''}`}
-            onClick={() => { setSelectedWorkflowId(undefined); setCurrentPage('workflows') }}
-          >
-            ⚙️ Workflows
-          </button>
-          <button
-            className={`nav-btn ${currentPage === 'api-keys' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('api-keys')}
-          >
-            🔑 API Keys &amp; OAuth
-          </button>
+          {canEditWorkflows && (
+            <button
+              className={`nav-btn ${(currentPage as string) === 'workflows' ? 'active' : ''}`}
+              onClick={() => { setSelectedWorkflowId(undefined); setCurrentPage('workflows') }}
+            >
+              ⚙️ Workflows
+            </button>
+          )}
+          {canManageApiKeys && (
+            <button
+              className={`nav-btn ${currentPage === 'api-keys' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('api-keys')}
+            >
+              🔑 API Keys &amp; OAuth
+            </button>
+          )}
           <button
             className={`nav-btn ${currentPage === 'architecture' ? 'active' : ''}`}
             onClick={() => setCurrentPage('architecture')}
@@ -97,7 +125,7 @@ function App() {
       <main className="app-main">
         {currentPage === 'dashboard' && <ComplianceDashboard claims={claims} />}
 
-        {currentPage === 'api-keys' && <ApiKeysPage claims={claims} />}
+        {currentPage === 'api-keys' && canManageApiKeys && <ApiKeysPage claims={claims} />}
 
         {currentPage === 'architecture' && <ArchitecturePage />}
 

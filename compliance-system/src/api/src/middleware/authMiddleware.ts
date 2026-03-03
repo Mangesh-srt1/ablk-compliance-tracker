@@ -219,8 +219,117 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   });
 };
 
+// ─── Role constants ───────────────────────────────────────────────────────────
+
 /**
- * Role-based authorization middleware
+ * Ableka Lumina platform roles.
+ * GLOBAL_ADMIN (admin) is the Ableka-internal super-admin.
+ * The remaining five are tenant-scoped roles used in the self-registration flow.
+ */
+export const ROLES = {
+  GLOBAL_ADMIN:       'admin',
+  TENANT_ADMIN:       'tenant_admin',
+  COMPLIANCE_OFFICER: 'compliance_officer',
+  COMPLIANCE_ANALYST: 'compliance_analyst',
+  OPERATOR:           'operator',
+  READ_ONLY:          'read_only',
+} as const;
+
+export type RoleType = (typeof ROLES)[keyof typeof ROLES];
+
+/**
+ * All roles that can be selected during self-registration (excludes global admin).
+ */
+export const SELF_REGISTERABLE_ROLES: RoleType[] = [
+  ROLES.TENANT_ADMIN,
+  ROLES.COMPLIANCE_OFFICER,
+  ROLES.COMPLIANCE_ANALYST,
+  ROLES.OPERATOR,
+  ROLES.READ_ONLY,
+];
+
+/**
+ * Ordered role hierarchy – index 0 is lowest, last is highest.
+ * Used by requireAtLeastRole.
+ */
+const ROLE_HIERARCHY: string[] = [
+  ROLES.READ_ONLY,
+  ROLES.OPERATOR,
+  ROLES.COMPLIANCE_ANALYST,
+  ROLES.COMPLIANCE_OFFICER,
+  ROLES.TENANT_ADMIN,
+  ROLES.GLOBAL_ADMIN,
+];
+
+/**
+ * Default permissions granted to each role.
+ * These are injected into the JWT at login so that requirePermission() works
+ * consistently for both role-based and permission-based checks.
+ */
+export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  [ROLES.GLOBAL_ADMIN]: ['*'],
+  [ROLES.TENANT_ADMIN]: [
+    'tenant:settings',
+    'tenant:api_keys:view',
+    'tenant:api_keys:rotate',
+    'tenant:users:invite',
+    'tenant:users:manage',
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'reports:read',
+  ],
+  [ROLES.COMPLIANCE_OFFICER]: [
+    'compliance:read',
+    'compliance:write',
+    'aml:read',
+    'aml:write',
+    'kyc:read',
+    'cases:read',
+    'cases:manage',
+    'cases:approve',
+    'cases:reject',
+    'sar:file',
+    'rules:edit',
+    'audit:read',
+    'reports:read',
+  ],
+  [ROLES.COMPLIANCE_ANALYST]: [
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'cases:read',
+    'cases:notes',
+    'transactions:read',
+    'audit:read',
+  ],
+  [ROLES.OPERATOR]: [
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'cases:read',
+    'reviews:trigger',
+    'reports:export',
+    'assets:view',
+  ],
+  [ROLES.READ_ONLY]: [
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'cases:read',
+    'reports:read',
+    'audit:read',
+  ],
+  // Legacy / backward-compat aliases
+  analyst: ['compliance:read', 'aml:read', 'kyc:read'],
+  client:  ['compliance:read'],
+  api_client: [],
+};
+
+// ─── Role-based authorization middleware ──────────────────────────────────────
+
+/**
+ * Require an exact role match.
  */
 export const requireRole = (requiredRole: string) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -247,6 +356,64 @@ export const requireRole = (requiredRole: string) => {
       return;
     }
 
+    next();
+  };
+};
+
+/**
+ * Pass if the authenticated user has ANY of the specified roles.
+ */
+export const requireAnyRole = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+      return;
+    }
+    if (!roles.includes(req.user.role)) {
+      logger.warn('Role not in allowed set', {
+        userId: req.user.id,
+        userRole: req.user.role,
+        allowedRoles: roles,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: 'Insufficient permissions',
+        code: 'INSUFFICIENT_ROLE',
+        message: `Required one of: ${roles.join(', ')}`,
+      });
+      return;
+    }
+    next();
+  };
+};
+
+/**
+ * Pass if the user has the specified role OR any higher role in the hierarchy.
+ * E.g. requireAtLeastRole('compliance_analyst') passes for compliance_officer,
+ * tenant_admin, and admin as well.
+ */
+export const requireAtLeastRole = (minRole: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+      return;
+    }
+    const userLevel = ROLE_HIERARCHY.indexOf(req.user.role);
+    const requiredLevel = ROLE_HIERARCHY.indexOf(minRole);
+    if (userLevel < 0 || requiredLevel < 0 || userLevel < requiredLevel) {
+      logger.warn('Role below minimum required', {
+        userId: req.user.id,
+        userRole: req.user.role,
+        minRole,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: 'Insufficient permissions',
+        code: 'INSUFFICIENT_ROLE',
+        message: `Minimum required role: ${minRole}`,
+      });
+      return;
+    }
     next();
   };
 };
@@ -289,7 +456,7 @@ export const requirePermission = (requiredPermission: string) => {
 export const requireAdmin = requireRole('admin');
 
 /**
- * Compliance officer middleware
+ * Compliance officer middleware – allows compliance_officer, tenant_admin, and admin.
  */
 export const requireComplianceOfficer = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.user) {
@@ -300,7 +467,7 @@ export const requireComplianceOfficer = (req: Request, res: Response, next: Next
     return;
   }
 
-  const allowedRoles = ['admin', 'compliance_officer'];
+  const allowedRoles: string[] = [ROLES.GLOBAL_ADMIN, ROLES.TENANT_ADMIN, ROLES.COMPLIANCE_OFFICER];
   if (!allowedRoles.includes(req.user.role)) {
     logger.warn('Access denied for compliance operations', {
       userId: req.user.id,

@@ -130,3 +130,24 @@
   color: #999;
   font-style: italic;
 }
+
+.login-register-link {
+  margin-top: 0.75rem;
+  font-size: 0.87rem;
+  color: #555;
+}
+
+.login-link-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.login-link-btn:hover {
+  color: #4f46e5;
+}

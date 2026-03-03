@@ -94,6 +94,32 @@ class AuthAPIService {
     return claims;
   }
 
+  /** Register a new user account and trigger OTP delivery. */
+  async register(payload: {
+    email: string;
+    full_name: string;
+    password: string;
+    role: string;
+    tenant_id?: string;
+  }): Promise<{ message: string; debug_otp?: string }> {
+    const response = await this.client.post('/api/auth/register', payload);
+    return response.data.data as { message: string; debug_otp?: string };
+  }
+
+  /** Verify the OTP received after registration; returns claims on success. */
+  async verifyOtp(email: string, otp: string): Promise<TokenClaims> {
+    const response = await this.client.post('/api/auth/verify-otp', { email, otp });
+    const { token } = response.data.data;
+    storeToken(token);
+    return decodeJwtClientSideOnly(token) as TokenClaims;
+  }
+
+  /** Request a new OTP for an unverified account. */
+  async resendOtp(email: string): Promise<{ message: string; debug_otp?: string }> {
+    const response = await this.client.post('/api/auth/resend-otp', { email });
+    return response.data.data as { message: string; debug_otp?: string };
+  }
+
   async logout(): Promise<void> {
     try {
       await this.client.post('/api/auth/logout');
