@@ -1,0 +1,354 @@
+.api-keys-page {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Section ────────────────────────────────────────────────────────────── */
+.ak-section {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.ak-section h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.25rem;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.ak-section h3 {
+  margin-top: 0;
+  font-size: 1rem;
+  color: #444;
+}
+
+.ak-description {
+  color: #555;
+  font-size: 0.92rem;
+  margin-top: -0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Tenant context grid ────────────────────────────────────────────────── */
+.ak-context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.ak-context-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ak-context-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 0.05em;
+}
+
+.ak-context-item code {
+  font-size: 0.88rem;
+  background: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: #374151;
+  word-break: break-all;
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────── */
+.ak-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ak-chip {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.ak-chip--product {
+  background-color: #7c3aed;
+}
+
+.ak-chip--scope {
+  background-color: #0e7490;
+}
+
+.ak-empty {
+  font-size: 0.85rem;
+  color: #aaa;
+  font-style: italic;
+}
+
+/* ── Flow cards ─────────────────────────────────────────────────────────── */
+.ak-flows-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.ak-flow-card {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.ak-flow-card h3 {
+  margin-bottom: 0.75rem;
+}
+
+.ak-flow-card p {
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.6;
+  margin-top: 0;
+}
+
+.ak-flow-card code {
+  font-size: 0.83rem;
+  background: #f3f4f6;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  color: #374151;
+}
+
+.ak-code-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 0.9rem 1rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0.75rem 0;
+}
+
+.ak-code-block--wrap {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.75rem;
+}
+
+.ak-note {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0;
+}
+
+/* ── OAuth form ─────────────────────────────────────────────────────────── */
+.ak-oauth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 700px;
+}
+
+.ak-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.ak-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ak-form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.ak-optional {
+  font-weight: 400;
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.ak-form-group input {
+  padding: 0.6rem 0.85rem;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.ak-form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+}
+
+.ak-form-group input:disabled {
+  background: #f9f9f9;
+  color: #999;
+}
+
+.ak-scope-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.ak-scope-pill {
+  padding: 0.25rem 0.7rem;
+  border: 1.5px solid #0e7490;
+  border-radius: 999px;
+  background: transparent;
+  color: #0e7490;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ak-scope-pill.active {
+  background: #0e7490;
+  color: white;
+}
+
+.ak-scope-pill:hover:not(:disabled) {
+  background: rgba(14, 116, 144, 0.1);
+}
+
+.ak-scope-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.ak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  align-self: flex-start;
+}
+
+.ak-btn--primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.ak-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.ak-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── OAuth result ────────────────────────────────────────────────────────── */
+.ak-oauth-result {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1.5px solid;
+}
+
+.ak-oauth-result--success {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.ak-oauth-result--error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.ak-oauth-result h4 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.ak-oauth-result h5 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.ak-oauth-result p {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
+.ak-result-grid {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.ak-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ak-raw-token {
+  margin-top: 1rem;
+}
+
+.ak-raw-token summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #666;
+  user-select: none;
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+.ak-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.ak-legend-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .ak-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .api-keys-page {
+    padding: 1rem;
+  }
+}

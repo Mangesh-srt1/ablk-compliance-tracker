@@ -1,0 +1,414 @@
+/* ── RegisterPage ─────────────────────────────────────────────────────────── */
+
+.reg-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+}
+
+.reg-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Logo ──────────────────────────────────────────────────────────────────── */
+.reg-logo {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.reg-logo h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.6rem;
+  color: #1e1e2e;
+  font-weight: 700;
+}
+
+.reg-logo p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+/* ── Step indicator ────────────────────────────────────────────────────────── */
+.reg-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 1.75rem;
+}
+
+.reg-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.reg-step-num {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #9ca3af;
+  background: white;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.reg-step-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #9ca3af;
+  transition: color 0.2s;
+}
+
+.reg-step.active .reg-step-num {
+  border-color: #667eea;
+  background: #667eea;
+  color: white;
+}
+
+.reg-step.active .reg-step-label {
+  color: #667eea;
+}
+
+.reg-step.done .reg-step-num {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: white;
+}
+
+.reg-step.done .reg-step-label {
+  color: #16a34a;
+}
+
+.reg-step-connector {
+  flex: 0 0 40px;
+  height: 2px;
+  background: #e5e7eb;
+  margin: 0 0.5rem;
+}
+
+/* ── Error banner ──────────────────────────────────────────────────────────── */
+.reg-error {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Form ──────────────────────────────────────────────────────────────────── */
+.reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.reg-form h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1e1e2e;
+}
+
+.reg-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.reg-form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.reg-form-group input[type='text'],
+.reg-form-group input[type='email'],
+.reg-form-group input[type='password'] {
+  padding: 0.6rem 0.85rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: white;
+  color: #1e1e2e;
+}
+
+.reg-form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.reg-form-group input:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.reg-optional {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 0.78rem;
+}
+
+.reg-hint {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin-top: -0.1rem;
+}
+
+/* Password row */
+.reg-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.reg-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.reg-password-wrap input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.reg-eye-btn {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  color: #9ca3af;
+}
+
+/* ── Role selector ─────────────────────────────────────────────────────────── */
+.reg-role-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.reg-role-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.reg-role-card input[type='radio'] {
+  display: none;
+}
+
+.reg-role-card:hover {
+  border-color: #a5b4fc;
+  background: #f5f3ff;
+}
+
+.reg-role-card.selected {
+  border-color: #667eea;
+  background: #ede9fe;
+}
+
+.reg-role-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e1e2e;
+  margin-bottom: 0.15rem;
+}
+
+.reg-role-card.selected .reg-role-title {
+  color: #4c1d95;
+}
+
+.reg-role-desc {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.reg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.97rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.reg-btn--primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 100%;
+}
+
+.reg-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.reg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Switch / Link ─────────────────────────────────────────────────────────── */
+.reg-switch {
+  text-align: center;
+  font-size: 0.87rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.reg-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.reg-link:hover {
+  color: #4f46e5;
+}
+
+.reg-link:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* ── OTP step ──────────────────────────────────────────────────────────────── */
+.reg-otp-intro {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Dev OTP banner */
+.reg-debug-otp {
+  background: #fef9c3;
+  border: 1.5px solid #fde047;
+  border-radius: 6px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.84rem;
+  color: #713f12;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.reg-debug-code {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  background: #fef08a;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: all;
+}
+
+.reg-debug-code:hover {
+  background: #fde047;
+}
+
+.reg-debug-hint {
+  font-size: 0.78rem;
+  color: #92400e;
+}
+
+/* 6-digit OTP input boxes */
+.reg-otp-boxes {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.reg-otp-box {
+  width: 52px;
+  height: 60px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e1e2e;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: transparent;
+}
+
+.reg-otp-box:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.reg-otp-box:disabled {
+  background: #f9fafb;
+}
+
+/* Resend link */
+.reg-resend {
+  text-align: center;
+  font-size: 0.87rem;
+  color: #6b7280;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .reg-card {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .reg-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .reg-otp-box {
+    width: 44px;
+    height: 52px;
+    font-size: 1.3rem;
+  }
+
+  .reg-otp-boxes {
+    gap: 0.4rem;
+  }
+}
