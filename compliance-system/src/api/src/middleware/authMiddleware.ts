@@ -4,6 +4,7 @@
  * FR-8.2: JWT Token Blacklisting on logout
  */
 
+import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import winston from 'winston';
@@ -335,12 +336,16 @@ export const authenticateApiKey = (req: Request, res: Response, next: NextFuncti
         return;
       }
 
+      // Hash the incoming key and use constant-time lookup against stored hash.
+      // Falls back to plaintext comparison for legacy seed keys (no key_hash).
+      const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+
       const result = await db.query(
         `SELECT ak.id, ak.tenant_id, ak.products, ak.allowed_scopes
            FROM api_keys ak
-          WHERE ak.api_key = $1
+          WHERE (ak.key_hash = $1 OR (ak.key_hash IS NULL AND ak.api_key = $2))
             AND ak.is_active = true`,
-        [apiKey]
+        [keyHash, apiKey]
       );
 
       if (result.rows.length === 0) {

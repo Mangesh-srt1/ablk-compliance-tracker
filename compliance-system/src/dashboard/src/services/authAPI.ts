@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 /**
  * Authentication API Service
  * Handles login, logout, token management, and OAuth2 client_credentials testing.
@@ -10,8 +12,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
-/** Decode a JWT payload without verifying the signature. */
-export function decodeJwt(token: string): Record<string, any> | null {
+/** Decode a JWT payload without verifying the signature.
+ * ⚠️ UNSAFE: This is intentionally client-side only — for display purposes (showing
+ * email, tenant, products in the UI). NEVER use this for authorization decisions;
+ * all access control is enforced server-side by the verified JWT middleware.
+ */
+export function decodeJwtClientSideOnly(token: string): Record<string, any> | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -43,7 +49,7 @@ export function getStoredToken(): string | null {
 export function getStoredClaims(): TokenClaims | null {
   const token = getStoredToken();
   if (!token) return null;
-  return decodeJwt(token) as TokenClaims | null;
+  return decodeJwtClientSideOnly(token) as TokenClaims | null;
 }
 
 export function isTokenExpired(): boolean {
@@ -84,7 +90,7 @@ class AuthAPIService {
     const response = await this.client.post('/api/auth/login', { email, password });
     const { token } = response.data.data;
     storeToken(token);
-    const claims = decodeJwt(token) as TokenClaims;
+    const claims = decodeJwtClientSideOnly(token) as TokenClaims;
     return claims;
   }
 
@@ -143,17 +149,111 @@ class AuthAPIService {
   async revokeApiKey(keyId: string): Promise<void> {
     await this.client.delete(`/api/v1/api-keys/${keyId}`);
   }
+
+  // ── Tenant management ───────────────────────────────────────────────────────
+
+  async registerTenant(id: string, name: string): Promise<{ id: string; name: string; is_active: boolean }> {
+    const response = await this.client.post('/api/v1/tenants', { id, name });
+    return response.data.data;
+  }
+
+  async listTenants(): Promise<Array<{ id: string; name: string; is_active: boolean; created_at: string }>> {
+    const response = await this.client.get('/api/v1/tenants');
+    return response.data.data;
+  }
+
+  async onboardTenantUser(
+    tenantId: string,
+    payload: { email: string; full_name: string; role: string; products: string[]; password?: string }
+  ): Promise<TenantUser> {
+    const response = await this.client.post(`/api/v1/tenants/${tenantId}/users`, payload);
+    return response.data.data;
+  }
+
+  async listTenantUsers(tenantId: string): Promise<TenantUser[]> {
+    const response = await this.client.get(`/api/v1/tenants/${tenantId}/users`);
+    return response.data.data;
+  }
+
+  async generateTenantApiKey(
+    tenantId: string,
+    payload: { products: string[]; allowed_scopes: string[]; rate_limit_per_min?: number }
+  ): Promise<ApiKeyCreated> {
+    const response = await this.client.post(`/api/v1/tenants/${tenantId}/api-keys`, payload);
+    return response.data.data;
+  }
+
+  async listTenantApiKeys(tenantId: string): Promise<ApiKey[]> {
+    const response = await this.client.get(`/api/v1/tenants/${tenantId}/api-keys`);
+    return response.data.data;
+  }
+
+  async revokeTenantApiKey(tenantId: string, keyId: string): Promise<void> {
+    await this.client.delete(`/api/v1/tenants/${tenantId}/api-keys/${keyId}`);
+  }
+
+  async generateOAuthClient(
+    tenantId: string,
+    payload: { products: string[]; allowed_scopes: string[] }
+  ): Promise<OAuthClientCreated> {
+    const response = await this.client.post(`/api/v1/tenants/${tenantId}/oauth-clients`, payload);
+    return response.data.data;
+  }
+
+  async listOAuthClients(tenantId: string): Promise<OAuthClient[]> {
+    const response = await this.client.get(`/api/v1/tenants/${tenantId}/oauth-clients`);
+    return response.data.data;
+  }
+
+  async revokeOAuthClient(tenantId: string, clientDbId: string): Promise<void> {
+    await this.client.delete(`/api/v1/tenants/${tenantId}/oauth-clients/${clientDbId}`);
+  }
 }
 
 export interface ApiKey {
   id: string;
   api_key?: string; // only returned on creation
+  key_prefix?: string; // masked display prefix
   tenant_id: string;
   products: string[];
   allowed_scopes: string[];
   rate_limit_per_min: number;
   is_active: boolean;
   created_at: string;
+}
+
+/** Full response on key creation – includes the one-time plaintext api_key */
+export interface ApiKeyCreated extends ApiKey {
+  api_key: string;
+}
+
+export interface TenantUser {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  products: string[];
+  permissions: string[];
+  is_active: boolean;
+  tenant_id: string;
+  created_at: string;
+  /** Only present when password was auto-generated */
+  temporary_password?: string;
+}
+
+export interface OAuthClient {
+  id: string;
+  client_id: string;
+  tenant_id: string;
+  products: string[];
+  allowed_scopes: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+/** Full response on client creation – includes the one-time client_secret */
+export interface OAuthClientCreated extends OAuthClient {
+  client_secret: string;
 }
 
 export const authAPI = new AuthAPIService();

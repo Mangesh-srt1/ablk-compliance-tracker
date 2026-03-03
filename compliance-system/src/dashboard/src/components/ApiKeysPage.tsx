@@ -9,7 +9,7 @@
  */
 
 import React, { useState } from 'react';
-import { authAPI, TokenClaims, decodeJwt } from '../services/authAPI';
+import { authAPI, TokenClaims, decodeJwtClientSideOnly } from '../services/authAPI';
 import '../styles/ApiKeysPage.css';
 
 interface ApiKeysPageProps {
@@ -51,7 +51,7 @@ const ApiKeysPage: React.FC<ApiKeysPageProps> = ({ claims }) => {
         oauthClientSecret,
         oauthScope || undefined
       );
-      const decoded = decodeJwt(result.access_token) ?? undefined;
+      const decoded = decodeJwtClientSideOnly(result.access_token) ?? undefined;
       setOauthResult({ ...result, decoded });
     } catch (err: any) {
       const msg =

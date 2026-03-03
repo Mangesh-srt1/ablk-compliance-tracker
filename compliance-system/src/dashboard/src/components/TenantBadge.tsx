@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { TokenClaims } from '../services/authAPI';
+import '../styles/TenantBadge.css';
 
 interface TenantBadgeProps {
   claims: TokenClaims;
