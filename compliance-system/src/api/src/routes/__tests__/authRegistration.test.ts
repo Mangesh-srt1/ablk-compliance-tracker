@@ -16,6 +16,8 @@ jest.mock('../../config/redis', () => ({
     get: jest.fn().mockResolvedValue(null),
     set: jest.fn().mockResolvedValue('OK'),
     del: jest.fn().mockResolvedValue(1),
+    incr: jest.fn().mockResolvedValue(1),
+    expire: jest.fn().mockResolvedValue(1),
     quit: jest.fn().mockResolvedValue(undefined),
   }),
   configureRedis: jest.fn(),
@@ -53,6 +55,8 @@ beforeEach(() => {
   (redis.get as jest.Mock).mockResolvedValue(null);
   (redis.set as jest.Mock).mockResolvedValue('OK');
   (redis.del as jest.Mock).mockResolvedValue(1);
+  (redis.incr as jest.Mock).mockResolvedValue(1);   // first request in window
+  (redis.expire as jest.Mock).mockResolvedValue(1);
 });
 
 // ─── POST /register ───────────────────────────────────────────────────────────
@@ -249,6 +253,14 @@ describe('POST /resend-otp', () => {
   it('returns 400 for invalid email', async () => {
     const res = await request(app).post('/resend-otp').send({ email: 'bad' });
     expect(res.status).toBe(400);
+  });
+
+  it('returns 429 when rate limit is exceeded', async () => {
+    // incr returns > OTP_RATE_LIMIT (5)
+    (getRedisClient().incr as jest.Mock).mockResolvedValueOnce(6);
+
+    const res = await request(app).post('/resend-otp').send({ email: 'limited@example.com' });
+    expect(res.status).toBe(429);
   });
 
   it('returns 200 (with neutral message) when user is not found', async () => {

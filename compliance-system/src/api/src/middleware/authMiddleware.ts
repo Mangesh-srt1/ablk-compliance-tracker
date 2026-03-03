@@ -320,9 +320,12 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'reports:read',
     'audit:read',
   ],
-  // Legacy / backward-compat aliases
-  analyst: ['compliance:read', 'aml:read', 'kyc:read'],
-  client:  ['compliance:read'],
+  // ── Legacy / backward-compat aliases ─────────────────────────────────────
+  // These role values existed before the 5-role expansion and are kept for
+  // existing rows in the users table.  Do NOT use them in new code.
+  // Mapping: 'analyst' → compliance_analyst, 'client' → read_only
+  analyst:    ['compliance:read', 'aml:read', 'kyc:read'],
+  client:     ['compliance:read'],
   api_client: [],
 };
 

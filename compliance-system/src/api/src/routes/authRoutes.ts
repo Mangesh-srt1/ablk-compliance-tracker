@@ -35,6 +35,10 @@ const logger = winston.createLogger({
 
 const OTP_TTL_SECONDS = 10 * 60; // 10 minutes
 const OTP_REDIS_PREFIX = 'otp:register:';
+/** Rate-limit key prefix: max 5 resend requests per email per hour */
+const OTP_RATE_PREFIX = 'otp:rate:';
+const OTP_RATE_LIMIT = 5;
+const OTP_RATE_WINDOW_SECONDS = 60 * 60; // 1 hour
 
 /** Generate a 6-digit numeric OTP. */
 function generateOtp(): string {
@@ -59,6 +63,21 @@ async function verifyOtp(email: string, otp: string): Promise<boolean> {
   if (!stored || stored !== hashOtp(otp)) return false;
   await redis.del(`${OTP_REDIS_PREFIX}${email}`);
   return true;
+}
+
+/**
+ * Increment the per-email resend counter and return true if the request
+ * is within the allowed rate (OTP_RATE_LIMIT per OTP_RATE_WINDOW_SECONDS).
+ */
+async function checkOtpRateLimit(email: string): Promise<boolean> {
+  const redis = getRedisClient();
+  const key = `${OTP_RATE_PREFIX}${email}`;
+  const count = await redis.incr(key);
+  if (count === 1) {
+    // First request in this window: set expiry
+    await redis.expire(key, OTP_RATE_WINDOW_SECONDS);
+  }
+  return count <= OTP_RATE_LIMIT;
 }
 
 /**
@@ -333,8 +352,12 @@ router.post(
         );
       }
 
-      const { email, full_name, role, tenant_id } = req.body;
+      const { email, full_name, role } = req.body;
       const password: string = req.body.password;
+      // Normalise tenant_id to uppercase to match the tenants.id format (e.g. TENANT_123)
+      const tenant_id: string | undefined = req.body.tenant_id
+        ? String(req.body.tenant_id).toUpperCase()
+        : undefined;
 
       // Check if email is already registered
       const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -386,8 +409,10 @@ router.post(
         message: 'Registration successful. Please check your email for the verification code.',
       };
 
-      // Expose OTP in non-production environments for testing
-      if (process.env.NODE_ENV !== 'production') {
+      // Expose OTP in non-production environments for testing.
+      // Guard: NODE_ENV must not be 'production' AND DEBUG_OTP must not be 'false'.
+      if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_OTP !== 'false') {
+        logger.warn('debug_otp included in response – ensure NODE_ENV=production in live environments');
         responseData.debug_otp = otp;
       }
 
@@ -552,6 +577,19 @@ router.post(
 
       const { email } = req.body;
 
+      // Per-email rate limit: max 5 resend requests per hour
+      const allowed = await checkOtpRateLimit(email);
+      if (!allowed) {
+        logger.warn('OTP resend rate limit exceeded', { email, ip: req.ip });
+        return res.status(429).json(
+          createErrorResponseFromDetails(
+            ErrorCode.RATE_LIMIT_EXCEEDED,
+            ErrorCategory.RATE_LIMIT,
+            'Too many verification code requests. Please try again in 1 hour.'
+          )
+        );
+      }
+
       const userResult = await db.query(
         'SELECT id, is_email_verified FROM users WHERE email = $1',
         [email]
@@ -574,7 +612,8 @@ router.post(
         message: 'A new verification code has been sent to your email.',
       };
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_OTP !== 'false') {
+        logger.warn('debug_otp included in resend response – ensure NODE_ENV=production in live environments');
         responseData.debug_otp = otp;
       }
 
