@@ -32,6 +32,7 @@ import { initializeWebSocketService } from './services/websocketService';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
+import oauthRoutes from './routes/oauthRoutes';
 import complianceRoutes from './routes/complianceRoutes';
 import agentRoutes from './routes/agentRoutes';
 import reportRoutes from './routes/reportRoutes';
@@ -185,6 +186,7 @@ async function initializeApp(): Promise<void> {
 
     // API routes
     app.use('/api/auth', authRoutes);
+    app.use('/oauth', oauthRoutes);
     app.use('/api/compliance', complianceRoutes);
     app.use('/api/agents', agentRoutes);
     app.use('/api/reports', reportRoutes);
