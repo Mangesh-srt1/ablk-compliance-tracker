@@ -1,0 +1,499 @@
+.tenant-onboarding {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.to-header {
+  margin-bottom: 2rem;
+}
+
+.to-header h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+  color: #1e1e2e;
+}
+
+.to-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+/* ── Step indicator ──────────────────────────────────────────────────────── */
+.to-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 2rem;
+  overflow-x: auto;
+}
+
+.to-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.to-step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #9ca3af;
+  background: white;
+  flex-shrink: 0;
+}
+
+.to-step-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.to-step--active .to-step-num {
+  border-color: #667eea;
+  background: #667eea;
+  color: white;
+}
+
+.to-step--active .to-step-label {
+  color: #667eea;
+}
+
+.to-step--done .to-step-num {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: white;
+}
+
+.to-step--done .to-step-label {
+  color: #16a34a;
+}
+
+.to-step-line {
+  flex: 1;
+  height: 2px;
+  background: #e5e7eb;
+  min-width: 24px;
+  max-width: 60px;
+}
+
+.to-step-line--done {
+  background: #22c55e;
+}
+
+/* ── Global error ────────────────────────────────────────────────────────── */
+.to-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.to-error button {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #b91c1c;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.to-card {
+  background: white;
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.to-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  color: #1e1e2e;
+}
+
+.to-description {
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+.to-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.to-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.to-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.to-field--narrow {
+  max-width: 200px;
+}
+
+.to-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.to-hint {
+  font-weight: 400;
+  color: #888;
+  font-size: 0.78rem;
+}
+
+.to-field input,
+.to-field select {
+  padding: 0.6rem 0.85rem;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  background: white;
+}
+
+.to-field input:focus,
+.to-field select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+}
+
+.to-field input:disabled {
+  background: #f9f9f9;
+  color: #999;
+}
+
+/* ── Multi-select pills ──────────────────────────────────────────────────── */
+.to-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.to-pill {
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1.5px solid;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  background: transparent;
+}
+
+.to-pill--product {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
+
+.to-pill--product.to-pill--selected {
+  background: #7c3aed;
+  color: white;
+}
+
+.to-pill--scope {
+  border-color: #0e7490;
+  color: #0e7490;
+}
+
+.to-pill--scope.to-pill--selected {
+  background: #0e7490;
+  color: white;
+}
+
+.to-pill:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.to-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.4rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  border: none;
+  text-decoration: none;
+}
+
+.to-btn--primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.to-btn--secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1.5px solid #d1d5db;
+}
+
+.to-btn--ghost {
+  background: transparent;
+  color: #667eea;
+  border: 1.5px solid #667eea;
+}
+
+.to-btn--sm {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.to-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.to-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.to-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Success block ───────────────────────────────────────────────────────── */
+.to-success-block {
+  background: #f0fdf4;
+  border: 1.5px solid #22c55e;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.to-success-block p {
+  margin: 0;
+  color: #166534;
+  font-size: 0.95rem;
+}
+
+/* ── Users table ─────────────────────────────────────────────────────────── */
+.to-users-list {
+  margin-bottom: 1.5rem;
+}
+
+.to-users-list h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.to-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.to-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid #e5e7eb;
+}
+
+.to-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.to-role-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.to-role-badge--admin          { background: #fef3c7; color: #92400e; }
+.to-role-badge--compliance_officer { background: #ede9fe; color: #5b21b6; }
+.to-role-badge--analyst        { background: #dbeafe; color: #1e40af; }
+.to-role-badge--client         { background: #d1fae5; color: #065f46; }
+
+.to-mini-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.to-mini-chip {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  background: #ede9fe;
+  color: #5b21b6;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.to-saved {
+  color: #16a34a;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.to-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+}
+
+.to-tab {
+  padding: 0.65rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.to-tab--active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.to-tab:hover:not(.to-tab--active) {
+  color: #374151;
+}
+
+/* ── Credential panel ────────────────────────────────────────────────────── */
+.to-cred-panel {
+  min-height: 200px;
+}
+
+.to-cred-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.to-cred-id {
+  margin-bottom: 1rem;
+}
+
+.to-cred-id-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.to-cred-id-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.to-cred-id-field code {
+  flex: 1;
+  font-size: 0.88rem;
+  color: #374151;
+  word-break: break-all;
+}
+
+/* ── Step navigation ─────────────────────────────────────────────────────── */
+.to-step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.to-done-note {
+  font-size: 0.9rem;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .to-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-onboarding {
+    padding: 1rem;
+  }
+
+  .to-steps {
+    gap: 0;
+  }
+
+  .to-step-label {
+    display: none;
+  }
+}

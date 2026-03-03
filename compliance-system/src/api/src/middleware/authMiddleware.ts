@@ -4,10 +4,12 @@
  * FR-8.2: JWT Token Blacklisting on logout
  */
 
+import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import winston from 'winston';
 import { getRedisClient } from '../config/redis';
+import db from '../config/database';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -33,6 +35,11 @@ declare global {
         jti?: string;
         iat: number;
         exp: number;
+        // B2B / tenant context
+        sub?: string;
+        tenant?: string;
+        products?: string[];
+        scope?: string;
       };
     }
   }
@@ -46,6 +53,11 @@ export interface JWTPayload {
   jti?: string;
   iat: number;
   exp: number;
+  // B2B / tenant context
+  sub?: string;
+  tenant?: string;
+  products?: string[];
+  scope?: string;
 }
 
 /**
@@ -207,8 +219,120 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   });
 };
 
+// ─── Role constants ───────────────────────────────────────────────────────────
+
 /**
- * Role-based authorization middleware
+ * Ableka Lumina platform roles.
+ * GLOBAL_ADMIN (admin) is the Ableka-internal super-admin.
+ * The remaining five are tenant-scoped roles used in the self-registration flow.
+ */
+export const ROLES = {
+  GLOBAL_ADMIN:       'admin',
+  TENANT_ADMIN:       'tenant_admin',
+  COMPLIANCE_OFFICER: 'compliance_officer',
+  COMPLIANCE_ANALYST: 'compliance_analyst',
+  OPERATOR:           'operator',
+  READ_ONLY:          'read_only',
+} as const;
+
+export type RoleType = (typeof ROLES)[keyof typeof ROLES];
+
+/**
+ * All roles that can be selected during self-registration (excludes global admin).
+ */
+export const SELF_REGISTERABLE_ROLES: RoleType[] = [
+  ROLES.TENANT_ADMIN,
+  ROLES.COMPLIANCE_OFFICER,
+  ROLES.COMPLIANCE_ANALYST,
+  ROLES.OPERATOR,
+  ROLES.READ_ONLY,
+];
+
+/**
+ * Ordered role hierarchy – index 0 is lowest, last is highest.
+ * Used by requireAtLeastRole.
+ */
+const ROLE_HIERARCHY: string[] = [
+  ROLES.READ_ONLY,
+  ROLES.OPERATOR,
+  ROLES.COMPLIANCE_ANALYST,
+  ROLES.COMPLIANCE_OFFICER,
+  ROLES.TENANT_ADMIN,
+  ROLES.GLOBAL_ADMIN,
+];
+
+/**
+ * Default permissions granted to each role.
+ * These are injected into the JWT at login so that requirePermission() works
+ * consistently for both role-based and permission-based checks.
+ */
+export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  [ROLES.GLOBAL_ADMIN]: ['*'],
+  [ROLES.TENANT_ADMIN]: [
+    'tenant:settings',
+    'tenant:api_keys:view',
+    'tenant:api_keys:rotate',
+    'tenant:users:invite',
+    'tenant:users:manage',
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'reports:read',
+  ],
+  [ROLES.COMPLIANCE_OFFICER]: [
+    'compliance:read',
+    'compliance:write',
+    'aml:read',
+    'aml:write',
+    'kyc:read',
+    'cases:read',
+    'cases:manage',
+    'cases:approve',
+    'cases:reject',
+    'sar:file',
+    'rules:edit',
+    'audit:read',
+    'reports:read',
+  ],
+  [ROLES.COMPLIANCE_ANALYST]: [
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'cases:read',
+    'cases:notes',
+    'transactions:read',
+    'audit:read',
+  ],
+  [ROLES.OPERATOR]: [
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'cases:read',
+    'reviews:trigger',
+    'reports:export',
+    'assets:view',
+  ],
+  [ROLES.READ_ONLY]: [
+    'compliance:read',
+    'aml:read',
+    'kyc:read',
+    'cases:read',
+    'reports:read',
+    'audit:read',
+  ],
+  // ── Legacy / backward-compat aliases ─────────────────────────────────────
+  // These role values existed before the 5-role expansion and are kept for
+  // existing rows in the users table.  Do NOT use them in new code.
+  // Mapping: 'analyst' → compliance_analyst, 'client' → read_only
+  analyst:    ['compliance:read', 'aml:read', 'kyc:read'],
+  client:     ['compliance:read'],
+  api_client: [],
+};
+
+// ─── Role-based authorization middleware ──────────────────────────────────────
+
+/**
+ * Require an exact role match.
  */
 export const requireRole = (requiredRole: string) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -235,6 +359,64 @@ export const requireRole = (requiredRole: string) => {
       return;
     }
 
+    next();
+  };
+};
+
+/**
+ * Pass if the authenticated user has ANY of the specified roles.
+ */
+export const requireAnyRole = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+      return;
+    }
+    if (!roles.includes(req.user.role)) {
+      logger.warn('Role not in allowed set', {
+        userId: req.user.id,
+        userRole: req.user.role,
+        allowedRoles: roles,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: 'Insufficient permissions',
+        code: 'INSUFFICIENT_ROLE',
+        message: `Required one of: ${roles.join(', ')}`,
+      });
+      return;
+    }
+    next();
+  };
+};
+
+/**
+ * Pass if the user has the specified role OR any higher role in the hierarchy.
+ * E.g. requireAtLeastRole('compliance_analyst') passes for compliance_officer,
+ * tenant_admin, and admin as well.
+ */
+export const requireAtLeastRole = (minRole: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+      return;
+    }
+    const userLevel = ROLE_HIERARCHY.indexOf(req.user.role);
+    const requiredLevel = ROLE_HIERARCHY.indexOf(minRole);
+    if (userLevel < 0 || requiredLevel < 0 || userLevel < requiredLevel) {
+      logger.warn('Role below minimum required', {
+        userId: req.user.id,
+        userRole: req.user.role,
+        minRole,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: 'Insufficient permissions',
+        code: 'INSUFFICIENT_ROLE',
+        message: `Minimum required role: ${minRole}`,
+      });
+      return;
+    }
     next();
   };
 };
@@ -277,7 +459,7 @@ export const requirePermission = (requiredPermission: string) => {
 export const requireAdmin = requireRole('admin');
 
 /**
- * Compliance officer middleware
+ * Compliance officer middleware – allows compliance_officer, tenant_admin, and admin.
  */
 export const requireComplianceOfficer = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.user) {
@@ -288,7 +470,7 @@ export const requireComplianceOfficer = (req: Request, res: Response, next: Next
     return;
   }
 
-  const allowedRoles = ['admin', 'compliance_officer'];
+  const allowedRoles: string[] = [ROLES.GLOBAL_ADMIN, ROLES.TENANT_ADMIN, ROLES.COMPLIANCE_OFFICER];
   if (!allowedRoles.includes(req.user.role)) {
     logger.warn('Access denied for compliance operations', {
       userId: req.user.id,
@@ -303,4 +485,157 @@ export const requireComplianceOfficer = (req: Request, res: Response, next: Next
   }
 
   next();
+};
+
+/**
+ * API Key authentication middleware (B2B partner / tenant backend flows).
+ * Reads the X-API-Key header, looks up the api_keys table, and populates
+ * req.user with the tenant_id, products, and allowed_scopes for the key.
+ */
+export const authenticateApiKey = (req: Request, res: Response, next: NextFunction): void => {
+  (async () => {
+    try {
+      const apiKey = req.headers['x-api-key'] as string | undefined;
+
+      if (!apiKey) {
+        res.status(401).json({
+          error: 'API key required',
+          code: 'API_KEY_MISSING',
+          message: 'X-API-Key header is required for this endpoint',
+        });
+        return;
+      }
+
+      // Hash the incoming key and use constant-time lookup against stored hash.
+      // Falls back to plaintext comparison for legacy seed keys (no key_hash).
+      const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+
+      const result = await db.query(
+        `SELECT ak.id, ak.tenant_id, ak.products, ak.allowed_scopes
+           FROM api_keys ak
+          WHERE (ak.key_hash = $1 OR (ak.key_hash IS NULL AND ak.api_key = $2))
+            AND ak.is_active = true`,
+        [keyHash, apiKey]
+      );
+
+      if (result.rows.length === 0) {
+        logger.warn('Invalid or inactive API key used', { ip: req.ip, path: req.path });
+        res.status(401).json({
+          error: 'Invalid API key',
+          code: 'API_KEY_INVALID',
+          message: 'The provided API key is not valid or has been revoked',
+        });
+        return;
+      }
+
+      const row = result.rows[0];
+      const now = Math.floor(Date.now() / 1000);
+
+      // Synthesize a lightweight user context so downstream middleware is consistent
+      // permissions is mapped to allowed_scopes so that requirePermission() checks work
+      // identically for both JWT-authenticated users and API-key-authenticated clients.
+      req.user = {
+        id: row.id,
+        email: '',
+        role: 'api_client',
+        permissions: row.allowed_scopes as string[],
+        iat: now,
+        exp: now + 3600,
+        tenant: row.tenant_id as string,
+        products: row.products as string[],
+        scope: (row.allowed_scopes as string[]).join(' '),
+      };
+
+      logger.debug('API key authenticated', { tenant: row.tenant_id, path: req.path });
+      next();
+    } catch (error) {
+      logger.error('API key authentication error', {
+        error: error instanceof Error ? error.message : String(error),
+        ip: req.ip,
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Authentication error', code: 'AUTH_ERROR' });
+      }
+    }
+  })().catch((err) => {
+    logger.error('Unexpected API key authentication error', {
+      error: err instanceof Error ? err.message : String(err),
+      ip: req.ip,
+    });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Authentication error', code: 'AUTH_ERROR' });
+    }
+  });
+};
+
+/**
+ * Product-based authorization middleware.
+ * Ensures the authenticated principal has access to the required product.
+ * Works with both JWT-based users and API-key-authenticated clients.
+ */
+export const requireProduct = (requiredProduct: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED',
+      });
+      return;
+    }
+
+    const products = req.user.products ?? [];
+    if (!products.includes(requiredProduct)) {
+      logger.warn('Product access denied', {
+        userId: req.user.id,
+        tenant: req.user.tenant,
+        userProducts: products,
+        requiredProduct,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: 'Product access denied',
+        code: 'PRODUCT_ACCESS_DENIED',
+        message: `Access to product "${requiredProduct}" is not permitted for this token`,
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+/**
+ * Scope-based authorization middleware.
+ * Ensures the authenticated principal's token includes the required OAuth2 scope.
+ * Works with both JWT-based users and API-key-authenticated clients.
+ */
+export const requireScope = (requiredScope: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED',
+      });
+      return;
+    }
+
+    const scopeList = req.user.scope ? req.user.scope.split(' ') : [];
+    if (!scopeList.includes(requiredScope)) {
+      logger.warn('Insufficient scope', {
+        userId: req.user.id,
+        tenant: req.user.tenant,
+        userScope: req.user.scope,
+        requiredScope,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: 'Insufficient scope',
+        code: 'INSUFFICIENT_SCOPE',
+        message: `Required scope: ${requiredScope}`,
+      });
+      return;
+    }
+
+    next();
+  };
 };

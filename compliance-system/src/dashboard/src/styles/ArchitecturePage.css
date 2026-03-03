@@ -1,0 +1,459 @@
+/* ── ArchitecturePage styles ─────────────────────────────────────────────── */
+
+.arch-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+
+.arch-header {
+  margin-bottom: 1.5rem;
+}
+
+.arch-page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.3rem;
+}
+
+.arch-page-subtitle {
+  color: #718096;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+
+.arch-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.arch-tab-btn {
+  padding: 0.6rem 1.1rem;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #718096;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  margin-bottom: -2px;
+}
+
+.arch-tab-btn:hover {
+  color: #667eea;
+}
+
+.arch-tab-active {
+  color: #667eea !important;
+  border-bottom-color: #667eea !important;
+}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+
+.arch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.arch-h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2d3748;
+  border-left: 4px solid #667eea;
+  padding-left: 0.75rem;
+  margin: 0.5rem 0 0;
+}
+
+.arch-lead {
+  color: #4a5568;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Architecture layer diagram ──────────────────────────────────────────── */
+
+.arch-layers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem 0;
+}
+
+.arch-layer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 680px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.arch-layer-icon {
+  font-size: 1.4rem;
+}
+
+.arch-layer-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.arch-layer-sub {
+  font-size: 0.76rem;
+  color: #718096;
+  margin-top: 0.1rem;
+}
+
+.arch-arrow {
+  font-size: 1.1rem;
+  color: #a0aec0;
+  line-height: 1;
+}
+
+.arch-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 680px;
+}
+
+/* ── Flow cards ──────────────────────────────────────────────────────────── */
+
+.arch-flow-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 700px) {
+  .arch-flow-cards { grid-template-columns: 1fr; }
+}
+
+.arch-flow-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  position: relative;
+  border-top: 4px solid #667eea;
+}
+
+.arch-flow-card-2 {
+  border-top-color: #059669;
+}
+
+.arch-flow-card-num {
+  position: absolute;
+  top: -16px;
+  left: 1.25rem;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.arch-flow-card-2 .arch-flow-card-num {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.arch-flow-card h3 {
+  margin: 0.5rem 0 0.6rem;
+  font-size: 1rem;
+  color: #1a202c;
+}
+
+.arch-flow-card p {
+  font-size: 0.85rem;
+  color: #4a5568;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.arch-flow-card ul {
+  padding-left: 1.25rem;
+  font-size: 0.83rem;
+  color: #4a5568;
+  line-height: 1.8;
+}
+
+/* ── Steps ───────────────────────────────────────────────────────────────── */
+
+.arch-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.arch-steps::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: linear-gradient(to bottom, #667eea 0%, #e2e8f0 100%);
+  z-index: 0;
+}
+
+.arch-step {
+  display: flex;
+  gap: 1.25rem;
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+
+.arch-step:last-child {
+  padding-bottom: 0;
+}
+
+.arch-step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.arch-step-body {
+  flex: 1;
+  background: white;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  margin-top: 0;
+}
+
+.arch-step-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #2d3748;
+  margin-bottom: 0.6rem;
+}
+
+.arch-step-content p {
+  font-size: 0.84rem;
+  color: #4a5568;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.arch-step-content p:last-child {
+  margin-bottom: 0;
+}
+
+.arch-ol {
+  padding-left: 1.25rem;
+  font-size: 0.84rem;
+  color: #4a5568;
+  line-height: 1.9;
+  margin: 0;
+}
+
+/* ── Code blocks ─────────────────────────────────────────────────────────── */
+
+.arch-code-wrap {
+  position: relative;
+  margin: 0.6rem 0;
+}
+
+.arch-code-lang {
+  display: inline-block;
+  background: #4a5568;
+  color: #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px 4px 0 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.arch-code {
+  background: #1e2535;
+  color: #e2e8f0;
+  border-radius: 0 6px 6px 6px;
+  padding: 0.9rem 1rem;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre;
+}
+
+.arch-code-lang + .arch-code {
+  border-top-left-radius: 0;
+}
+
+.arch-code code {
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', Consolas, monospace;
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ── JWT reference tab ───────────────────────────────────────────────────── */
+
+.arch-token-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 750px) {
+  .arch-token-grid { grid-template-columns: 1fr; }
+}
+
+.arch-token-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.arch-token-card h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  color: #2d3748;
+}
+
+.arch-claim-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.arch-claim-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+}
+
+.arch-claim-row code {
+  background: #edf2f7;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: #7c3aed;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.arch-claim-row span {
+  color: #4a5568;
+}
+
+/* ── Compare table ───────────────────────────────────────────────────────── */
+
+.arch-compare-table {
+  overflow-x: auto;
+}
+
+.arch-compare-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.arch-compare-table th {
+  background: #f7fafc;
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: #4a5568;
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 0.8rem;
+}
+
+.arch-compare-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #f7fafc;
+  color: #4a5568;
+  vertical-align: top;
+}
+
+.arch-compare-table tr:last-child td {
+  border-bottom: none;
+}
+
+.arch-compare-table td:first-child {
+  font-weight: 600;
+  color: #2d3748;
+  white-space: nowrap;
+}
+
+.arch-compare-table code {
+  background: #edf2f7;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.77rem;
+  color: #7c3aed;
+}
+
+/* ── Scope grid ──────────────────────────────────────────────────────────── */
+
+.arch-scope-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.arch-scope-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.arch-scope-code {
+  background: #f3e8ff;
+  color: #7c3aed;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 140px;
+  display: inline-block;
+}
+
+.arch-scope-row span {
+  color: #4a5568;
+}
