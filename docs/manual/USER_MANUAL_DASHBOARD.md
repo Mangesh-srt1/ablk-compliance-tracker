@@ -1,7 +1,7 @@
 # Ableka Lumina Compliance Dashboard - User Manual
 
-**Version:** 1.0  
-**Last Updated:** March 1, 2026  
+**Version:** 1.1  
+**Last Updated:** March 3, 2026  
 **Platform:** Ableka Lumina AI Compliance Engine  
 **Dashboard URL:** http://localhost:4005
 
@@ -15,6 +15,8 @@
 4. [User Authentication](#4-user-authentication)
 5. [Home Dashboard](#5-home-dashboard)
 6. [Submitting Compliance Checks](#6-submitting-compliance-checks)
+   - [6.4 AI Document Validation](#64-ai-document-validation)
+   - [6.5 AI Asset Validation](#65-ai-asset-validation)
 7. [Viewing Compliance Results](#7-viewing-compliance-results)
 8. [Workflow Builder](#8-workflow-builder)
 9. [Real-Time Alerts & Monitoring](#9-real-time-alerts--monitoring)
@@ -798,6 +800,242 @@ Authorization: Bearer YOUR_JWT_TOKEN
 **See API Documentation:**
 - Full API docs: http://localhost:4000/api/docs
 - Swagger UI with interactive testing
+
+---
+
+### 6.4 AI Document Validation
+
+**Submit a compliance document for AI-powered authenticity verification**
+
+The **AI Document Validation** feature uses a two-stage analysis pipeline:
+
+1. **Structural analysis** (always active) – checks required fields, suspicious keywords, date consistency, content length, and SHA-256 hash integrity.
+2. **LLM semantic analysis** (active when `ANTHROPIC_API_KEY` is configured) – uses Claude AI to reason about the document's authenticity and flag nuanced anomalies.
+
+#### Step 1: Navigate to Document Validation
+
+1. Click **"Compliance Checks"** in the left sidebar (`Ctrl+K`)
+2. Click the **"Document Validation"** tab or button
+3. Or go directly to: `http://localhost:4005/checks/documents`
+
+#### Step 2: Select Document Type
+
+Choose the document type from the dropdown:
+
+| Category | Document Types |
+|----------|---------------|
+| **Identity** | Passport, National ID, Driver's License |
+| **Financial** | Bank Statement, Financial Statement, Tax Document |
+| **Property** | Title Deed, Property Certificate, Utility Bill |
+| **Corporate** | Business Registration |
+| **PE / RWA** | Subscription Agreement, Limited Partnership Agreement, Private Placement Memorandum, Capital Call Notice, Distribution Notice |
+| **Other** | Any other document type |
+
+#### Step 3: Enter Document Details
+
+Fill in the form fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| **Document Type** | ✅ | Selected in Step 2 |
+| **Document Content** | ✅ | Paste OCR-extracted text or the full document text |
+| **Issuer Name** | Recommended | Name of the issuing authority (e.g. "Dubai Land Department") |
+| **Issuer Jurisdiction** | Recommended | 2-character code: `AE`, `US`, `IN`, `UK`, `SG`, `EU` |
+| **Entity Name** | Recommended | Full name of the individual or company |
+| **Issue Date** | Recommended | Date the document was issued (YYYY-MM-DD) |
+| **Expiry Date** | Optional | Expiry date, if applicable (YYYY-MM-DD) |
+| **Document Hash (SHA-256)** | Optional | 64-character hex hash for tamper-detection |
+
+> **Tip:** Providing more optional fields improves AI analysis accuracy and reduces the risk of false `SUSPICIOUS` verdicts.
+
+#### Step 4: Submit and View Results
+
+Click **"Validate Document"** to submit. Results appear within 1–3 seconds.
+
+**Understanding the Document Validation Result:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Document Validation Result                             │
+│                                                         │
+│  Verdict:        ✅ AUTHENTIC          (or ⚠️/❌)       │
+│  Authenticity:   92/100                                 │
+│  Fraud Risk:     8/100                                  │
+│                                                         │
+│  ─── Integrity Check ───────────────────────────────── │
+│  Hash Match:         ✅ Passed                          │
+│  Expiry Valid:       ✅ Passed                          │
+│  Date Consistent:    ✅ Passed                          │
+│                                                         │
+│  ─── AI Analysis ───────────────────────────────────── │
+│  Performed:      Yes (Claude claude-3-haiku)            │
+│  Confidence:     96%                                    │
+│  Reasoning:      Document structure is consistent       │
+│                  with a genuine UK passport.            │
+│                                                         │
+│  ─── Recommendations ───────────────────────────────── │
+│  • Document passed AI validation checks.                │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Document Verdict Meanings:**
+
+| Verdict | Color | Score | Meaning | What to Do |
+|---------|-------|-------|---------|-----------|
+| ✅ **AUTHENTIC** | Green | 0–34 risk | Passed all checks | Accept the document |
+| ⚠️ **SUSPICIOUS** | Yellow | 35–69 risk | Anomalies detected | Escalate for manual review |
+| ❌ **FORGED** | Red | 70–100 risk | High forgery probability | Reject – investigate immediately |
+| 🔄 **UNVERIFIABLE** | Grey | — | Insufficient content | Request better-quality document |
+
+**Common Flags and Their Meanings:**
+
+| Flag | What It Means | Recommended Action |
+|------|--------------|-------------------|
+| `SUSPICIOUS_KEYWORD` | Document contains words like "void", "cancelled", or "specimen" | Verify document with issuer |
+| `DOCUMENT_EXPIRED` | Document has passed its expiry date | Request a valid, current document |
+| `HASH_MISMATCH` | Document content does not match the provided hash | Treat as potentially tampered |
+| `MISSING_FIELD_*` | A required field is absent for this document type | Provide the missing information |
+| `FUTURE_ISSUED_DATE` | Issue date is in the future | Document cannot be valid – reject |
+
+#### Step 5: Take Action
+
+Based on the verdict:
+
+- **AUTHENTIC** → Proceed with the compliance workflow
+- **SUSPICIOUS** → Click **"Escalate"** to assign to a compliance officer for manual review
+- **FORGED** → Click **"Reject"** and initiate an investigation report
+- **UNVERIFIABLE** → Click **"Request Resubmission"** to ask for a clearer document
+
+---
+
+### 6.5 AI Asset Validation
+
+**Submit a Real-World Asset for AI-powered genuineness verification**
+
+The **AI Asset Validation** feature validates Real-World Assets (RWA) including real estate, tokenized securities, Private Equity fund tokens, and more. It checks:
+
+- **Suspicious keywords** in asset descriptions
+- **Registry reference** presence for regulated asset types
+- **Registration date** validity
+- **Valuation plausibility** against minimum thresholds
+- **Ownership chain** chronological consistency
+- **SHA-256 hash integrity** of supporting documents
+- **LLM semantic analysis** (when `ANTHROPIC_API_KEY` is configured)
+
+#### Step 1: Navigate to Asset Validation
+
+1. Click **"Compliance Checks"** in the left sidebar (`Ctrl+K`)
+2. Click the **"Asset Validation"** tab or button
+3. Or go directly to: `http://localhost:4005/checks/assets`
+
+#### Step 2: Select Asset Type
+
+| Category | Asset Types |
+|----------|------------|
+| **Real Estate** | `real_estate` – physical property / land |
+| **Securities** | `tokenized_security` – on-chain tokenized equity or debt |
+| **Private Equity** | `private_equity_fund`, `pe_fund_token` – LP interests and fund units |
+| **Debt** | `debt_instrument` – bonds, notes, loans |
+| **Other Physical** | `commodity`, `vehicle`, `art_collectible`, `intellectual_property` |
+| **Other** | `other` |
+
+> **Note:** Asset types marked with ✅ Registry Required (`real_estate`, `tokenized_security`, `private_equity_fund`, `pe_fund_token`, `debt_instrument`) must include a **Registry Reference**.
+
+#### Step 3: Enter Asset Details
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| **Asset Type** | ✅ | Selected in Step 2 |
+| **Asset Description** | ✅ | Full description from title deed, certificate, or token contract |
+| **Owner Name** | Recommended | Current registered owner's full name |
+| **Owner Jurisdiction** | Recommended | 2-character code: `AE`, `US`, `IN`, etc. |
+| **Registry Reference** | Required for regulated types | Land dept. ref., ISIN, on-chain contract address |
+| **Registration Date** | Recommended | ISO-8601 date (YYYY-MM-DD) |
+| **Valuation (USD)** | Recommended | Declared valuation amount |
+| **Ownership Chain** | Optional | List of past owners (oldest → current) with transfer dates |
+| **Content Hash** | Optional | SHA-256 of supporting document for tamper-detection |
+
+**Adding an Ownership Chain:**
+
+Click **"+ Add Ownership Record"** for each historical owner:
+```
+Owner 1 (oldest):   Developer Corp LLC       Transfer: 2018-01-10
+Owner 2:            Previous Owner           Transfer: 2021-08-22
+Owner 3 (current):  Ahmed Al Maktoum         Transfer: 2024-06-15
+```
+
+The system verifies that:
+- Transfer dates are in chronological order
+- The last entry's owner matches the declared **Owner Name**
+
+#### Step 4: Submit and View Results
+
+Click **"Validate Asset"** to submit. Results appear within 1–3 seconds.
+
+**Understanding the Asset Validation Result:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Asset Validation Result                                │
+│                                                         │
+│  Verdict:        ✅ VALID              (or ⚠️/❌)       │
+│  Validity Score: 88/100                                 │
+│  Risk Score:     12/100                                 │
+│                                                         │
+│  ─── Integrity Check ───────────────────────────────── │
+│  Hash Match:             ✅ Passed                      │
+│  Ownership Chain:        ✅ Valid                       │
+│  Registration Date:      ✅ Valid                       │
+│                                                         │
+│  ─── AI Analysis ───────────────────────────────────── │
+│  Performed:      Yes (Claude claude-3-haiku)            │
+│  Confidence:     94%                                    │
+│  Reasoning:      Asset description and ownership        │
+│                  chain are consistent with a            │
+│                  legitimate Dubai real estate transfer. │
+│                                                         │
+│  ─── Recommendations ───────────────────────────────── │
+│  • Asset passed AI validation checks.                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Asset Verdict Meanings:**
+
+| Verdict | Color | Score | Meaning | What to Do |
+|---------|-------|-------|---------|-----------|
+| ✅ **VALID** | Green | 0–34 risk | Asset passed all checks | Proceed with tokenization/transfer |
+| ⚠️ **SUSPICIOUS** | Yellow | 35–69 risk | Anomalies detected | Escalate for manual review |
+| ❌ **INVALID** | Red | 70–100 risk | High fraud probability | Reject – do not tokenize or transfer |
+| 🔄 **UNVERIFIABLE** | Grey | — | Insufficient data | Request additional documentation |
+
+**Common Flags and Their Meanings:**
+
+| Flag | What It Means | Recommended Action |
+|------|--------------|-------------------|
+| `SUSPICIOUS_ASSET_KEYWORD` | Description contains words like "disputed", "lien", or "fraudulent" | Verify with registry |
+| `MISSING_REGISTRY_REFERENCE` | No registry ref provided for a type that requires one | Supply the reference number |
+| `IMPLAUSIBLY_LOW_VALUATION` | Valuation is below the minimum threshold for this asset type | Obtain an independent valuation |
+| `OWNERSHIP_MISMATCH` | Declared owner does not match the last ownership chain entry | Resolve the discrepancy before proceeding |
+| `ASSET_HASH_MISMATCH` | Supporting document has been altered | Treat as potentially fraudulent |
+| `FUTURE_REGISTRATION_DATE` | Asset registered in the future | Registration date is invalid – reject |
+
+#### Step 5: Take Action
+
+- **VALID** → Proceed with the PE tokenization or RWA compliance workflow
+- **SUSPICIOUS** → Click **"Escalate"** for compliance officer review
+- **INVALID** → Click **"Reject"** and generate an investigation report
+- **UNVERIFIABLE** → Click **"Request Resubmission"** with specific data requirements
+
+#### Combined Document + Asset Validation
+
+To validate a document and asset together (e.g. for PE tokenization onboarding):
+
+1. Click **"Compliance Checks"** in the left sidebar (`Ctrl+K`)
+2. Click the **"Combined Validation"** tab
+3. Or go directly to: `http://localhost:4005/checks/combined`
+4. Fill in both the **Document** section (e.g. Subscription Agreement) and the **Asset** section (e.g. PE Fund Token)
+5. Submit – the system runs both checks in parallel
+6. A single **Overall Status** (`APPROVED` / `ESCALATED` / `REJECTED`) is displayed along with individual results for each check
 
 ---
 
@@ -3208,6 +3446,18 @@ A: See [Section 12.1 - Issue 6: Export/Download Not Working](#issue-6-exportdown
 | **SLA** | Service Level Agreement - Response time commitment |
 | **Audit Trail** | Immutable log of all actions |
 | **WebSocket** | Real-time bidirectional communication protocol |
+| **RWA** | Real-World Asset – physical or financial asset represented on-chain |
+| **PE** | Private Equity – privately held investment fund |
+| **LP** | Limited Partner – investor in a PE fund |
+| **GP** | General Partner – fund manager |
+| **LPA** | Limited Partnership Agreement – legal document governing a PE fund |
+| **PPM** | Private Placement Memorandum – offering document for private investments |
+| **pe_fund_token** | Tokenized LP interest in a Private Equity fund |
+| **Authenticity Score** | 0-100 score for document genuineness (100 = definitely authentic) |
+| **Validity Score** | 0-100 score for asset genuineness (100 = definitely valid) |
+| **Fraud Risk Score** | 0-100 score indicating probability of fraud (0 = no risk) |
+| **Hash Integrity** | SHA-256 verification that a file has not been altered |
+| **Ownership Chain** | Historical sequence of asset owners from oldest to current |
 
 ### 15.3 Jurisdictions Reference
 
@@ -3243,8 +3493,8 @@ A: See [Section 12.1 - Issue 6: Export/Download Not Working](#issue-6-exportdown
 
 ## Document Information
 
-**Document Version:** 1.0  
-**Last Updated:** March 1, 2026  
+**Document Version:** 1.1  
+**Last Updated:** March 3, 2026  
 **Maintained By:** Ableka Lumina Documentation Team  
 **Feedback:** docs@ableka.com  
 
