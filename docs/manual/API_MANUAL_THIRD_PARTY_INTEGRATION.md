@@ -1,7 +1,7 @@
 # Ableka Lumina Compliance Platform - API Documentation & Integration Manual
 
-**Version:** 1.0  
-**Last Updated:** March 2, 2026  
+**Version:** 1.1  
+**Last Updated:** March 3, 2026  
 **API Base URL:** `http://localhost:4000/api/v1`  
 **Platform:** Ableka Lumina AI Compliance Engine  
 **Target Audience:** Third-Party Integrators, Vendors, Partners  
@@ -15,6 +15,9 @@
 2. [Authentication & Security](#2-authentication--security)
 3. [Getting Started](#3-getting-started)
 4. [Compliance Check Endpoints](#4-compliance-check-endpoints)
+   - [4.7 Document Validation Endpoint](#47-document-validation-endpoint)
+   - [4.8 Asset Validation Endpoint](#48-asset-validation-endpoint)
+   - [4.9 Combined Document & Asset Validation](#49-combined-document--asset-validation)
 5. [Real-Time Monitoring](#5-real-time-monitoring)
 6. [Workflow Management](#6-workflow-management)
 7. [Reporting & Analytics](#7-reporting--analytics)
@@ -43,6 +46,8 @@ The **Ableka Lumina Compliance API** is a RESTful web service enabling automated
 | **AML Screening** | Money laundering risk assessment with AI scoring | Continuous monitoring |
 | **Sanctions Screening** | Check against global sanctions lists | Compliance enforcement |
 | **Transfer Compliance** | Transaction approval/rejection | Payment gateways |
+| **Document Validation** | AI-powered authenticity check for compliance documents | KYC/onboarding document review |
+| **Asset Validation** | AI-powered Real-World Asset (RWA) genuineness check | PE tokenization, RWA compliance |
 | **Blockchain Monitoring** | Real-time transaction monitoring | DeFi/blockchain apps |
 | **Workflow Automation** | Create custom compliance workflows | Custom business logic |
 | **Real-Time Alerts** | Instant notification of compliance issues | Risk management |
@@ -1240,6 +1245,676 @@ POST /api/v1/sanctions/screen
   ],
   "lists_checked": 4,
   "screened_on": "2026-03-02T10:35:00Z"
+}
+```
+
+---
+
+### 4.7 Document Validation Endpoint
+
+**AI-powered authenticity verification for compliance documents**
+
+Validates documents such as passports, national IDs, title deeds, business registrations, and Private Equity tokenization documents (subscription agreements, LPAs, PPMs, capital call notices, distribution notices). The engine runs structural rule-based analysis and, when `ANTHROPIC_API_KEY` is configured, an LLM semantic reasoning pass.
+
+**Endpoint:**
+```
+POST /api/v1/documents/validate
+```
+
+**Required Permission:** `compliance:execute`
+
+**Request Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Supported Document Types:**
+
+| Value | Description |
+|-------|-------------|
+| `passport` | Government-issued passport |
+| `national_id` | National identity card |
+| `drivers_license` | Driver's license |
+| `utility_bill` | Utility or service bill |
+| `bank_statement` | Bank account statement |
+| `title_deed` | Property title deed |
+| `business_registration` | Company registration certificate |
+| `financial_statement` | Audited/unaudited financial statements |
+| `property_certificate` | Property ownership certificate |
+| `tax_document` | Tax return or assessment notice |
+| `subscription_agreement` | LP capital-commitment agreement (PE) |
+| `limited_partnership_agreement` | Core LPA governing a PE fund |
+| `private_placement_memorandum` | PPM / offering memorandum |
+| `capital_call_notice` | GP → LP capital-call instruction |
+| `distribution_notice` | GP → LP distribution notification |
+| `other` | Any other document type |
+
+**Request Body:**
+
+```json
+{
+  "documentType": "passport",
+  "content": "PASSPORT\nSurname: SMITH\nGiven Names: JOHN EDWARD\nNationality: GBR\nDate of Birth: 15 JAN 1985\nDate of Issue: 10 MAR 2020\nDate of Expiry: 09 MAR 2030\nPassport No: 123456789",
+  "issuerName": "Her Majesty's Passport Office",
+  "issuerJurisdiction": "UK",
+  "entityName": "John Edward Smith",
+  "issuedDate": "2020-03-10",
+  "expiryDate": "2030-03-09",
+  "documentHash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+}
+```
+
+> **Note:** The `issuedDate` and `expiryDate` API fields correspond to the date labels printed on the document (e.g. "Date of Issue", "Issue Date", "Valid From"). Use ISO-8601 format (`YYYY-MM-DD`) regardless of how the date appears in the document text.
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `documentType` | string | ✅ | One of the supported document types listed above |
+| `content` | string | ✅ | Extracted text content (OCR output) or base-64 encoded raw document |
+| `documentId` | string | ❌ | Custom identifier; auto-generated (UUID) if omitted |
+| `issuerName` | string | ❌ | Name of the issuing authority |
+| `issuerJurisdiction` | string | ❌ | 2–10 character jurisdiction code (e.g. `AE`, `US`, `IN`) |
+| `entityName` | string | ❌ | Name of the individual or entity the document belongs to |
+| `issuedDate` | string | ❌ | ISO-8601 issue date (e.g. `2020-03-10`) |
+| `expiryDate` | string | ❌ | ISO-8601 expiry date, if applicable |
+| `documentHash` | string | ❌ | SHA-256 hex hash of the original document file for tamper-detection |
+| `metadata` | object | ❌ | Additional key-value metadata |
+
+**Response (200 OK – Authentic):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "documentId": "doc_3f8a2b1c",
+    "documentType": "passport",
+    "verdict": "AUTHENTIC",
+    "authenticityScore": 92,
+    "fraudRiskScore": 8,
+    "flags": [],
+    "integrityCheck": {
+      "passed": true,
+      "hashMatch": true,
+      "expiryValid": true,
+      "dateConsistent": true
+    },
+    "aiAnalysis": {
+      "performed": true,
+      "confidence": 0.96,
+      "reasoning": "Document structure and metadata are consistent with a genuine UK passport; no anomalies detected."
+    },
+    "recommendations": ["Document passed AI validation checks."],
+    "timestamp": "2026-03-03T10:30:00Z"
+  }
+}
+```
+
+**Response (200 OK – Suspicious):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "documentId": "doc_9z8y7x6w",
+    "documentType": "bank_statement",
+    "verdict": "SUSPICIOUS",
+    "authenticityScore": 45,
+    "fraudRiskScore": 55,
+    "flags": [
+      {
+        "code": "SUSPICIOUS_KEYWORD",
+        "severity": "HIGH",
+        "description": "Document content contains suspicious keyword: \"frozen\"."
+      }
+    ],
+    "integrityCheck": {
+      "passed": false,
+      "hashMatch": true,
+      "expiryValid": null,
+      "dateConsistent": true
+    },
+    "aiAnalysis": {
+      "performed": true,
+      "confidence": 0.85,
+      "reasoning": "The account shows signs of restricted status which warrants further investigation."
+    },
+    "recommendations": [
+      "Escalate for manual compliance review.",
+      "Request additional supporting documents.",
+      "Cross-reference with issuing authority database."
+    ],
+    "timestamp": "2026-03-03T10:31:00Z"
+  }
+}
+```
+
+**Response (200 OK – Forged):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "documentId": "doc_forged001",
+    "documentType": "title_deed",
+    "verdict": "FORGED",
+    "authenticityScore": 10,
+    "fraudRiskScore": 90,
+    "flags": [
+      {
+        "code": "HASH_MISMATCH",
+        "severity": "CRITICAL",
+        "description": "Document hash does not match the provided content – the document may have been tampered with."
+      },
+      {
+        "code": "SUSPICIOUS_KEYWORD",
+        "severity": "HIGH",
+        "description": "Document content contains suspicious keyword: \"void\"."
+      }
+    ],
+    "integrityCheck": {
+      "passed": false,
+      "hashMatch": false,
+      "expiryValid": null,
+      "dateConsistent": true
+    },
+    "aiAnalysis": {
+      "performed": true,
+      "confidence": 0.97,
+      "reasoning": "Hash mismatch combined with void status indicators strongly suggest document tampering."
+    },
+    "recommendations": [
+      "Reject document – high probability of forgery.",
+      "Report to compliance officer for investigation.",
+      "Request original certified copy from issuing authority."
+    ],
+    "timestamp": "2026-03-03T10:32:00Z"
+  }
+}
+```
+
+**Document Verdict Reference:**
+
+| Verdict | Fraud Risk Score | Meaning | Recommended Action |
+|---------|-----------------|---------|-------------------|
+| `AUTHENTIC` | 0–34 | Document passed all checks | Accept and proceed |
+| `SUSPICIOUS` | 35–69 | Anomalies detected – possible tampering | Escalate for manual review |
+| `FORGED` | 70–100 | High probability of forgery | Reject immediately |
+| `UNVERIFIABLE` | — | Insufficient content for analysis | Manual review required |
+
+**Validation Flags Reference:**
+
+| Flag Code | Severity | Description |
+|-----------|----------|-------------|
+| `MISSING_FIELD_<FIELD>` | MEDIUM | A required field is absent for this document type |
+| `SUSPICIOUS_KEYWORD` | HIGH | Content contains a fraud-indicator keyword |
+| `INVALID_ISSUED_DATE` | HIGH | Issue date is not a valid ISO-8601 date |
+| `FUTURE_ISSUED_DATE` | CRITICAL | Issue date is in the future |
+| `DOCUMENT_EXPIRED` | HIGH | Document has passed its expiry date |
+| `EXPIRY_BEFORE_ISSUE` | CRITICAL | Expiry date is on or before the issue date |
+| `INSUFFICIENT_CONTENT` | MEDIUM | Document text is too short to validate |
+| `HASH_MISMATCH` | CRITICAL | SHA-256 hash does not match document content |
+| `VALIDATION_SERVICE_ERROR` | HIGH | Internal error during validation |
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:4000/api/v1/documents/validate \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documentType": "passport",
+    "content": "PASSPORT\nSurname: SMITH\nGiven Names: JOHN EDWARD\nPassport No: 123456789",
+    "issuerName": "HMPO",
+    "issuerJurisdiction": "UK",
+    "entityName": "John Edward Smith",
+    "issuedDate": "2020-03-10",
+    "expiryDate": "2030-03-09"
+  }'
+```
+
+---
+
+### 4.8 Asset Validation Endpoint
+
+**AI-powered genuineness check for Real-World Assets (RWA)**
+
+Validates Real-World Assets including real estate title deeds, tokenized securities, Private Equity fund units (`pe_fund_token`), debt instruments, commodities, and other financial or physical assets. Performs structural analysis, ownership-chain consistency verification, hash integrity checks, and optional LLM semantic reasoning.
+
+**Endpoint:**
+```
+POST /api/v1/assets/validate
+```
+
+**Required Permission:** `compliance:execute`
+
+**Supported Asset Types:**
+
+| Value | Description | Registry Required |
+|-------|-------------|:-----------------:|
+| `real_estate` | Physical property / land | ✅ |
+| `tokenized_security` | On-chain tokenized equity or debt | ✅ |
+| `private_equity_fund` | Traditional PE fund interest | ✅ |
+| `pe_fund_token` | Tokenized LP interest / fund unit | ✅ |
+| `debt_instrument` | Bond, note, or loan instrument | ✅ |
+| `commodity` | Physical or derivative commodity | ❌ |
+| `intellectual_property` | Patent, trademark, copyright | ❌ |
+| `vehicle` | Motor vehicle, vessel, aircraft | ❌ |
+| `art_collectible` | Fine art, collectibles, NFT-backed | ❌ |
+| `other` | Any other asset type | ❌ |
+
+**Minimum Valuation Thresholds (USD):**
+
+| Asset Type | Minimum | Notes |
+|------------|---------|-------|
+| `real_estate` | $1,000 | Below triggers `IMPLAUSIBLY_LOW_VALUATION` |
+| `tokenized_security` | $100 | — |
+| `private_equity_fund` | $10,000 | — |
+| `pe_fund_token` | $50,000 | Reflects typical LP minimum commitment |
+| `debt_instrument` | $100 | — |
+
+**Request Body:**
+
+```json
+{
+  "assetType": "real_estate",
+  "assetDescription": "Residential villa, Plot 42, Palm Jumeirah, Dubai. 4-bedroom, 450 sqm. Freehold title registered with Dubai Land Department.",
+  "ownerName": "Ahmed Al Maktoum",
+  "ownerJurisdiction": "AE",
+  "registryReference": "DLD-REF-2024-00123456",
+  "registrationDate": "2024-06-15",
+  "valuationAmount": 4500000,
+  "valuationCurrency": "USD",
+  "ownershipChain": [
+    { "owner": "Developer Corp LLC", "transferDate": "2018-01-10", "registryRef": "DLD-2018-0001" },
+    { "owner": "Previous Owner", "transferDate": "2021-08-22", "registryRef": "DLD-2021-0456" },
+    { "owner": "Ahmed Al Maktoum", "transferDate": "2024-06-15", "registryRef": "DLD-REF-2024-00123456" }
+  ],
+  "contentHash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "contentForHashing": "Residential villa, Plot 42, Palm Jumeirah..."
+}
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `assetType` | string | ✅ | One of the supported asset types |
+| `assetDescription` | string | ✅ | Textual description from title deed, certificate, or registry |
+| `assetId` | string | ❌ | Custom identifier; auto-generated if omitted |
+| `ownerName` | string | ❌ | Current registered owner name |
+| `ownerJurisdiction` | string | ❌ | 2–10 character jurisdiction code |
+| `registryReference` | string | ❌ | Registry / land-department / on-chain contract reference |
+| `registrationDate` | string | ❌ | ISO-8601 date of asset registration |
+| `valuationAmount` | number | ❌ | Declared asset valuation in USD (or `valuationCurrency`) |
+| `valuationCurrency` | string | ❌ | Currency of the valuation (default: `USD`) |
+| `ownershipChain` | array | ❌ | Chronological list of `{ owner, transferDate?, registryRef? }` |
+| `contentHash` | string | ❌ | SHA-256 hex hash of the supporting asset document |
+| `contentForHashing` | string | ❌ | Raw content to hash and verify against `contentHash` |
+| `metadata` | object | ❌ | Additional key-value metadata |
+
+**Response (200 OK – Valid):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "assetId": "ast_5e4d3c2b",
+    "assetType": "real_estate",
+    "verdict": "VALID",
+    "validityScore": 88,
+    "riskScore": 12,
+    "flags": [],
+    "integrityCheck": {
+      "passed": true,
+      "hashMatch": true,
+      "ownershipChainValid": true,
+      "registrationDateValid": true
+    },
+    "aiAnalysis": {
+      "performed": true,
+      "confidence": 0.94,
+      "reasoning": "Asset description and ownership chain are consistent with a legitimate Dubai real estate transfer; no anomalies detected."
+    },
+    "recommendations": ["Asset passed AI validation checks."],
+    "timestamp": "2026-03-03T10:40:00Z"
+  }
+}
+```
+
+**Response (200 OK – Suspicious):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "assetId": "ast_suspicious01",
+    "assetType": "tokenized_security",
+    "verdict": "SUSPICIOUS",
+    "validityScore": 50,
+    "riskScore": 50,
+    "flags": [
+      {
+        "code": "MISSING_REGISTRY_REFERENCE",
+        "severity": "HIGH",
+        "description": "Registry reference is required for asset type 'tokenized_security'."
+      },
+      {
+        "code": "IMPLAUSIBLY_LOW_VALUATION",
+        "severity": "MEDIUM",
+        "description": "Declared valuation $50 is below minimum threshold $100 for tokenized_security."
+      }
+    ],
+    "integrityCheck": {
+      "passed": false,
+      "hashMatch": null,
+      "ownershipChainValid": null,
+      "registrationDateValid": null
+    },
+    "aiAnalysis": {
+      "performed": false,
+      "confidence": 0.8,
+      "reasoning": "Structural rule-based analysis performed. Configure ANTHROPIC_API_KEY for LLM-enhanced analysis."
+    },
+    "recommendations": [
+      "Escalate for manual compliance review before proceeding.",
+      "Request certified documentation from registering authority.",
+      "Conduct independent valuation if valuation flags are present."
+    ],
+    "timestamp": "2026-03-03T10:41:00Z"
+  }
+}
+```
+
+**Response (200 OK – Invalid):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "assetId": "ast_invalid001",
+    "assetType": "pe_fund_token",
+    "verdict": "INVALID",
+    "validityScore": 5,
+    "riskScore": 95,
+    "flags": [
+      {
+        "code": "ASSET_HASH_MISMATCH",
+        "severity": "CRITICAL",
+        "description": "Asset document hash does not match provided content – possible tampering."
+      },
+      {
+        "code": "OWNERSHIP_MISMATCH",
+        "severity": "CRITICAL",
+        "description": "Current owner \"John Doe\" does not match last chain entry \"Jane Smith\"."
+      }
+    ],
+    "integrityCheck": {
+      "passed": false,
+      "hashMatch": false,
+      "ownershipChainValid": false,
+      "registrationDateValid": true
+    },
+    "aiAnalysis": {
+      "performed": true,
+      "confidence": 0.98,
+      "reasoning": "Critical ownership discrepancy and hash mismatch indicate fraudulent asset documentation."
+    },
+    "recommendations": [
+      "Reject asset – high probability of fraud or invalid title.",
+      "Report to compliance officer for immediate investigation.",
+      "Do not proceed with tokenization or transfer."
+    ],
+    "timestamp": "2026-03-03T10:42:00Z"
+  }
+}
+```
+
+**Asset Verdict Reference:**
+
+| Verdict | Risk Score | Meaning | Recommended Action |
+|---------|-----------|---------|-------------------|
+| `VALID` | 0–34 | Asset passed all checks | Accept and proceed |
+| `SUSPICIOUS` | 35–69 | Anomalies detected | Escalate for manual review |
+| `INVALID` | 70–100 | High probability of fraud/invalidity | Reject immediately |
+| `UNVERIFIABLE` | — | Insufficient data for analysis | Manual review required |
+
+**Asset Validation Flags Reference:**
+
+| Flag Code | Severity | Description |
+|-----------|----------|-------------|
+| `SUSPICIOUS_ASSET_KEYWORD` | HIGH | Asset description contains a fraud-indicator keyword |
+| `INSUFFICIENT_ASSET_DESCRIPTION` | MEDIUM | Description is too short to validate |
+| `MISSING_REGISTRY_REFERENCE` | HIGH | Registry reference absent for an asset type that requires it |
+| `INVALID_REGISTRATION_DATE` | HIGH | Registration date is not a valid ISO-8601 date |
+| `FUTURE_REGISTRATION_DATE` | CRITICAL | Registration date is in the future |
+| `IMPLAUSIBLY_LOW_VALUATION` | MEDIUM | Declared valuation is below the minimum threshold |
+| `ZERO_OR_NEGATIVE_VALUATION` | HIGH | Valuation is zero or negative |
+| `OWNERSHIP_CHAIN_DATE_INCONSISTENCY` | HIGH | Transfer dates in ownership chain are out of order |
+| `OWNERSHIP_MISMATCH` | CRITICAL | Declared owner does not match last chain entry |
+| `ASSET_HASH_MISMATCH` | CRITICAL | SHA-256 hash does not match provided content |
+| `ASSET_VALIDATION_SERVICE_ERROR` | HIGH | Internal error during validation |
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:4000/api/v1/assets/validate \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetType": "real_estate",
+    "assetDescription": "Residential villa, Plot 42, Palm Jumeirah, Dubai. 4-bedroom, 450 sqm.",
+    "ownerName": "Ahmed Al Maktoum",
+    "ownerJurisdiction": "AE",
+    "registryReference": "DLD-REF-2024-00123456",
+    "registrationDate": "2024-06-15",
+    "valuationAmount": 4500000
+  }'
+```
+
+---
+
+### 4.9 Combined Document & Asset Validation
+
+**Validate a document and an asset together in a single request**
+
+Runs document validation and asset validation in parallel and aggregates the results into a single compliance decision (`APPROVED`, `REJECTED`, or `ESCALATED`). At least one of `document` or `asset` must be provided.
+
+**Endpoint:**
+```
+POST /api/v1/validation/combined
+```
+
+**Required Permission:** `compliance:execute`
+
+**Decision Logic:**
+
+| Condition | Overall Status |
+|-----------|---------------|
+| Document verdict `FORGED` OR Asset verdict `INVALID` | `REJECTED` |
+| Document verdict `SUSPICIOUS` OR Asset verdict `SUSPICIOUS` OR overall risk score ≥ 35 | `ESCALATED` |
+| Both checks pass with risk score < 35 | `APPROVED` |
+| Neither document nor asset provided | `ESCALATED` |
+
+**Request Body:**
+
+```json
+{
+  "requestId": "req_combined_001",
+  "document": {
+    "documentType": "subscription_agreement",
+    "content": "SUBSCRIPTION AGREEMENT\nFund: Global Growth PE Fund III\nLP: Ahmed Al Maktoum\nCommitment: USD 500,000\nDate: 2024-01-15",
+    "issuerName": "Global Growth Capital Partners",
+    "issuerJurisdiction": "AE",
+    "entityName": "Ahmed Al Maktoum",
+    "issuedDate": "2024-01-15"
+  },
+  "asset": {
+    "assetType": "pe_fund_token",
+    "assetDescription": "Tokenized LP interest in Global Growth PE Fund III. LP unit representing USD 500,000 capital commitment.",
+    "ownerName": "Ahmed Al Maktoum",
+    "ownerJurisdiction": "AE",
+    "registryReference": "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12",
+    "registrationDate": "2024-01-16",
+    "valuationAmount": 500000,
+    "valuationCurrency": "USD"
+  }
+}
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `requestId` | string | ❌ | Custom request identifier; auto-generated if omitted |
+| `document` | object | ❌* | Document validation input (see section 4.7) |
+| `asset` | object | ❌* | Asset validation input (see section 4.8) |
+
+\* At least one of `document` or `asset` must be provided.
+
+**Response (200 OK – Approved):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "requestId": "req_combined_001",
+    "overallStatus": "APPROVED",
+    "overallRiskScore": 10,
+    "documentResult": {
+      "documentId": "auto-generated-uuid",
+      "documentType": "subscription_agreement",
+      "verdict": "AUTHENTIC",
+      "authenticityScore": 90,
+      "fraudRiskScore": 10,
+      "flags": [],
+      "integrityCheck": { "passed": true, "hashMatch": null, "expiryValid": null, "dateConsistent": true },
+      "aiAnalysis": { "performed": true, "confidence": 0.93, "reasoning": "Subscription agreement appears genuine." },
+      "recommendations": ["Document passed AI validation checks."],
+      "timestamp": "2026-03-03T11:00:00Z"
+    },
+    "assetResult": {
+      "assetId": "auto-generated-uuid",
+      "assetType": "pe_fund_token",
+      "verdict": "VALID",
+      "validityScore": 90,
+      "riskScore": 10,
+      "flags": [],
+      "integrityCheck": { "passed": true, "hashMatch": null, "ownershipChainValid": null, "registrationDateValid": true },
+      "aiAnalysis": { "performed": true, "confidence": 0.91, "reasoning": "Tokenized PE fund unit record is consistent and complete." },
+      "recommendations": ["Asset passed AI validation checks."],
+      "timestamp": "2026-03-03T11:00:00Z"
+    },
+    "reasoning": "All validation checks passed. Document: AUTHENTIC (fraud risk 10/100). Asset: VALID (risk 10/100). Overall risk: 10/100",
+    "toolsUsed": ["document_validation", "asset_validation"],
+    "processingTime": 342,
+    "timestamp": "2026-03-03T11:00:00Z"
+  }
+}
+```
+
+**Response (200 OK – Rejected):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "requestId": "req_combined_002",
+    "overallStatus": "REJECTED",
+    "overallRiskScore": 83,
+    "documentResult": {
+      "documentId": "auto-generated-uuid",
+      "documentType": "limited_partnership_agreement",
+      "verdict": "FORGED",
+      "authenticityScore": 15,
+      "fraudRiskScore": 85,
+      "flags": [
+        { "code": "HASH_MISMATCH", "severity": "CRITICAL", "description": "Document hash does not match provided content." }
+      ],
+      "integrityCheck": { "passed": false, "hashMatch": false, "expiryValid": null, "dateConsistent": true },
+      "aiAnalysis": { "performed": true, "confidence": 0.97, "reasoning": "Hash mismatch is a strong indicator of document tampering." },
+      "recommendations": ["Reject document – high probability of forgery.", "Report to compliance officer."],
+      "timestamp": "2026-03-03T11:05:00Z"
+    },
+    "assetResult": null,
+    "reasoning": "One or more critical validation failures detected. Document: FORGED (risk 85/100). Overall risk: 85/100",
+    "toolsUsed": ["document_validation"],
+    "processingTime": 215,
+    "timestamp": "2026-03-03T11:05:00Z"
+  }
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:4000/api/v1/validation/combined \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document": {
+      "documentType": "subscription_agreement",
+      "content": "SUBSCRIPTION AGREEMENT\nFund: Global Growth PE Fund III\nLP: Ahmed Al Maktoum",
+      "issuerName": "Global Growth Capital Partners",
+      "issuerJurisdiction": "AE",
+      "entityName": "Ahmed Al Maktoum",
+      "issuedDate": "2024-01-15"
+    },
+    "asset": {
+      "assetType": "pe_fund_token",
+      "assetDescription": "Tokenized LP interest in Global Growth PE Fund III.",
+      "ownerName": "Ahmed Al Maktoum",
+      "ownerJurisdiction": "AE",
+      "registryReference": "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12",
+      "registrationDate": "2024-01-16",
+      "valuationAmount": 500000
+    }
+  }'
+```
+
+**Node.js Integration Example:**
+
+```javascript
+const axios = require('axios');
+
+async function validatePETokenization(subscriptionDoc, fundToken) {
+  const response = await axios.post(
+    'http://localhost:4000/api/v1/validation/combined',
+    {
+      document: {
+        documentType: 'subscription_agreement',
+        content: subscriptionDoc.extractedText,
+        issuerName: subscriptionDoc.gpName,
+        issuerJurisdiction: subscriptionDoc.jurisdiction,
+        entityName: subscriptionDoc.lpName,
+        issuedDate: subscriptionDoc.signedDate,
+      },
+      asset: {
+        assetType: 'pe_fund_token',
+        assetDescription: fundToken.description,
+        ownerName: fundToken.lpName,
+        ownerJurisdiction: fundToken.jurisdiction,
+        registryReference: fundToken.contractAddress,
+        registrationDate: fundToken.mintDate,
+        valuationAmount: fundToken.commitmentUSD,
+      },
+    },
+    { headers: { Authorization: `Bearer ${process.env.ABLEKA_JWT_TOKEN}` } }
+  );
+
+  const { overallStatus, overallRiskScore, reasoning } = response.data.data;
+
+  if (overallStatus === 'APPROVED') {
+    console.log(`✅ Tokenization approved. Risk: ${overallRiskScore}/100`);
+  } else if (overallStatus === 'ESCALATED') {
+    console.log(`⏳ Escalated for review. Risk: ${overallRiskScore}/100. Reason: ${reasoning}`);
+  } else {
+    console.log(`❌ Tokenization rejected. Risk: ${overallRiskScore}/100. Reason: ${reasoning}`);
+  }
+
+  return response.data.data;
 }
 ```
 
@@ -2684,8 +3359,8 @@ app.post('/webhooks/compliance', async (req, res) => {
 
 ## Document Information
 
-**API Documentation Version:** 1.0  
-**Last Updated:** March 2, 2026  
+**API Documentation Version:** 1.1  
+**Last Updated:** March 3, 2026  
 **API Version Documented:** 1.0  
 **Maintained By:** Ableka Lumina Engineering  
 **Support Email:** api-support@ableka.com  
@@ -2709,6 +3384,11 @@ app.post('/webhooks/compliance', async (req, res) => {
 - `POST /kyc/verify` - Identity verification only
 - `POST /aml/assess-risk` - AML scoring only
 - `POST /sanctions/screen` - Sanctions check only
+
+**Document & Asset Validation:**
+- `POST /documents/validate` - AI document authenticity check
+- `POST /assets/validate` - AI Real-World Asset validation
+- `POST /validation/combined` - Combined document + asset validation
 
 **Workflows:**
 - `POST /workflows` - Create workflow
