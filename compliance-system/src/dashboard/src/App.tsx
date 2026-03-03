@@ -6,9 +6,11 @@ import LoginPage from './components/LoginPage'
 import TenantBadge from './components/TenantBadge'
 import ApiKeysPage from './components/ApiKeysPage'
 import TenantOnboardingPage from './components/TenantOnboardingPage'
+import ComplianceDashboard from './components/ComplianceDashboard'
+import ArchitecturePage from './components/ArchitecturePage'
 import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './services/authAPI'
 
-type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding'
+type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard')
@@ -61,64 +63,43 @@ function App() {
             className={`nav-btn ${currentPage === 'dashboard' ? 'active' : ''}`}
             onClick={() => setCurrentPage('dashboard')}
           >
-            Dashboard
+            📊 Dashboard
           </button>
           <button
             className={`nav-btn ${(currentPage as string) === 'workflows' ? 'active' : ''}`}
             onClick={() => { setSelectedWorkflowId(undefined); setCurrentPage('workflows') }}
           >
-            Workflow Builder
+            ⚙️ Workflows
           </button>
           <button
             className={`nav-btn ${currentPage === 'api-keys' ? 'active' : ''}`}
             onClick={() => setCurrentPage('api-keys')}
           >
-            API Keys &amp; OAuth
+            🔑 API Keys &amp; OAuth
+          </button>
+          <button
+            className={`nav-btn ${currentPage === 'architecture' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('architecture')}
+          >
+            🏗 Architecture
           </button>
           {isAdmin && (
             <button
               className={`nav-btn ${currentPage === 'tenant-onboarding' ? 'active' : ''}`}
               onClick={() => setCurrentPage('tenant-onboarding')}
             >
-              Tenant Onboarding
+              🏢 Tenant Onboarding
             </button>
           )}
         </nav>
       </header>
 
       <main className="app-main">
-        {currentPage === 'dashboard' && (
-          <>
-            <section className="dashboard-section">
-              <h2>Compliance Status Overview</h2>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <h3>Total Checks</h3>
-                  <p className="stat-value">0</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Approved</h3>
-                  <p className="stat-value">0</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Escalated</h3>
-                  <p className="stat-value">0</p>
-                </div>
-                <div className="stat-card">
-                  <h3>Rejected</h3>
-                  <p className="stat-value">0</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="dashboard-section">
-              <h2>Recent Transactions</h2>
-              <p>Waiting for API connection…</p>
-            </section>
-          </>
-        )}
+        {currentPage === 'dashboard' && <ComplianceDashboard claims={claims} />}
 
         {currentPage === 'api-keys' && <ApiKeysPage claims={claims} />}
+
+        {currentPage === 'architecture' && <ArchitecturePage />}
 
         {currentPage === 'tenant-onboarding' && isAdmin && <TenantOnboardingPage />}
 

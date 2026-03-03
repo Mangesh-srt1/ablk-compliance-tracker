@@ -10,6 +10,7 @@ import axios, { AxiosInstance } from 'axios';
 import { getStoredToken } from './authAPI';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 10_000;
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ class ComplianceAPIClient {
   private client: AxiosInstance;
 
   constructor() {
-    this.client = axios.create({ baseURL: API_BASE_URL, timeout: 10_000 });
+    this.client = axios.create({ baseURL: API_BASE_URL, timeout: API_TIMEOUT_MS });
 
     // Inject Bearer token on every request
     this.client.interceptors.request.use((config) => {

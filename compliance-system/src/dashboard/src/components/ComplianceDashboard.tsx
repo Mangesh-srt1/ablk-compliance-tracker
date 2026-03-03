@@ -14,6 +14,17 @@ import {
 import type { TokenClaims } from '../services/authAPI';
 import '../styles/ComplianceDashboard.css';
 
+// ─── constants ────────────────────────────────────────────────────────────────
+
+const DEFAULT_CASE_LIMIT = 10;
+
+// ─── Role helper ──────────────────────────────────────────────────────────────
+
+/** Returns true for roles that can create/manage compliance cases. */
+function canManageCases(role: string): boolean {
+  return role === 'compliance_officer' || role === 'admin';
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
@@ -240,8 +251,7 @@ const ComplianceDashboard: React.FC<Props> = ({ claims }) => {
   const [showNewCase, setShowNewCase] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  const isComplianceOfficer =
-    claims.role === 'compliance_officer' || claims.role === 'admin';
+  const isComplianceOfficer = canManageCases(claims.role);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -249,7 +259,7 @@ const ComplianceDashboard: React.FC<Props> = ({ claims }) => {
     try {
       const [dash, caseList] = await Promise.all([
         complianceAPI.getDashboard(),
-        complianceAPI.listCases({ limit: 10 }),
+        complianceAPI.listCases({ limit: DEFAULT_CASE_LIMIT }),
       ]);
       setDashboard(dash);
       setCases(caseList);
