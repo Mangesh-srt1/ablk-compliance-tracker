@@ -437,11 +437,12 @@ router.put(
 /**
  * POST /api/v1/cases/:caseId/notes
  * Add an investigator note to a compliance case (FR-7.13 audit trail).
+ * Accessible to compliance_analyst (cases:notes) and compliance_officer (cases:notes).
  */
 router.post(
   '/:caseId/notes',
   authenticateToken,
-  requirePermission('cases:write'),
+  requirePermission('cases:notes'),
   [
     param('caseId').isUUID().withMessage('Valid case ID (UUID) is required'),
 

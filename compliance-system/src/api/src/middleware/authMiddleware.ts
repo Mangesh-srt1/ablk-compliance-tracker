@@ -278,6 +278,10 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'aml:read',
     'kyc:read',
     'reports:read',
+    'cases:read',
+    'alerts:read',
+    'alerts:write',
+    'audit:read',
   ],
   [ROLES.COMPLIANCE_OFFICER]: [
     'compliance:read',
@@ -289,10 +293,16 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'cases:manage',
     'cases:approve',
     'cases:reject',
+    'cases:notes',
     'sar:file',
     'rules:edit',
-    'audit:read',
+    'alerts:read',
+    'alerts:write',
     'reports:read',
+    'reports:write',
+    'reports:submit',
+    'audit:read',
+    'monitoring:write',
   ],
   [ROLES.COMPLIANCE_ANALYST]: [
     'compliance:read',
@@ -301,6 +311,8 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'cases:read',
     'cases:notes',
     'transactions:read',
+    'alerts:read',
+    'reports:read',
     'audit:read',
   ],
   [ROLES.OPERATOR]: [
@@ -309,8 +321,10 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'kyc:read',
     'cases:read',
     'reviews:trigger',
+    'reports:read',
     'reports:export',
     'assets:view',
+    'alerts:read',
   ],
   [ROLES.READ_ONLY]: [
     'compliance:read',
@@ -319,6 +333,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'cases:read',
     'reports:read',
     'audit:read',
+    'alerts:read',
   ],
   // ── Legacy / backward-compat aliases ─────────────────────────────────────
   // These role values existed before the 5-role expansion and are kept for
@@ -422,7 +437,8 @@ export const requireAtLeastRole = (minRole: string) => {
 };
 
 /**
- * Permission-based authorization middleware
+ * Permission-based authorization middleware.
+ * Also grants access when the user holds the wildcard permission '*' (global admin).
  */
 export const requirePermission = (requiredPermission: string) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -434,10 +450,13 @@ export const requirePermission = (requiredPermission: string) => {
       return;
     }
 
-    if (!req.user.permissions?.includes(requiredPermission)) {
+    const perms = req.user.permissions ?? [];
+    const hasPermission = perms.includes('*') || perms.includes(requiredPermission);
+
+    if (!hasPermission) {
       logger.warn('Insufficient permission access', {
         userId: req.user.id,
-        userPermissions: req.user.permissions,
+        userPermissions: perms,
         requiredPermission,
         path: req.path,
       });
@@ -457,6 +476,12 @@ export const requirePermission = (requiredPermission: string) => {
  * Admin-only middleware
  */
 export const requireAdmin = requireRole('admin');
+
+/**
+ * Tenant-admin-or-above middleware.
+ * Passes for tenant_admin and global admin.
+ */
+export const requireTenantAdmin = requireAtLeastRole(ROLES.TENANT_ADMIN);
 
 /**
  * Compliance officer middleware – allows compliance_officer, tenant_admin, and admin.

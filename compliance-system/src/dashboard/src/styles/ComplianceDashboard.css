@@ -538,3 +538,35 @@
 @keyframes cd-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Role capability list ──────────────────────────────────────────────────── */
+
+.cd-capability-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cd-capability-list li {
+  font-size: 0.82rem;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cd-cap-on {
+  color: #15803d;
+}
+
+.cd-cap-off {
+  color: #9ca3af;
+}
+
+.cd-cap-info {
+  color: #4b5563;
+  font-style: italic;
+}

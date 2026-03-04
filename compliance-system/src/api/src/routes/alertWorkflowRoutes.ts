@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import { requirePermission } from '../middleware/authMiddleware';
+import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { getAlertDispatchService } from '../services/alertDispatchService';
 import { getWebhookService } from '../services/webhookService';
 import { getReScreeningScheduler } from '../services/reScreeningScheduler';
@@ -13,6 +13,7 @@ const scheduler = getReScreeningScheduler();
 
 router.post(
   '/alerts/configure',
+  authenticateToken,
   requirePermission('alerts:write'),
   [
     body('clientId').isString().notEmpty(),
@@ -42,6 +43,7 @@ router.post(
 
 router.get(
   '/alerts/settings/:clientId',
+  authenticateToken,
   requirePermission('alerts:read'),
   [param('clientId').isString().notEmpty()],
   (req: Request, res: Response) => {
@@ -76,6 +78,7 @@ router.get(
 
 router.post(
   '/alerts/dispatch',
+  authenticateToken,
   requirePermission('alerts:write'),
   [
     body('clientId').isString().notEmpty(),
@@ -112,6 +115,7 @@ router.post(
 
 router.post(
   '/webhooks/register',
+  authenticateToken,
   requirePermission('alerts:write'),
   [body('clientId').isString().notEmpty(), body('url').isURL(), body('events').isArray({ min: 1 })],
   (req: Request, res: Response) => {
@@ -135,6 +139,7 @@ router.post(
 
 router.get(
   '/webhooks/deliveries',
+  authenticateToken,
   requirePermission('alerts:read'),
   [query('clientId').optional().isString(), query('eventType').optional().isString(), query('status').optional().isIn(['SENT', 'FAILED'])],
   (req: Request, res: Response) => {
@@ -163,6 +168,7 @@ router.get(
 
 router.post(
   '/monitoring/rescreening/schedule',
+  authenticateToken,
   requirePermission('monitoring:write'),
   [
     body('clientId').isString().notEmpty(),
@@ -189,7 +195,7 @@ router.post(
   }
 );
 
-router.post('/monitoring/rescreening/run', requirePermission('monitoring:write'), (req: Request, res: Response) => {
+router.post('/monitoring/rescreening/run', authenticateToken, requirePermission('monitoring:write'), (req: Request, res: Response) => {
   const result = scheduler.runDueSchedules(new Date());
   return res.status(200).json({ success: true, data: result });
 });

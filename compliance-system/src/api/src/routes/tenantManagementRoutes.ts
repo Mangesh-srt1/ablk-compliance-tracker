@@ -11,14 +11,14 @@
  * Mutation routes additionally require the 'admin' role.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import db from '../config/database';
-import { authenticateToken, requireRole } from '../middleware/authMiddleware';
+import { authenticateToken, requireRole, requireAtLeastRole, ROLES } from '../middleware/authMiddleware';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
 
 const router = Router();
@@ -56,6 +56,31 @@ function validationErrors(req: Request, res: Response): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Middleware: allows global admin to act on any tenant, or a tenant_admin to
+ * act only on their own tenant (matched via req.user.tenant === req.params.tenantId).
+ */
+function requireTenantAccess(req: Request, res: Response, next: NextFunction): void {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+    return;
+  }
+  if (user.role === ROLES.GLOBAL_ADMIN) {
+    next();
+    return;
+  }
+  if (user.role === ROLES.TENANT_ADMIN && user.tenant === req.params.tenantId) {
+    next();
+    return;
+  }
+  res.status(403).json({
+    error: 'Access denied',
+    code: 'INSUFFICIENT_ROLE',
+    message: 'Global admin or the tenant\'s own admin is required',
+  });
 }
 
 /**
@@ -173,7 +198,7 @@ router.get(
 router.post(
   '/:tenantId/users',
   authenticateToken,
-  requireRole('admin'),
+  requireTenantAccess,
   [
     param('tenantId').notEmpty(),
     body('email').isEmail().normalizeEmail(),
@@ -274,7 +299,7 @@ router.get(
 router.post(
   '/:tenantId/api-keys',
   authenticateToken,
-  requireRole('admin'),
+  requireTenantAccess,
   [
     param('tenantId').notEmpty(),
     body('products').isArray({ min: 1 }).withMessage('At least one product is required'),
@@ -350,7 +375,7 @@ router.get(
 router.delete(
   '/:tenantId/api-keys/:keyId',
   authenticateToken,
-  requireRole('admin'),
+  requireTenantAccess,
   async (req: Request, res: Response) => {
     try {
       const result = await db.query(
@@ -384,7 +409,7 @@ router.delete(
 router.post(
   '/:tenantId/oauth-clients',
   authenticateToken,
-  requireRole('admin'),
+  requireTenantAccess,
   [
     param('tenantId').notEmpty(),
     body('products').isArray({ min: 1 }).withMessage('At least one product is required'),
@@ -472,7 +497,7 @@ router.get(
 router.delete(
   '/:tenantId/oauth-clients/:clientDbId',
   authenticateToken,
-  requireRole('admin'),
+  requireTenantAccess,
   async (req: Request, res: Response) => {
     try {
       const result = await db.query(

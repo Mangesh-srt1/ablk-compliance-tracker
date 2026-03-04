@@ -17,8 +17,21 @@ jest.mock('../../config/redis', () => ({
   configureRedis: jest.fn(),
 }));
 jest.mock('../../middleware/authMiddleware', () => ({
-  authenticateToken: (_req: any, _res: any, next: any) => next(),
+  authenticateToken: (req: any, _res: any, next: any) => {
+    // Set a default admin user so requireTenantAccess checks pass
+    req.user = { id: 'admin-user', role: 'admin', permissions: ['*'], tenant: 'TENANT_TEST' };
+    next();
+  },
   requireRole: (_role: string) => (_req: any, _res: any, next: any) => next(),
+  requireAtLeastRole: (_role: string) => (_req: any, _res: any, next: any) => next(),
+  ROLES: {
+    GLOBAL_ADMIN: 'admin',
+    TENANT_ADMIN: 'tenant_admin',
+    COMPLIANCE_OFFICER: 'compliance_officer',
+    COMPLIANCE_ANALYST: 'compliance_analyst',
+    OPERATOR: 'operator',
+    READ_ONLY: 'read_only',
+  },
 }));
 
 import db from '../../config/database';
