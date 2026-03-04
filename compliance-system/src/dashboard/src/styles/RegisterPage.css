@@ -412,3 +412,25 @@
     gap: 0.4rem;
   }
 }
+
+/* ── Step 3: Pending admin approval ───────────────────────────────────────── */
+.reg-pending-approval {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin: 1rem 0 1.25rem;
+  text-align: center;
+}
+
+.reg-pending-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.reg-pending-approval p {
+  margin: 0.4rem 0;
+  color: #374151;
+  font-size: 0.93rem;
+  line-height: 1.5;
+}

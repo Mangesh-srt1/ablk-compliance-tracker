@@ -4,6 +4,8 @@
  *   Step 1 – Fill in email, full name, password and select a platform role.
  *   Step 2 – Enter the 6-digit OTP sent to the registered email address.
  *             In development the OTP is shown directly on screen.
+ *   Step 3 – Pending approval notice shown after successful OTP verification.
+ *             A platform admin must approve the account before the user can log in.
  *
  * Available roles (problem-statement spec):
  *   TENANT_ADMIN | COMPLIANCE_OFFICER | COMPLIANCE_ANALYST | OPERATOR | READ_ONLY
@@ -62,7 +64,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onSwitchToLogin }) => {
   // ── Step 1 state ────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
@@ -172,8 +174,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onSwitchToLogin
     }
     setLoading(true);
     try {
-      const claims = await authAPI.verifyOtp(email, code);
-      onRegister(claims);
+      const result = await authAPI.verifyOtp(email, code);
+      if ('requiresAdminApproval' in result) {
+        // Admin approval required — move to step 3 (pending notice)
+        setStep(3);
+      } else {
+        // Legacy: JWT issued immediately (e.g., admin bypassed)
+        onRegister(result);
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -223,9 +231,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onSwitchToLogin
             <span className="reg-step-label">Your details</span>
           </div>
           <div className="reg-step-connector" />
-          <div className={`reg-step ${step >= 2 ? 'active' : ''}`}>
-            <span className="reg-step-num">2</span>
+          <div className={`reg-step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'done' : ''}`}>
+            <span className="reg-step-num">{step > 2 ? '✓' : '2'}</span>
             <span className="reg-step-label">Verify email</span>
+          </div>
+          <div className="reg-step-connector" />
+          <div className={`reg-step ${step >= 3 ? 'active' : ''}`}>
+            <span className="reg-step-num">3</span>
+            <span className="reg-step-label">Await approval</span>
           </div>
         </div>
 
@@ -445,6 +458,31 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onSwitchToLogin
               </button>
             </p>
           </form>
+        )}
+        {/* ── Step 3: Pending admin approval ── */}
+        {step === 3 && (
+          <div className="reg-form">
+            <h2>Registration submitted!</h2>
+            <div className="reg-pending-approval">
+              <div className="reg-pending-icon" aria-hidden="true">🕐</div>
+              <p>
+                Your email <strong>{email}</strong> has been verified.
+              </p>
+              <p>
+                Your account is now <strong>pending approval</strong> by a platform
+                administrator. You will be able to sign in once your account has been activated.
+              </p>
+              <p className="reg-hint">
+                If you don't hear back within 24 hours, please contact your platform
+                administrator.
+              </p>
+            </div>
+            <p className="reg-switch">
+              <button type="button" className="reg-link" onClick={onSwitchToLogin}>
+                Back to sign in
+              </button>
+            </p>
+          </div>
         )}
       </div>
     </div>

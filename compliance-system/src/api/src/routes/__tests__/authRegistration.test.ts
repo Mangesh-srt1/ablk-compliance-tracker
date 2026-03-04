@@ -59,6 +59,11 @@ beforeEach(() => {
   (redis.expire as jest.Mock).mockResolvedValue(1);
 });
 
+// JWT_SECRET is set once for all tests that need it (avoids env pollution per-test)
+beforeAll(() => {
+  process.env.JWT_SECRET = 'test-secret';
+});
+
 // ─── POST /register ───────────────────────────────────────────────────────────
 
 describe('POST /register', () => {
@@ -217,7 +222,7 @@ describe('POST /verify-otp', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 200 + JWT on correct OTP', async () => {
+  it('returns 200 with pending approval state on correct OTP', async () => {
     const crypto = require('crypto');
     const correctOtp = '654321';
     const hashedOtp = crypto.createHash('sha256').update(correctOtp).digest('hex');
@@ -229,11 +234,8 @@ describe('POST /verify-otp', () => {
     ]);
     // Redis returns matching hash
     (getRedisClient().get as jest.Mock).mockResolvedValueOnce(hashedOtp);
-    // UPDATE to mark verified
+    // UPDATE to mark verified + pending_approval
     mockDbEmpty();
-
-    // Set JWT_SECRET for signing
-    process.env.JWT_SECRET = 'test-secret';
 
     const res = await request(app).post('/verify-otp').send({
       email: 'user@example.com',
@@ -242,8 +244,11 @@ describe('POST /verify-otp', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data).toHaveProperty('token');
+    // No JWT is issued – account awaits admin approval
+    expect(res.body.data).not.toHaveProperty('token');
+    expect(res.body.data.requiresAdminApproval).toBe(true);
     expect(res.body.data.user.email).toBe('user@example.com');
+    expect(res.body.data.message).toMatch(/pending approval/i);
   });
 });
 
@@ -288,5 +293,208 @@ describe('POST /resend-otp', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveProperty('debug_otp');
     expect(res.body.data.debug_otp).toMatch(/^\d{6}$/);
+  });
+});
+
+// ─── Admin approval endpoints ─────────────────────────────────────────────────
+
+/**
+ * Helper: generate a signed JWT for the test admin user.
+ * This mirrors what the real login endpoint would produce.
+ * JWT_SECRET is set in beforeAll above.
+ */
+function makeAdminToken(): string {
+  const jwt = require('jsonwebtoken');
+  return jwt.sign(
+    {
+      id: 'admin-uid',
+      email: 'admin@platform.com',
+      role: 'admin',
+      permissions: ['*'],
+      jti: 'admin-jti-1',
+    },
+    'test-secret',
+    { expiresIn: '1h', issuer: 'compliance-api', audience: 'compliance-client' }
+  );
+}
+
+function makeUserToken(role = 'read_only'): string {
+  const jwt = require('jsonwebtoken');
+  return jwt.sign(
+    {
+      id: 'user-uid',
+      email: 'user@example.com',
+      role,
+      permissions: [],
+      jti: 'user-jti-1',
+    },
+    'test-secret',
+    { expiresIn: '1h', issuer: 'compliance-api', audience: 'compliance-client' }
+  );
+}
+
+describe('GET /admin/pending-users', () => {
+  it('returns 401 when no token provided', async () => {
+    const res = await request(app).get('/admin/pending-users');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when called by a non-admin user', async () => {
+    const token = makeUserToken('compliance_officer');
+    // JWT verification uses real JWT_SECRET; Redis blacklist check returns null (not blacklisted)
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+
+    const res = await request(app)
+      .get('/admin/pending-users')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 200 with list of pending users for admin', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null); // not blacklisted
+
+    const pendingUsers = [
+      {
+        id: 'pending-uid-1',
+        email: 'newuser@example.com',
+        full_name: 'New User',
+        role: 'compliance_analyst',
+        tenant_id: null,
+        approval_status: 'pending_approval',
+        is_email_verified: true,
+        created_at: new Date().toISOString(),
+      },
+    ];
+    mockDbRows(pendingUsers);
+
+    const res = await request(app)
+      .get('/admin/pending-users')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.users).toHaveLength(1);
+    expect(res.body.data.users[0].approval_status).toBe('pending_approval');
+    expect(res.body.data.total).toBe(1);
+  });
+});
+
+describe('POST /admin/approve/:userId', () => {
+  it('returns 401 when no token provided', async () => {
+    const res = await request(app).post('/admin/approve/some-uid');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when called by non-admin', async () => {
+    const token = makeUserToken('tenant_admin');
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+
+    const res = await request(app)
+      .post('/admin/approve/some-uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 when user does not exist', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+    mockDbEmpty(); // SELECT returns nothing
+
+    const res = await request(app)
+      .post('/admin/approve/nonexistent-uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 409 when user is already approved', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'approved' }]);
+
+    const res = await request(app)
+      .post('/admin/approve/uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('ALREADY_APPROVED');
+  });
+
+  it('returns 200 and activates user on successful approval (admin JWT)', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'pending_approval' }]);
+    mockDbEmpty(); // UPDATE
+
+    const res = await request(app)
+      .post('/admin/approve/uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.message).toMatch(/approved/i);
+    expect(res.body.data.user.email).toBe('user@example.com');
+  });
+});
+
+describe('POST /admin/reject/:userId', () => {
+  it('returns 401 when no token provided', async () => {
+    const res = await request(app).post('/admin/reject/some-uid');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when called by non-admin', async () => {
+    const token = makeUserToken('compliance_officer');
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+
+    const res = await request(app)
+      .post('/admin/reject/some-uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 when user does not exist', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+    mockDbEmpty();
+
+    const res = await request(app)
+      .post('/admin/reject/nonexistent-uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 409 when user is already rejected', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'rejected' }]);
+
+    const res = await request(app)
+      .post('/admin/reject/uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('ALREADY_REJECTED');
+  });
+
+  it('returns 200 on successful rejection', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
+    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'pending_approval' }]);
+    mockDbEmpty(); // UPDATE
+
+    const res = await request(app)
+      .post('/admin/reject/uid')
+      .send({ reason: 'Incomplete information' })
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.message).toMatch(/rejected/i);
   });
 });
