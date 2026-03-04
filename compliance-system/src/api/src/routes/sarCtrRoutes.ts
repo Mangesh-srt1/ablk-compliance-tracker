@@ -7,7 +7,7 @@
 import { Router, Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import winston from 'winston';
-import { requirePermission } from '../middleware/authMiddleware';
+import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { getSARCTRAutomationService } from '../services/sarCtrAutomationService';
 import { getSARThresholdEngine } from '../services/sarThresholdEngine';
 import { getFinCenCtRGenerator } from '../services/finCenCtRGenerator';
@@ -38,7 +38,8 @@ const logger = winston.createLogger({
  */
 router.post(
   '/sar/auto-generate',
-  requirePermission('reports:write'),
+  authenticateToken,
+  requirePermission('sar:file'),
   [
     body('entityId').notEmpty().isUUID(),
     body('jurisdiction').isIn(['US', 'AE', 'IN', 'SA', 'EU']),
@@ -110,7 +111,8 @@ router.post(
  */
 router.post(
   '/sar/submit',
-  requirePermission('reports:submit'),
+  authenticateToken,
+  requirePermission('sar:file'),
   [body('sarId').notEmpty().isUUID(), body('submittedBy').optional().isString()],
   async (req: Request, res: Response) => {
     try {
@@ -161,6 +163,7 @@ router.post(
  */
 router.get(
   '/sar/history',
+  authenticateToken,
   requirePermission('reports:read'),
   [
     query('status').optional().isIn(['DRAFT', 'PENDING_REVIEW', 'SUBMITTED', 'ACKNOWLEDGED', 'REJECTED']),
@@ -218,6 +221,7 @@ router.get(
  */
 router.get(
   '/sar/:sarId',
+  authenticateToken,
   requirePermission('reports:read'),
   (req: Request, res: Response) => {
     try {
@@ -263,7 +267,8 @@ router.get(
  */
 router.post(
   '/ctr/auto-generate',
-  requirePermission('reports:write'),
+  authenticateToken,
+  requirePermission('sar:file'),
   [
     body('entityId').notEmpty().isUUID(),
     body('currency').isIn(['USD', 'AED', 'INR', 'SAR', 'EUR']),
@@ -332,7 +337,8 @@ router.post(
  */
 router.post(
   '/ctr/submit',
-  requirePermission('reports:submit'),
+  authenticateToken,
+  requirePermission('sar:file'),
   [body('ctrId').notEmpty().isUUID(), body('targetAuthority').optional().isString()],
   async (req: Request, res: Response) => {
     try {
@@ -383,6 +389,7 @@ router.post(
  */
 router.get(
   '/ctr/pending',
+  authenticateToken,
   requirePermission('reports:read'),
   async (req: Request, res: Response) => {
     try {
@@ -430,7 +437,8 @@ router.get(
  */
 router.post(
   '/batch-submit',
-  requirePermission('reports:submit'),
+  authenticateToken,
+  requirePermission('sar:file'),
   [body('reportIds').isArray().notEmpty()],
   async (req: Request, res: Response) => {
     try {
@@ -484,6 +492,7 @@ router.post(
  */
 router.post(
   '/trigger-rules/test',
+  authenticateToken,
   requirePermission('compliance:read'),
   [
     body('entityId').notEmpty().isUUID(),
@@ -540,6 +549,7 @@ router.post(
  */
 router.get(
   '/sar-ctr/config/:jurisdiction',
+  authenticateToken,
   requirePermission('compliance:read'),
   (req: Request, res: Response) => {
     try {

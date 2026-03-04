@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import winston from 'winston';
-import { requirePermission } from '../middleware/authMiddleware';
+import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { KycService } from '../services/kycService';
 import { Jurisdiction } from '../types/kyc';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
@@ -29,6 +29,7 @@ const kycService = new KycService();
  */
 router.post(
   '/kyc-check',
+  authenticateToken,
   requirePermission('kyc:execute'),
   [
     body('entityId')

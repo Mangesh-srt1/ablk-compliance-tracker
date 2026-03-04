@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import winston from 'winston';
-import { requirePermission } from '../middleware/authMiddleware';
+import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { AmlService } from '../services/amlService';
 import { Jurisdiction } from '../types/kyc';
 import { createErrorResponseFromDetails, ErrorCode, ErrorCategory } from '../types/errors';
@@ -29,6 +29,7 @@ const amlService = new AmlService();
  */
 router.post(
   '/aml-score',
+  authenticateToken,
   requirePermission('aml:execute'),
   [
     body('entityId')

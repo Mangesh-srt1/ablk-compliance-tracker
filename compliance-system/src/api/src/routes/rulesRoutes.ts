@@ -6,7 +6,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import winston from 'winston';
-import { requirePermission } from '../middleware/authMiddleware';
+import { authenticateToken, requirePermission, requireAtLeastRole, ROLES } from '../middleware/authMiddleware';
 import { ragService } from '../services/ragService';
 
 const router = Router();
@@ -27,6 +27,7 @@ const logger = winston.createLogger({
  */
 router.get(
   '/rules',
+  authenticateToken,
   requirePermission('compliance:read'),
   [
     query('query').isString().isLength({ min: 1, max: 500 }).withMessage('query must be 1-500 chars'),
@@ -58,7 +59,8 @@ router.get(
  */
 router.post(
   '/rules',
-  requirePermission('compliance:write'),
+  authenticateToken,
+  requirePermission('rules:edit'),
   [
     body('content').isString().isLength({ min: 1, max: 50000 }).withMessage('content must be 1-50000 chars'),
     body('jurisdiction').isString().isLength({ min: 1, max: 10 }).withMessage('jurisdiction is required'),
@@ -97,7 +99,8 @@ router.post(
  */
 router.delete(
   '/rules/:id',
-  requirePermission('admin'),
+  authenticateToken,
+  requireAtLeastRole(ROLES.TENANT_ADMIN),
   [
     param('id').isInt({ min: 1 }).withMessage('id must be a positive integer'),
   ],
@@ -132,6 +135,7 @@ router.delete(
  */
 router.get(
   '/rules/jurisdiction/:code',
+  authenticateToken,
   requirePermission('compliance:read'),
   [
     param('code').isString().isLength({ min: 1, max: 10 }).withMessage('jurisdiction code is required'),

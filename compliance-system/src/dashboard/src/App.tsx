@@ -67,10 +67,15 @@ function App() {
   const role = claims.role
   const isAdmin = role === 'admin'
   const isTenantAdmin = role === 'tenant_admin' || isAdmin
+
   // Roles that can access API keys: tenant_admin, admin
   const canManageApiKeys = isTenantAdmin
   // Roles that can trigger workflow builder: compliance_officer, tenant_admin, admin
   const canEditWorkflows = ['admin', 'tenant_admin', 'compliance_officer'].includes(role)
+  // Tenant admin can manage their own tenant settings
+  const canManageTenant = isTenantAdmin
+  // User approvals: global admin only
+  const canApproveUsers = isAdmin
 
   return (
     <div className="app">
@@ -120,7 +125,15 @@ function App() {
               🏢 Tenant Onboarding
             </button>
           )}
-          {isAdmin && (
+          {isTenantAdmin && !isAdmin && (
+            <button
+              className={`nav-btn ${currentPage === 'tenant-onboarding' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('tenant-onboarding')}
+            >
+              ⚙️ Tenant Settings
+            </button>
+          )}
+          {canApproveUsers && (
             <button
               className={`nav-btn ${currentPage === 'user-approvals' ? 'active' : ''}`}
               onClick={() => setCurrentPage('user-approvals')}
@@ -138,18 +151,18 @@ function App() {
 
         {currentPage === 'architecture' && <ArchitecturePage />}
 
-        {currentPage === 'tenant-onboarding' && isAdmin && <TenantOnboardingPage />}
+        {currentPage === 'tenant-onboarding' && canManageTenant && <TenantOnboardingPage />}
 
-        {currentPage === 'tenant-onboarding' && !isAdmin && (
+        {currentPage === 'tenant-onboarding' && !canManageTenant && (
           <section className="dashboard-section">
             <h2>Access Denied</h2>
             <p>Tenant onboarding requires the <strong>admin</strong> role.</p>
           </section>
         )}
 
-        {currentPage === 'user-approvals' && isAdmin && <AdminApprovalPage />}
+        {currentPage === 'user-approvals' && canApproveUsers && <AdminApprovalPage />}
 
-        {currentPage === 'user-approvals' && !isAdmin && (
+        {currentPage === 'user-approvals' && !canApproveUsers && (
           <section className="dashboard-section">
             <h2>Access Denied</h2>
             <p>User approvals require the <strong>admin</strong> role.</p>

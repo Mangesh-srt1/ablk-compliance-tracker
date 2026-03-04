@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 
 jest.mock('../../middleware/authMiddleware', () => ({
-  requirePermission: () => (req: any, _res: any, next: any) => {
+  authenticateToken: (req: any, _res: any, next: any) => {
     req.user = {
       id: 'test-user',
       email: 'test@example.com',
@@ -13,6 +13,7 @@ jest.mock('../../middleware/authMiddleware', () => ({
     };
     next();
   },
+  requirePermission: () => (_req: any, _res: any, next: any) => next(),
 }));
 
 const performAmlCheckMock = jest.fn();

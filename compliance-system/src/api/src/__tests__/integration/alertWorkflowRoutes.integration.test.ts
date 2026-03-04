@@ -3,7 +3,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 jest.mock('../../middleware/authMiddleware', () => ({
-  requirePermission: () => (req: any, _res: any, next: any) => {
+  authenticateToken: (req: any, _res: any, next: any) => {
     req.user = {
       id: 'test-user',
       email: 'test@example.com',
@@ -14,6 +14,7 @@ jest.mock('../../middleware/authMiddleware', () => ({
     };
     next();
   },
+  requirePermission: () => (_req: any, _res: any, next: any) => next(),
 }));
 
 const configureClientAlertsMock = jest.fn();

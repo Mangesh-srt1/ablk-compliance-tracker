@@ -22,7 +22,27 @@ const DEFAULT_CASE_LIMIT = 10;
 
 /** Returns true for roles that can create/manage compliance cases. */
 function canManageCases(role: string): boolean {
-  return role === 'compliance_officer' || role === 'admin';
+  return ['compliance_officer', 'admin', 'tenant_admin'].includes(role);
+}
+
+/** Returns true for roles that can add notes to cases (investigate). */
+function canAddNotes(role: string): boolean {
+  return ['compliance_analyst', 'compliance_officer', 'admin', 'tenant_admin'].includes(role);
+}
+
+/** Returns true for roles that can approve/reject reviews. */
+function canApproveReviews(role: string): boolean {
+  return ['compliance_officer', 'admin', 'tenant_admin'].includes(role);
+}
+
+/** Returns true for roles that can trigger manual reviews. */
+function canTriggerReviews(role: string): boolean {
+  return ['operator', 'compliance_officer', 'admin', 'tenant_admin'].includes(role);
+}
+
+/** Returns true for roles that can export operational reports. */
+function canExportReports(role: string): boolean {
+  return ['operator', 'compliance_officer', 'admin', 'tenant_admin'].includes(role);
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -251,7 +271,12 @@ const ComplianceDashboard: React.FC<Props> = ({ claims }) => {
   const [showNewCase, setShowNewCase] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  const isComplianceOfficer = canManageCases(claims.role);
+  const isOfficer = canManageCases(claims.role);
+  const analystOrAbove = canAddNotes(claims.role);
+  const canApprove = canApproveReviews(claims.role);
+  const canTrigger = canTriggerReviews(claims.role);
+  const canExport = canExportReports(claims.role);
+  const isReadOnly = claims.role === 'read_only';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -313,9 +338,19 @@ const ComplianceDashboard: React.FC<Props> = ({ claims }) => {
           )}
         </div>
         <div className="cd-topbar-actions">
-          {isComplianceOfficer && (
+          {isOfficer && (
             <button className="cd-btn-primary" onClick={() => setShowNewCase(true)}>
               + New Case
+            </button>
+          )}
+          {canTrigger && !isOfficer && (
+            <button className="cd-btn-secondary" title="Trigger a manual compliance review for a customer or asset">
+              🔍 Trigger Review
+            </button>
+          )}
+          {canExport && (
+            <button className="cd-btn-secondary" title="Export compliance reports">
+              📥 Export Report
             </button>
           )}
           <button className="cd-btn-secondary" onClick={load} disabled={loading}>
@@ -457,6 +492,38 @@ const ComplianceDashboard: React.FC<Props> = ({ claims }) => {
               <tr><td>High-Risk</td><td><strong className="cd-risk-num">{m?.highRiskEntities ?? '—'}</strong> entities</td></tr>
             </tbody>
           </table>
+
+          {/* ── Role capabilities summary ─────────────────────────── */}
+          <h3 className="cd-panel-title" style={{ marginTop: '1rem' }}>Your Capabilities</h3>
+          <ul className="cd-capability-list" aria-label="Role capabilities">
+            <li className={isOfficer ? 'cd-cap-on' : 'cd-cap-off'}
+                aria-label={`Create and manage cases: ${isOfficer ? 'allowed' : 'not allowed'}`}>
+              {isOfficer ? '✅' : '🚫'} Create &amp; manage cases
+            </li>
+            <li className={analystOrAbove ? 'cd-cap-on' : 'cd-cap-off'}
+                aria-label={`Add investigation notes: ${analystOrAbove ? 'allowed' : 'not allowed'}`}>
+              {analystOrAbove ? '✅' : '🚫'} Add investigation notes
+            </li>
+            <li className={canApprove ? 'cd-cap-on' : 'cd-cap-off'}
+                aria-label={`Approve or reject reviews: ${canApprove ? 'allowed' : 'not allowed'}`}>
+              {canApprove ? '✅' : '🚫'} Approve / reject reviews
+            </li>
+            <li className={isOfficer ? 'cd-cap-on' : 'cd-cap-off'}
+                aria-label={`File STR SAR reports: ${isOfficer ? 'allowed' : 'not allowed'}`}>
+              {isOfficer ? '✅' : '🚫'} File STR / SAR reports
+            </li>
+            <li className={canTrigger ? 'cd-cap-on' : 'cd-cap-off'}
+                aria-label={`Trigger manual reviews: ${canTrigger ? 'allowed' : 'not allowed'}`}>
+              {canTrigger ? '✅' : '🚫'} Trigger manual reviews
+            </li>
+            <li className={canExport ? 'cd-cap-on' : 'cd-cap-off'}
+                aria-label={`Export operational reports: ${canExport ? 'allowed' : 'not allowed'}`}>
+              {canExport ? '✅' : '🚫'} Export operational reports
+            </li>
+            {isReadOnly && (
+              <li className="cd-cap-info" role="note">ℹ️ View-only access — no modifications allowed</li>
+            )}
+          </ul>
         </div>
       </div>
 
@@ -470,7 +537,7 @@ const ComplianceDashboard: React.FC<Props> = ({ claims }) => {
         {cases.length === 0 ? (
           <div className="cd-empty-cases">
             <p>No compliance cases found.</p>
-            {isComplianceOfficer && (
+            {isOfficer && (
               <button className="cd-btn-primary" onClick={() => setShowNewCase(true)}>
                 Open First Case
               </button>
