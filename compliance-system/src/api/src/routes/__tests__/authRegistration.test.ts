@@ -7,6 +7,7 @@
 
 import express from 'express';
 import request from 'supertest';
+import bcrypt from 'bcryptjs';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,12 @@ function mockRedisGet(value: string | null) {
   (redis.get as jest.Mock).mockResolvedValueOnce(value);
 }
 
+/** Pre-hashed version of 'correctPassword' with bcrypt cost 1 (fast in tests). */
+let TEST_HASH: string;
+beforeAll(async () => {
+  TEST_HASH = await bcrypt.hash('correctPassword', 1);
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   // Reset redis mock
@@ -62,6 +69,53 @@ beforeEach(() => {
 // JWT_SECRET is set once for all tests that need it (avoids env pollution per-test)
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret';
+});
+
+// ─── POST /login ──────────────────────────────────────────────────────────────
+
+describe('POST /login', () => {
+  it('returns 401 for a pending_approval user (not yet approved by admin)', async () => {
+    // DB returns no rows because the query now filters is_active=true AND approval_status='approved'
+    mockDbEmpty();
+
+    const res = await request(app).post('/login').send({
+      email: 'pending@example.com',
+      password: 'securePass1',
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 401 for completely unknown email', async () => {
+    mockDbEmpty();
+
+    const res = await request(app).post('/login').send({
+      email: 'nobody@example.com',
+      password: 'securePass1',
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 401 for wrong password', async () => {
+    mockDbRows([{ id: 'uid', email: 'user@example.com', password_hash: TEST_HASH, role: 'read_only' }]);
+
+    const res = await request(app).post('/login').send({
+      email: 'user@example.com',
+      password: 'wrongPassword',
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 200 with JWT for an approved, active user', async () => {
+    mockDbRows([{ id: 'uid', email: 'user@example.com', password_hash: TEST_HASH, role: 'read_only' }]);
+
+    const res = await request(app).post('/login').send({
+      email: 'user@example.com',
+      password: 'correctPassword',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('token');
+  });
 });
 
 // ─── POST /register ───────────────────────────────────────────────────────────
@@ -426,8 +480,10 @@ describe('POST /admin/approve/:userId', () => {
   it('returns 200 and activates user on successful approval (admin JWT)', async () => {
     const token = makeAdminToken();
     (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
-    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'pending_approval' }]);
-    mockDbEmpty(); // UPDATE
+    // Promise.all fires user query and admin-bootstrap query simultaneously:
+    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'pending_approval' }]); // 1st: user SELECT
+    mockDbRows([{ is_bootstrap_admin: false }]); // 2nd: admin bootstrap SELECT
+    mockDbEmpty(); // 3rd: UPDATE (approve user)
 
     const res = await request(app)
       .post('/admin/approve/uid')
@@ -437,6 +493,31 @@ describe('POST /admin/approve/:userId', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.message).toMatch(/approved/i);
     expect(res.body.data.user.email).toBe('user@example.com');
+  });
+
+  it('suspends the bootstrap admin and blacklists token after approving a user', async () => {
+    const token = makeAdminToken();
+    (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null); // not blacklisted
+    // Promise.all fires user query and admin-bootstrap query simultaneously:
+    mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'operator', approval_status: 'pending_approval' }]); // 1st: user SELECT
+    mockDbRows([{ is_bootstrap_admin: true }]); // 2nd: admin bootstrap SELECT
+    mockDbEmpty(); // 3rd: UPDATE (approve user)
+    mockDbEmpty(); // 4th: UPDATE (suspend bootstrap admin)
+    // Redis set (blacklist) → already mocked to return 'OK'
+
+    const res = await request(app)
+      .post('/admin/approve/uid')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    // Token should have been blacklisted
+    expect(getRedisClient().set as jest.Mock).toHaveBeenCalledWith(
+      expect.stringContaining('jwt_blacklist:'),
+      '1',
+      'EX',
+      expect.any(Number)
+    );
   });
 });
 
