@@ -106,9 +106,12 @@ router.post(
 
       const { email, password } = req.body;
 
-      // Find user by email
+      // Find user by email – only allow fully approved, active accounts to log in.
+      // `is_active` is the canonical active flag (migration 005); `approval_status`
+      // ensures self-registered users cannot log in until a platform admin approves them.
       const userQuery =
-        'SELECT id, email, password_hash, role FROM users WHERE email = $1 AND active = true';
+        `SELECT id, email, password_hash, role FROM users
+          WHERE email = $1 AND is_active = true AND approval_status = 'approved'`;
       const userResult = await db.query(userQuery, [email]);
 
       if (userResult.rows.length === 0) {
@@ -216,9 +219,9 @@ router.post(
         process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'default-secret'
       ) as jwt.JwtPayload;
 
-      // Get user details
+      // Get user details – only allow fully approved, active accounts.
       const userQuery =
-        'SELECT id, email, role FROM users WHERE id = $1 AND active = true';
+        `SELECT id, email, role FROM users WHERE id = $1 AND is_active = true AND approval_status = 'approved'`;
       const userResult = await db.query(userQuery, [decoded.id]);
 
       if (userResult.rows.length === 0) {
@@ -684,10 +687,18 @@ router.post('/admin/approve/:userId', authenticateToken, async (req: Request, re
 
     const { userId } = req.params;
 
-    const userResult = await db.query(
-      `SELECT id, email, full_name, role, approval_status FROM users WHERE id = $1`,
-      [userId]
-    );
+    // Fetch the user being approved and the admin's bootstrap flag in parallel
+    // to avoid two sequential round-trips to the database.
+    const [userResult, adminResult] = await Promise.all([
+      db.query(
+        `SELECT id, email, full_name, role, approval_status FROM users WHERE id = $1`,
+        [userId]
+      ),
+      db.query(
+        `SELECT is_bootstrap_admin FROM users WHERE id = $1`,
+        [req.user.id]
+      ),
+    ]);
 
     if (userResult.rows.length === 0) {
       return res.status(404).json(
@@ -724,6 +735,25 @@ router.post('/admin/approve/:userId', authenticateToken, async (req: Request, re
       adminId: req.user.id,
       ip: req.ip,
     });
+
+    // ── Bootstrap admin one-time-use suspension ────────────────────────────
+    // If the approving admin is flagged as the bootstrap (seed) admin, suspend
+    // their account immediately after this approval and blacklist their current
+    // JWT so no further requests can be made with the same token.
+    const isBootstrap = adminResult.rows.length > 0 && adminResult.rows[0].is_bootstrap_admin;
+    if (isBootstrap) {
+      await db.query(
+        `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1`,
+        [req.user.id]
+      );
+      if (req.user.jti) {
+        await blacklistToken(req.user.jti, req.user.exp);
+      }
+      logger.info('Bootstrap admin suspended after approving first user', {
+        adminId: req.user.id,
+        ip: req.ip,
+      });
+    }
 
     return res.json({
       success: true,
