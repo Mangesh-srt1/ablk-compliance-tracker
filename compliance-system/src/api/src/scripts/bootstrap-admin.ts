@@ -41,10 +41,9 @@ async function bootstrapAdmin(): Promise<void> {
 
   await db.query(
     `INSERT INTO users
-       (id, email, full_name, role, password_hash, is_active, is_email_verified,
-        approval_status, permissions, products)
-     VALUES ($1, $2, $3, 'admin', $4, true, true, 'approved', $5, '{}')`,
-    [id, ADMIN_EMAIL, ADMIN_NAME, passwordHash, permissions]
+       (id, email, full_name, role, password_hash, active)
+     VALUES ($1, $2, $3, 'admin', $4, true)`,
+    [id, ADMIN_EMAIL, ADMIN_NAME, passwordHash]
   );
 
   console.log(`✅  Platform admin created successfully.`);

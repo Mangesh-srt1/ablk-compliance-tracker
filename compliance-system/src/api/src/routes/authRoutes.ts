@@ -108,7 +108,7 @@ router.post(
 
       // Find user by email
       const userQuery =
-        'SELECT id, email, password_hash, role, permissions, tenant_id, products FROM users WHERE email = $1 AND is_active = true';
+        'SELECT id, email, password_hash, role FROM users WHERE email = $1 AND active = true';
       const userResult = await db.query(userQuery, [email]);
 
       if (userResult.rows.length === 0) {
@@ -140,15 +140,11 @@ router.post(
       }
 
       // Generate JWT token (include jti for blacklist support - FR-8.2)
-      // Include tenant + products claims for multi-tenant product access control
       const tokenPayload = {
         id: user.id,
         email: user.email,
         role: user.role,
-        permissions: user.permissions || [],
         jti: uuidv4(),
-        ...(user.tenant_id ? { tenant: user.tenant_id } : {}),
-        products: user.products || [],
       };
 
       const token = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'default-secret', {
@@ -222,7 +218,7 @@ router.post(
 
       // Get user details
       const userQuery =
-        'SELECT id, email, role, permissions, tenant_id, products FROM users WHERE id = $1 AND is_active = true';
+        'SELECT id, email, role FROM users WHERE id = $1 AND active = true';
       const userResult = await db.query(userQuery, [decoded.id]);
 
       if (userResult.rows.length === 0) {
@@ -466,7 +462,7 @@ router.post(
 
       // Find the user (must exist and not yet verified)
       const userResult = await db.query(
-        `SELECT id, email, role, permissions, tenant_id, products, is_email_verified
+        `SELECT id, email, role
            FROM users WHERE email = $1`,
         [email]
       );

@@ -133,9 +133,10 @@ async function initializeApp(): Promise<void> {
     );
 
     // CORS configuration
+    const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:4005,http://localhost:3001').split(',').map(o => o.trim());
     app.use(
       cors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+        origin: corsOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
