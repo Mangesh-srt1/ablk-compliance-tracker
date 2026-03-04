@@ -504,38 +504,28 @@ router.post(
         );
       }
 
-      // Activate the account
+      // Mark email as verified and set to pending admin approval.
+      // The account remains inactive (is_active = false) until a platform admin
+      // explicitly approves it via POST /api/auth/admin/approve/:userId.
       await db.query(
-        `UPDATE users SET is_email_verified = true, is_active = true, updated_at = NOW()
-           WHERE id = $1`,
+        `UPDATE users
+            SET is_email_verified = true,
+                is_active         = false,
+                approval_status   = 'pending_approval',
+                updated_at        = NOW()
+          WHERE id = $1`,
         [user.id]
       );
 
-      // Issue JWT
-      const tokenPayload = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        permissions: user.permissions || [],
-        jti: uuidv4(),
-        ...(user.tenant_id ? { tenant: user.tenant_id } : {}),
-        products: user.products || [],
-      };
-
-      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'default-secret', {
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-        issuer: 'compliance-api',
-        audience: 'compliance-client',
-      } as jwt.SignOptions);
-
-      logger.info('Email verified, user activated', { userId: user.id, email, ip: req.ip });
+      logger.info('Email verified, awaiting admin approval', { userId: user.id, email, ip: req.ip });
 
       return res.json({
         success: true,
         data: {
-          token,
+          requiresAdminApproval: true,
           user: { id: user.id, email: user.email, role: user.role },
-          message: 'Email verified successfully. You are now logged in.',
+          message:
+            'Email verified successfully. Your account is pending approval by a platform administrator. You will be notified once your account is activated.',
         },
       });
     } catch (error) {
@@ -627,6 +617,222 @@ router.post(
           ErrorCode.SERVICE_UNAVAILABLE,
           ErrorCategory.INTERNAL,
           'Failed to resend verification code'
+        )
+      );
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin approval endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/auth/admin/pending-users
+ * List all self-registered users awaiting admin approval.
+ * Requires: authenticated admin (role = 'admin').
+ */
+router.get('/admin/pending-users', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json(
+        createErrorResponseFromDetails(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          ErrorCategory.AUTHORIZATION,
+          'Admin access required'
+        )
+      );
+    }
+
+    const result = await db.query(
+      `SELECT id, email, full_name, role, tenant_id, approval_status, is_email_verified, created_at
+         FROM users
+        WHERE approval_status = 'pending_approval'
+        ORDER BY created_at ASC`
+    );
+
+    return res.json({
+      success: true,
+      data: { users: result.rows, total: result.rows.length },
+    });
+  } catch (error) {
+    logger.error('Failed to fetch pending users', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return res.status(500).json(
+      createErrorResponseFromDetails(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        ErrorCategory.INTERNAL,
+        'Failed to fetch pending users'
+      )
+    );
+  }
+});
+
+/**
+ * POST /api/auth/admin/approve/:userId
+ * Approve a self-registered user. Sets is_active = true and approval_status = 'approved'.
+ * Requires: authenticated admin (role = 'admin').
+ */
+router.post('/admin/approve/:userId', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json(
+        createErrorResponseFromDetails(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          ErrorCategory.AUTHORIZATION,
+          'Admin access required'
+        )
+      );
+    }
+
+    const { userId } = req.params;
+
+    const userResult = await db.query(
+      `SELECT id, email, full_name, role, approval_status FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json(
+        createErrorResponseFromDetails(
+          ErrorCode.USER_NOT_FOUND,
+          ErrorCategory.VALIDATION,
+          'User not found'
+        )
+      );
+    }
+
+    const user = userResult.rows[0];
+
+    if (user.approval_status === 'approved') {
+      return res.status(409).json({
+        success: false,
+        error: 'User is already approved',
+        code: 'ALREADY_APPROVED',
+      });
+    }
+
+    await db.query(
+      `UPDATE users
+          SET is_active       = true,
+              approval_status = 'approved',
+              updated_at      = NOW()
+        WHERE id = $1`,
+      [userId]
+    );
+
+    logger.info('User approved by admin', {
+      userId,
+      email: user.email,
+      adminId: req.user.id,
+      ip: req.ip,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        message: `User ${user.email} has been approved and can now log in.`,
+        user: { id: user.id, email: user.email, role: user.role },
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to approve user', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return res.status(500).json(
+      createErrorResponseFromDetails(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        ErrorCategory.INTERNAL,
+        'Failed to approve user'
+      )
+    );
+  }
+});
+
+/**
+ * POST /api/auth/admin/reject/:userId
+ * Reject a self-registered user's application.
+ * Sets is_active = false and approval_status = 'rejected'.
+ * Requires: authenticated admin (role = 'admin').
+ */
+router.post(
+  '/admin/reject/:userId',
+  [body('reason').optional().isLength({ max: 500 })],
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json(
+          createErrorResponseFromDetails(
+            ErrorCode.INSUFFICIENT_PERMISSIONS,
+            ErrorCategory.AUTHORIZATION,
+            'Admin access required'
+          )
+        );
+      }
+
+      const { userId } = req.params;
+      const reason: string = req.body?.reason || '';
+
+      const userResult = await db.query(
+        `SELECT id, email, full_name, role, approval_status FROM users WHERE id = $1`,
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return res.status(404).json(
+          createErrorResponseFromDetails(
+            ErrorCode.USER_NOT_FOUND,
+            ErrorCategory.VALIDATION,
+            'User not found'
+          )
+        );
+      }
+
+      const user = userResult.rows[0];
+
+      if (user.approval_status === 'rejected') {
+        return res.status(409).json({
+          success: false,
+          error: 'User application is already rejected',
+          code: 'ALREADY_REJECTED',
+        });
+      }
+
+      await db.query(
+        `UPDATE users
+            SET is_active       = false,
+                approval_status = 'rejected',
+                updated_at      = NOW()
+          WHERE id = $1`,
+        [userId]
+      );
+
+      logger.info('User registration rejected by admin', {
+        userId,
+        email: user.email,
+        adminId: req.user.id,
+        reason,
+        ip: req.ip,
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          message: `User ${user.email}'s registration has been rejected.`,
+          user: { id: user.id, email: user.email, role: user.role },
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to reject user', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return res.status(500).json(
+        createErrorResponseFromDetails(
+          ErrorCode.SERVICE_UNAVAILABLE,
+          ErrorCategory.INTERNAL,
+          'Failed to reject user'
         )
       );
     }

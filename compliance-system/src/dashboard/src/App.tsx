@@ -9,9 +9,10 @@ import ApiKeysPage from './components/ApiKeysPage'
 import TenantOnboardingPage from './components/TenantOnboardingPage'
 import ComplianceDashboard from './components/ComplianceDashboard'
 import ArchitecturePage from './components/ArchitecturePage'
+import AdminApprovalPage from './components/AdminApprovalPage'
 import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './services/authAPI'
 
-type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture'
+type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture' | 'user-approvals'
 type AuthView = 'login' | 'register'
 
 function App() {
@@ -119,6 +120,14 @@ function App() {
               🏢 Tenant Onboarding
             </button>
           )}
+          {isAdmin && (
+            <button
+              className={`nav-btn ${currentPage === 'user-approvals' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('user-approvals')}
+            >
+              👥 User Approvals
+            </button>
+          )}
         </nav>
       </header>
 
@@ -135,6 +144,15 @@ function App() {
           <section className="dashboard-section">
             <h2>Access Denied</h2>
             <p>Tenant onboarding requires the <strong>admin</strong> role.</p>
+          </section>
+        )}
+
+        {currentPage === 'user-approvals' && isAdmin && <AdminApprovalPage />}
+
+        {currentPage === 'user-approvals' && !isAdmin && (
+          <section className="dashboard-section">
+            <h2>Access Denied</h2>
+            <p>User approvals require the <strong>admin</strong> role.</p>
           </section>
         )}
       </main>

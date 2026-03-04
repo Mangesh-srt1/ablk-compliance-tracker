@@ -1,0 +1,158 @@
+/* ── AdminApprovalPage ─────────────────────────────────────────────────────── */
+
+.section-desc {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Toolbar */
+.approval-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.approval-refresh-btn {
+  padding: 0.45rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.87rem;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.15s;
+}
+
+.approval-refresh-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.approval-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Status banners */
+.approval-success,
+.approval-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.approval-success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.approval-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #7f1d1d;
+}
+
+.approval-dismiss {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 0.25rem;
+}
+
+.approval-dismiss:hover {
+  opacity: 1;
+}
+
+/* Empty state */
+.approval-empty {
+  color: #9ca3af;
+  font-style: italic;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+/* Table */
+.approval-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.approval-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  font-weight: 600;
+}
+
+.approval-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.approval-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Role badge */
+.approval-role-badge {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Actions cell */
+.approval-actions {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.approval-btn {
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.approval-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.approval-btn--approve {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.approval-btn--approve:hover:not(:disabled) {
+  background: #a7f3d0;
+}
+
+.approval-btn--reject {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.approval-btn--reject:hover:not(:disabled) {
+  background: #fecaca;
+}
