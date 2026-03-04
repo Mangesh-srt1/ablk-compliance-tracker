@@ -21,6 +21,12 @@ interface PendingUser {
   created_at: string;
 }
 
+interface RejectState {
+  userId: string;
+  email: string;
+  reason: string;
+}
+
 function getAuthHeader(): { Authorization: string } | Record<string, never> {
   const token = localStorage.getItem('authToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -32,6 +38,8 @@ const AdminApprovalPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  // Inline rejection form state (replaces window.prompt for accessibility)
+  const [rejectTarget, setRejectTarget] = useState<RejectState | null>(null);
 
   const fetchPendingUsers = useCallback(async () => {
     setLoading(true);
@@ -75,9 +83,9 @@ const AdminApprovalPage: React.FC = () => {
     }
   };
 
-  const handleReject = async (userId: string, email: string) => {
-    const reason = window.prompt(`Reason for rejecting ${email} (optional):`);
-    if (reason === null) return; // User cancelled
+  const handleRejectSubmit = async () => {
+    if (!rejectTarget) return;
+    const { userId, email, reason } = rejectTarget;
     setActionInProgress(userId);
     setError(null);
     setSuccessMsg(null);
@@ -89,6 +97,7 @@ const AdminApprovalPage: React.FC = () => {
       );
       setSuccessMsg(`❌ ${email}'s registration has been rejected.`);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setRejectTarget(null);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Rejection failed.');
     } finally {
@@ -107,7 +116,7 @@ const AdminApprovalPage: React.FC = () => {
       {successMsg && (
         <div className="approval-success" role="status">
           {successMsg}
-          <button className="approval-dismiss" onClick={() => setSuccessMsg(null)}>
+          <button className="approval-dismiss" onClick={() => setSuccessMsg(null)} aria-label="Dismiss">
             ×
           </button>
         </div>
@@ -116,9 +125,46 @@ const AdminApprovalPage: React.FC = () => {
       {error && (
         <div className="approval-error" role="alert">
           {error}
-          <button className="approval-dismiss" onClick={() => setError(null)}>
+          <button className="approval-dismiss" onClick={() => setError(null)} aria-label="Dismiss">
             ×
           </button>
+        </div>
+      )}
+
+      {/* Inline rejection form – accessible alternative to window.prompt() */}
+      {rejectTarget && (
+        <div className="approval-reject-form" role="dialog" aria-label="Reject user registration">
+          <p>
+            Reject registration for <strong>{rejectTarget.email}</strong>?
+          </p>
+          <label htmlFor="reject-reason" className="approval-reject-label">
+            Reason <span className="approval-optional">(optional)</span>
+          </label>
+          <textarea
+            id="reject-reason"
+            className="approval-reject-textarea"
+            value={rejectTarget.reason}
+            onChange={(e) => setRejectTarget({ ...rejectTarget, reason: e.target.value })}
+            rows={3}
+            placeholder="e.g. Incomplete information, duplicate account…"
+            maxLength={500}
+          />
+          <div className="approval-reject-actions">
+            <button
+              className="approval-btn approval-btn--reject"
+              onClick={handleRejectSubmit}
+              disabled={!!actionInProgress}
+            >
+              {actionInProgress ? '…' : 'Confirm Rejection'}
+            </button>
+            <button
+              className="approval-btn"
+              onClick={() => setRejectTarget(null)}
+              disabled={!!actionInProgress}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -158,16 +204,18 @@ const AdminApprovalPage: React.FC = () => {
                   <button
                     className="approval-btn approval-btn--approve"
                     onClick={() => handleApprove(user.id, user.email)}
-                    disabled={actionInProgress === user.id}
+                    disabled={!!actionInProgress || !!rejectTarget}
                   >
                     {actionInProgress === user.id ? '…' : '✓ Approve'}
                   </button>
                   <button
                     className="approval-btn approval-btn--reject"
-                    onClick={() => handleReject(user.id, user.email)}
-                    disabled={actionInProgress === user.id}
+                    onClick={() =>
+                      setRejectTarget({ userId: user.id, email: user.email, reason: '' })
+                    }
+                    disabled={!!actionInProgress || !!rejectTarget}
                   >
-                    {actionInProgress === user.id ? '…' : '✗ Reject'}
+                    ✗ Reject
                   </button>
                 </td>
               </tr>

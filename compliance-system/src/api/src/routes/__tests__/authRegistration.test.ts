@@ -59,6 +59,11 @@ beforeEach(() => {
   (redis.expire as jest.Mock).mockResolvedValue(1);
 });
 
+// JWT_SECRET is set once for all tests that need it (avoids env pollution per-test)
+beforeAll(() => {
+  process.env.JWT_SECRET = 'test-secret';
+});
+
 // ─── POST /register ───────────────────────────────────────────────────────────
 
 describe('POST /register', () => {
@@ -232,8 +237,6 @@ describe('POST /verify-otp', () => {
     // UPDATE to mark verified + pending_approval
     mockDbEmpty();
 
-    process.env.JWT_SECRET = 'test-secret';
-
     const res = await request(app).post('/verify-otp').send({
       email: 'user@example.com',
       otp: correctOtp,
@@ -298,10 +301,10 @@ describe('POST /resend-otp', () => {
 /**
  * Helper: generate a signed JWT for the test admin user.
  * This mirrors what the real login endpoint would produce.
+ * JWT_SECRET is set in beforeAll above.
  */
 function makeAdminToken(): string {
   const jwt = require('jsonwebtoken');
-  process.env.JWT_SECRET = 'test-secret';
   return jwt.sign(
     {
       id: 'admin-uid',
@@ -317,7 +320,6 @@ function makeAdminToken(): string {
 
 function makeUserToken(role = 'read_only'): string {
   const jwt = require('jsonwebtoken');
-  process.env.JWT_SECRET = 'test-secret';
   return jwt.sign(
     {
       id: 'user-uid',
@@ -421,7 +423,7 @@ describe('POST /admin/approve/:userId', () => {
     expect(res.body.code).toBe('ALREADY_APPROVED');
   });
 
-  it('returns 200 and activates user on successful approval', async () => {
+  it('returns 200 and activates user on successful approval (admin JWT)', async () => {
     const token = makeAdminToken();
     (getRedisClient().get as jest.Mock).mockResolvedValueOnce(null);
     mockDbRows([{ id: 'uid', email: 'user@example.com', full_name: 'User', role: 'read_only', approval_status: 'pending_approval' }]);

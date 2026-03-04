@@ -156,3 +156,54 @@
 .approval-btn--reject:hover:not(:disabled) {
   background: #fecaca;
 }
+
+/* ── Inline rejection form ─────────────────────────────────────────────────── */
+.approval-reject-form {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.approval-reject-form p {
+  margin: 0 0 0.75rem;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.approval-reject-label {
+  display: block;
+  font-size: 0.87rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.4rem;
+}
+
+.approval-optional {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+
+.approval-reject-textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.87rem;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.approval-reject-textarea:focus {
+  outline: 2px solid #f97316;
+  border-color: #f97316;
+}
+
+.approval-reject-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
