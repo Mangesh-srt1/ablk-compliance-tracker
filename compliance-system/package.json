@@ -47,6 +47,7 @@
     "db:migrate": "npm run migrate --workspace=src/api",
     "db:migrate:latest": "npm run migrate:latest --workspace=src/api",
     "db:seed": "npm run seed --workspace=src/api",
+    "db:bootstrap": "npm run bootstrap:admin --workspace=src/api",
     "sonar": "npm run test:coverage && npx sonarqube-scanner",
     "sonar:check": "curl -s http://localhost:9000/api/projects/search?keys=ablk-compliance-system | jq .components[0].key || echo '❌ Project not found'",
     "sonar:install": "npm install --save-dev sonarqube-scanner",

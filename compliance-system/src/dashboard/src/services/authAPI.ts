@@ -106,10 +106,23 @@ class AuthAPIService {
     return response.data.data as { message: string; debug_otp?: string };
   }
 
-  /** Verify the OTP received after registration; returns claims on success. */
-  async verifyOtp(email: string, otp: string): Promise<TokenClaims> {
+  /**
+   * Verify the OTP received after registration.
+   * Returns claims if the account was immediately activated (legacy),
+   * or a pending-approval response when admin approval is required.
+   */
+  async verifyOtp(
+    email: string,
+    otp: string
+  ): Promise<TokenClaims | { requiresAdminApproval: true; message: string }> {
     const response = await this.client.post('/api/auth/verify-otp', { email, otp });
-    const { token } = response.data.data;
+    const data = response.data.data;
+    // New flow: admin approval required — no JWT is issued yet
+    if (data.requiresAdminApproval) {
+      return { requiresAdminApproval: true, message: data.message };
+    }
+    // Legacy / admin-bypassed flow: JWT returned immediately
+    const { token } = data;
     storeToken(token);
     return decodeJwtClientSideOnly(token) as TokenClaims;
   }

@@ -13,7 +13,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bootstrap:admin": "ts-node src/scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@types/ioredis": "^4.28.10",
