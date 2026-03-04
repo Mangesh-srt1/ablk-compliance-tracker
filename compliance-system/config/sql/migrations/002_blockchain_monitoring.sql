@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS blockchain_monitoring (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    UNIQUE(wallet_address, blockchain_type),
-    FOREIGN KEY (jurisdiction) REFERENCES jurisdictions(code)
+    UNIQUE(wallet_address, blockchain_type)
+    -- Note: jurisdictions table removed, FK constraint disabled
 );
 
 -- New table for blockchain transaction logs
@@ -32,14 +32,13 @@ CREATE TABLE IF NOT EXISTS blockchain_transactions (
     transaction_type VARCHAR(50),
     compliance_status VARCHAR(50) DEFAULT 'pending',
     risk_score NUMERIC(5, 2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (wallet_address) REFERENCES entities(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- Note: entities table removed, FK constraint disabled
 );
 
 -- Indexes for blockchain monitoring
-CREATE INDEX idx_blockchain_monitoring_active ON blockchain_monitoring(is_active);
-CREATE INDEX idx_blockchain_transactions_status ON blockchain_transactions(compliance_status);
-CREATE INDEX idx_blockchain_transactions_timestamp ON blockchain_transactions(created_at);
+CREATE INDEX IF NOT EXISTS idx_blockchain_monitoring_active ON blockchain_monitoring(is_active);
+CREATE INDEX IF NOT EXISTS idx_blockchain_transactions_status ON blockchain_transactions(compliance_status);
+CREATE INDEX IF NOT EXISTS idx_blockchain_transactions_timestamp ON blockchain_transactions(created_at);
 
 COMMIT;

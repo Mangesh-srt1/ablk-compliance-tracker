@@ -185,19 +185,20 @@ INSERT INTO compliance_rules (jurisdiction, rule_name, rule_category, rule_conte
     ('US', 'FinCEN AML Requirements', 'aml_requirements', '{"suspeciousActivityReportingRequired": true, "ofacScreeningRequired": true}', true)
     ON CONFLICT DO NOTHING;
 
--- Insert test users for different jurisdictions
-INSERT INTO users (email, full_name, role, jurisdiction, active) VALUES
-    ('officer.ae@ableka.io', 'Ahmed Al Maktoum', 'compliance_officer', 'AE', true),
-    ('officer.in@ableka.io', 'Rajesh Kumar', 'compliance_officer', 'IN', true),
-    ('officer.us@ableka.io', 'John Smith', 'compliance_officer', 'US', true),
-    ('analyst@ableka.io', 'Sarah Johnson', 'analyst', NULL, true)
-    ON CONFLICT (email) DO NOTHING;
+-- Test users moved to migrations (006_admin_approval_flow.sql creates bootstrap admin)
+-- These rows were causing NOT NULL constraint violations since password_hash is required
+-- INSERT INTO users (email, full_name, role, jurisdiction, active) VALUES
+--     ('officer.ae@ableka.io', 'Ahmed Al Maktoum', 'compliance_officer', 'AE', true),
+--     ('officer.in@ableka.io', 'Rajesh Kumar', 'compliance_officer', 'IN', true),
+--     ('officer.us@ableka.io', 'John Smith', 'compliance_officer', 'US', true),
+--     ('analyst@ableka.io', 'Sarah Johnson', 'analyst', NULL, true)
+--     ON CONFLICT (email) DO NOTHING;
 
 -- Insert test KYC checks (3 records per jurisdiction)
 INSERT INTO kyc_checks (entity_id, entity_type, jurisdiction, status, score, flags, recommendations, entity_data) VALUES
     ('entity-ae-001', 'individual', 'AE', 'approved', 95.0, '[]'::jsonb, 'Approved for low-risk investments', '{"name": "Mohammad Al Mazrouei", "nationality": "AE", "accountType": "Individual"}'),
     ('entity-ae-002', 'company', 'AE', 'pending', NULL, '["PENDING_DOCS"]'::jsonb, 'Awaiting proof of address', '{"name": "Dubai Investment Ltd", "registrationNumber": "12345", "jurisdiction": "AE"}'),
-    ('entity-ae-003', 'individual', 'AE', 'approved', 88.0, '[]'::jsonb, 'Approved with standard monitoring', '{"name": "Fatima Mohammed', "nationality": "AE", "accountType": "Individual"}'),
+    ('entity-ae-003', 'individual', 'AE', 'approved', 88.0, '[]'::jsonb, 'Approved with standard monitoring', '{"name": "Fatima Mohammed", "nationality": "AE", "accountType": "Individual"}'),
     
     ('entity-in-001', 'individual', 'IN', 'approved', 92.0, '[]'::jsonb, 'SEBI accredited investor', '{"name": "Rajesh Sharma", "nationality": "IN", "panCard": "AAAPA1234K"}'),
     ('entity-in-002', 'company', 'IN', 'escalated', 65.0, '["PEP_RISK", "HIGH_VELOCITY"]'::jsonb, 'Requires enhanced due diligence', '{"name": "Bombay Dev Ltd", "cin": "U12345MH2020PTC123456", "jurisdiction": "IN"}'),

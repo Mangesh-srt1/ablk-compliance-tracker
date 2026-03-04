@@ -39,7 +39,7 @@ VALUES (
     'admin@platform.com',
     'Platform Administrator',
     'admin',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lewmc6c5Gy5JkVfmK',  -- Admin@Platform1
+    '$2a$12$vgjZ1gq2vGmHmsv8KrIj9uo6ReX2kp8QdPQQjtUJa47WLKhz1uT6m',  -- Admin@Platform1 (bcryptjs hash)
     true,
     true,
     'approved',
