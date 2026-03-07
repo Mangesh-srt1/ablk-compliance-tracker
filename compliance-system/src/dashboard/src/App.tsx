@@ -9,6 +9,8 @@ import TenantOnboardingPage from './components/TenantOnboardingPage'
 import ComplianceDashboard from './components/ComplianceDashboard'
 import ComplianceChecksPage from './components/ComplianceChecksPage'
 import RealTimeAlertsPage from './components/RealTimeAlertsPage'
+import ReportsPage from './components/ReportsPage'
+import SettingsPage from './components/SettingsPage'
 import ArchitecturePage from './components/ArchitecturePage'
 import AdminApprovalPage from './components/AdminApprovalPage'
 import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './services/authAPI'
@@ -438,37 +440,13 @@ function App() {
 
           {currentPage === 'reports' && (
             <section className="dashboard-section">
-              <h2>📈 Reports &amp; Analytics</h2>
-              <p className="placeholder-text">Compliance reports and analytics dashboards will be available here. Generate KYC/AML summary reports, audit trails, and risk trend analysis.</p>
+              <ReportsPage />
             </section>
           )}
 
           {currentPage === 'settings' && (
             <section className="dashboard-section">
-              <h2>⚙️ Settings</h2>
-              <div className="settings-profile">
-                <h3>Profile</h3>
-                <p><strong>Email:</strong> {claims.email}</p>
-                <p><strong>Role:</strong> {claims.role}</p>
-                {claims.tenant && <p><strong>Tenant:</strong> {claims.tenant}</p>}
-              </div>
-              <div className="settings-section">
-                <h3>Password Requirements</h3>
-                <ul className="password-requirements-list">
-                  <li>✅ Minimum 12 characters</li>
-                  <li>✅ At least 1 uppercase letter (A–Z)</li>
-                  <li>✅ At least 1 lowercase letter (a–z)</li>
-                  <li>✅ At least 1 number (0–9)</li>
-                  <li>✅ At least 1 special character (!@#$%^&amp;*)</li>
-                  <li>✅ Cannot be same as previous 5 passwords</li>
-                </ul>
-              </div>
-              <div className="settings-section">
-                <h3>Session Management</h3>
-                <p>Inactivity timeout: <strong>15 minutes</strong></p>
-                <p>Warning shown: <strong>2 minutes</strong> before expiry</p>
-                <p>Click <em>"Stay Logged In"</em> in the warning dialog to extend your session.</p>
-              </div>
+              <SettingsPage claims={claims} />
             </section>
           )}
 
