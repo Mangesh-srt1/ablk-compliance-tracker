@@ -14,7 +14,14 @@ import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './service
 type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture' | 'user-approvals' | 'alerts' | 'reports' | 'settings'
 type AuthView = 'login' | 'register'
 
-// ── Session timeout constants ────────────────────────────────────────────────
+/** Extracts a short display name from JWT claims (uses local part of email or sub). */
+function getDisplayNameFromClaims(c: TokenClaims): string {
+  if (c.email) {
+    const atIndex = c.email.indexOf('@')
+    return atIndex > 0 ? c.email.slice(0, atIndex) : c.email
+  }
+  return c.sub ?? 'User'
+}
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000   // 15 minutes
 const WARNING_BEFORE_MS     = 2  * 60 * 1000   // show warning 2 min before expiry
 
@@ -114,8 +121,7 @@ function App() {
       clearAllTimers()
       events.forEach((e) => window.removeEventListener(e, onActivity))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claims])
+  }, [claims, clearAllTimers, startSessionTimers, resetSessionTimers])
 
   // Auto-dismiss session warning when seconds reach 0
   useEffect(() => {
@@ -182,7 +188,7 @@ function App() {
   const canManageTenant  = isTenantAdmin
   const canApproveUsers  = isAdmin
 
-  const displayName = claims.email?.split('@')[0] ?? claims.sub ?? 'User'
+  const displayName = getDisplayNameFromClaims(claims)
 
   // ── Sidebar nav items ─────────────────────────────────────────────────────
   type NavItem = {

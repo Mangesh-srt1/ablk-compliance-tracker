@@ -22,7 +22,7 @@ const PASSWORD_REQUIREMENTS = [
   { label: 'At least 1 special character (!@#$%^&*)', re: /[!@#$%^&*]/ },
 ];
 
-function checkRequirements(pwd: string) {
+function evaluatePasswordRequirements(pwd: string) {
   return PASSWORD_REQUIREMENTS.map((r) => ({ ...r, met: r.re.test(pwd) }));
 }
 
@@ -42,7 +42,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToRegister }) =>
   // New-password fields (step 2 of reset, shown after "sent")
   const [fpNewPassword, setFpNewPassword] = useState('');
   const [fpConfirmPassword, setFpConfirmPassword] = useState('');
-  const reqs = checkRequirements(fpNewPassword);
+  const passwordRequirements = evaluatePasswordRequirements(fpNewPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +89,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToRegister }) =>
     setFpError(null);
   };
 
-  const allRequirementsMet = reqs.every((r) => r.met);
+  const allRequirementsMet = passwordRequirements.every((r) => r.met);
   const passwordsMatch = fpNewPassword === fpConfirmPassword && fpNewPassword.length > 0;
 
   return (
@@ -269,7 +269,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToRegister }) =>
                   {/* Live requirement check */}
                   {fpNewPassword.length > 0 && (
                     <ul className="fp-req-list fp-req-live">
-                      {reqs.map((r) => (
+                      {passwordRequirements.map((r) => (
                         <li key={r.label} className={`fp-req-item ${r.met ? 'fp-req-met' : 'fp-req-unmet'}`}>
                           <span className="fp-req-icon">{r.met ? '✅' : '❌'}</span>
                           {r.label}
