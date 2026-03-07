@@ -13,6 +13,9 @@ yarn-error.log
 package-lock.json
 yarn.lock
 
+# Allow compliance-system package-lock.json for CI reproducible installs
+!compliance-system/package-lock.json
+
 # Environment & Secrets
 .env
 .env.local
