@@ -570,3 +570,329 @@
   color: #4b5563;
   font-style: italic;
 }
+
+/* ── Quick Actions ───────────────────────────────────────────────────────── */
+
+.cd-quick-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cd-qa-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4a5568;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cd-qa-btn:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.cd-qa-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.cd-qa-label {
+  white-space: nowrap;
+}
+
+/* ── Clickable KPI cards ─────────────────────────────────────────────────── */
+
+.cd-kpi-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.cd-kpi-clickable:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.cd-kpi-clickable:focus {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* ── Risk Trend Chart ────────────────────────────────────────────────────── */
+
+.cd-panel-wide {
+  grid-column: span 2;
+}
+
+.cd-trend-chart-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cd-trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.cd-trend-summary {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  align-self: flex-start;
+}
+
+.cd-trend-up   { background: #fef2f2; color: #b91c1c; }
+.cd-trend-down { background: #f0fdf4; color: #15803d; }
+.cd-trend-flat { background: #f0f4ff; color: #4338ca; }
+
+/* ── Jurisdiction Pie Chart ──────────────────────────────────────────────── */
+
+.cd-pie-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cd-pie-svg {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.cd-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 100px;
+}
+
+.cd-pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+
+.cd-pie-legend-item:hover,
+.cd-pie-legend-hovered {
+  background: #f0f1ff;
+}
+
+.cd-pie-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cd-pie-label {
+  font-weight: 700;
+  color: #2d3748;
+  min-width: 28px;
+}
+
+.cd-pie-pct {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.cd-pie-count {
+  color: #a0aec0;
+  font-size: 0.72rem;
+}
+
+/* ── Bottom row (3 columns) ──────────────────────────────────────────────── */
+
+.cd-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .cd-bottom-row { grid-template-columns: 1fr; }
+}
+
+/* ── Mid row update (2 columns for trend + pie) ──────────────────────────── */
+
+.cd-mid-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .cd-mid-row { grid-template-columns: 1fr; }
+  .cd-panel-wide { grid-column: span 1; }
+}
+
+/* ── Recent Alerts ───────────────────────────────────────────────────────── */
+
+.cd-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cd-alert-card {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.cd-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cd-alert-critical .cd-alert-header { background: #fef2f2; color: #b91c1c; border-bottom: 1px solid #fca5a5; }
+.cd-alert-high     .cd-alert-header { background: #fff7ed; color: #c2410c; border-bottom: 1px solid #fdba74; }
+.cd-alert-medium   .cd-alert-header { background: #fefce8; color: #a16207; border-bottom: 1px solid #fde047; }
+.cd-alert-low      .cd-alert-header { background: #eff6ff; color: #1d4ed8; border-bottom: 1px solid #93c5fd; }
+
+.cd-alert-priority-icon {
+  font-size: 0.9rem;
+}
+
+.cd-alert-label {
+  flex: 1;
+}
+
+.cd-alert-dismiss {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+}
+
+.cd-alert-dismiss:hover { opacity: 1; }
+
+.cd-alert-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.75rem;
+  color: #4a5568;
+  background: white;
+}
+
+.cd-alert-meta code {
+  background: #edf2f7;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+}
+
+.cd-alert-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f7fafc;
+}
+
+.cd-alert-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: opacity 0.15s;
+}
+
+.cd-alert-btn:hover { opacity: 0.8; }
+
+.cd-alert-btn-view {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.cd-alert-btn-investigate {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.cd-alerts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  color: #a0aec0;
+}
+
+.cd-alerts-empty-icon {
+  font-size: 2rem;
+}
+
+/* ── Alert Detail Modal ──────────────────────────────────────────────────── */
+
+.cd-alert-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.cd-detail-row {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  align-items: flex-start;
+}
+
+.cd-detail-row span:first-child {
+  min-width: 90px;
+  font-weight: 700;
+  color: #718096;
+  flex-shrink: 0;
+}
+
+.cd-flag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cd-flag-tag {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.cd-modal-desc {
+  font-size: 0.875rem;
+  color: #4a5568;
+  margin-bottom: 1.25rem;
+  line-height: 1.6;
+}

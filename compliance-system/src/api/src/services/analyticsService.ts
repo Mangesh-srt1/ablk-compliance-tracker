@@ -34,6 +34,22 @@ export interface JurisdictionMetrics {
   topFlags: string[];
 }
 
+export interface JurisdictionDistribution {
+  jurisdiction: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RecentAlert {
+  id: string;
+  riskScore: number;
+  status: string;
+  entityId: string;
+  jurisdiction: string;
+  flags: string[];
+  createdAt: string;
+}
+
 export interface RiskTrend {
   date: string;
   averageRiskScore: number;
@@ -215,6 +231,81 @@ export class AnalyticsService {
       }));
     } catch (error) {
       logger.error('Failed to fetch risk trends', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get jurisdiction distribution for the last 30 days.
+   */
+  async getJurisdictionDistribution(): Promise<JurisdictionDistribution[]> {
+    try {
+      logger.info('Fetching jurisdiction distribution');
+
+      const result = await db.query<{ jurisdiction: string; check_count: string }>(
+        `SELECT jurisdiction, COUNT(*) AS check_count
+         FROM compliance_checks
+         WHERE created_at >= NOW() - INTERVAL '30 days'
+           AND jurisdiction IS NOT NULL
+         GROUP BY jurisdiction
+         ORDER BY check_count DESC
+         LIMIT 20`
+      );
+
+      const rows = result.rows;
+      const total = rows.reduce((sum, r) => sum + parseInt(r.check_count, 10), 0) || 1;
+
+      return rows.map((r) => ({
+        jurisdiction: r.jurisdiction,
+        count: parseInt(r.check_count, 10),
+        percentage: Math.round((parseInt(r.check_count, 10) / total) * 100),
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch jurisdiction distribution', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get the most recent high-risk compliance checks as alerts.
+   */
+  async getRecentAlerts(limit = 5): Promise<RecentAlert[]> {
+    try {
+      logger.info('Fetching recent alerts', { limit });
+
+      const safeLimit = Math.min(Math.max(1, limit), 50);
+      const result = await db.query<{
+        id: string;
+        risk_score: string | null;
+        status: string;
+        entity_id: string | null;
+        jurisdiction: string | null;
+        flags: string[] | null;
+        created_at: string;
+      }>(
+        `SELECT id, risk_score, status, entity_id, jurisdiction, flags, created_at
+         FROM compliance_checks
+         WHERE risk_score >= 30
+         ORDER BY created_at DESC
+         LIMIT $1`,
+        [safeLimit]
+      );
+
+      return result.rows.map((r) => ({
+        id: r.id,
+        riskScore: r.risk_score != null ? parseFloat(r.risk_score) : 0,
+        status: r.status ?? 'unknown',
+        entityId: r.entity_id ?? 'unknown',
+        jurisdiction: r.jurisdiction ?? 'unknown',
+        flags: r.flags ?? [],
+        createdAt: r.created_at,
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch recent alerts', {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
