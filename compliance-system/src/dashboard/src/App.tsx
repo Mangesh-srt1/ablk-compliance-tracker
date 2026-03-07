@@ -177,9 +177,8 @@ function App() {
   }
 
   // ── Workflow builder (full-screen) ────────────────────────────────────────
-  if (currentPage === 'workflows') {
-    return <WorkflowBuilder workflowId={selectedWorkflowId} onSave={() => setCurrentPage('dashboard')} />
-  }
+  // NOTE: WorkflowBuilder is rendered inside the main layout (not full-screen)
+  // to preserve sidebar navigation as a proper SPA page.
 
   const role = claims.role
   const isAdmin = role === 'admin'
@@ -428,6 +427,20 @@ function App() {
           {currentPage === 'dashboard' && <ComplianceDashboard claims={claims} onNavigateToChecks={() => setCurrentPage('checks')} />}
 
           {currentPage === 'checks' && <ComplianceChecksPage />}
+
+          {currentPage === 'workflows' && canEditWorkflows && (
+            <WorkflowBuilder
+              workflowId={selectedWorkflowId}
+              onSave={() => setCurrentPage('dashboard')}
+            />
+          )}
+
+          {currentPage === 'workflows' && !canEditWorkflows && (
+            <section className="dashboard-section">
+              <h2>Access Denied</h2>
+              <p>Workflow Builder requires the <strong>compliance_officer</strong>, <strong>tenant_admin</strong>, or <strong>admin</strong> role.</p>
+            </section>
+          )}
 
           {currentPage === 'alerts' && (
             <section className="dashboard-section">
