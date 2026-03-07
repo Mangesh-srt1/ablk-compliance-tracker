@@ -8,6 +8,7 @@ import ApiKeysPage from './components/ApiKeysPage'
 import TenantOnboardingPage from './components/TenantOnboardingPage'
 import ComplianceDashboard from './components/ComplianceDashboard'
 import ComplianceChecksPage from './components/ComplianceChecksPage'
+import RealTimeAlertsPage from './components/RealTimeAlertsPage'
 import ArchitecturePage from './components/ArchitecturePage'
 import AdminApprovalPage from './components/AdminApprovalPage'
 import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './services/authAPI'
@@ -431,25 +432,7 @@ function App() {
 
           {currentPage === 'alerts' && (
             <section className="dashboard-section">
-              <h2>🔔 Real-Time Alerts</h2>
-              <p className="placeholder-text">Real-time compliance alert monitoring will appear here. Connect the WebSocket stream to start receiving live alerts.</p>
-              <div className="risk-legend-card">
-                <h3>Risk Color Reference</h3>
-                <div className="risk-legend-grid">
-                  <div className="risk-legend-row">
-                    <span className="risk-badge risk-low">Low 0–29</span>
-                    <span>🟢 Auto-approved — no action required</span>
-                  </div>
-                  <div className="risk-legend-row">
-                    <span className="risk-badge risk-medium">Medium 30–69</span>
-                    <span>🟡 Review required — manual assessment needed</span>
-                  </div>
-                  <div className="risk-legend-row">
-                    <span className="risk-badge risk-high">High 70–100</span>
-                    <span>🔴 Escalated/Rejected — immediate action required</span>
-                  </div>
-                </div>
-              </div>
+              <RealTimeAlertsPage />
             </section>
           )}
 
