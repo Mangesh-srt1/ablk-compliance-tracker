@@ -255,7 +255,9 @@ export class AnalyticsService {
       );
 
       const rows = result.rows;
-      const total = rows.reduce((sum, r) => sum + parseInt(r.check_count, 10), 0) || 1;
+      if (rows.length === 0) return [];
+
+      const total = rows.reduce((sum, r) => sum + parseInt(r.check_count, 10), 0);
 
       return rows.map((r) => ({
         jurisdiction: r.jurisdiction,
@@ -277,6 +279,7 @@ export class AnalyticsService {
     try {
       logger.info('Fetching recent alerts', { limit });
 
+      // Max 50 alerts to prevent performance issues on high-volume systems
       const safeLimit = Math.min(Math.max(1, limit), 50);
       const result = await db.query<{
         id: string;

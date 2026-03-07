@@ -108,6 +108,8 @@ const EMPTY_FORM: FormState = {
   notes: '',
 };
 
+const ETH_ADDRESS_REGEX = /^0x[0-9a-fA-F]{40}$/;
+
 const ComplianceChecksPage: React.FC = () => {
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading]     = useState(false);
@@ -122,11 +124,10 @@ const ComplianceChecksPage: React.FC = () => {
 
   const validate = (): boolean => {
     const errors: Partial<Record<keyof FormState, string>> = {};
-    const ethAddr = /^0x[0-9a-fA-F]{40}$/;
 
-    if (!ethAddr.test(form.from_address)) errors.from_address = 'Invalid wallet address (must be 0x + 40 hex chars)';
-    if (!ethAddr.test(form.to_address)) errors.to_address = 'Invalid wallet address (must be 0x + 40 hex chars)';
-    if (form.from_address.toLowerCase() === form.to_address.toLowerCase()) errors.to_address = 'Cannot be same as From address';
+    if (!ETH_ADDRESS_REGEX.test(form.from_address)) errors.from_address = 'Invalid wallet address (must be 0x + 40 hex chars)';
+    if (!ETH_ADDRESS_REGEX.test(form.to_address)) errors.to_address = 'Invalid wallet address (must be 0x + 40 hex chars)';
+    if (form.from_address.toLowerCase() === form.to_address.toLowerCase()) errors.to_address = 'Recipient address cannot be the same as sender address';
     const amt = parseFloat(form.amount);
     if (isNaN(amt) || amt < 1) errors.amount = 'Amount must be a number ≥ 1';
     if (!form.from_name.trim()) errors.from_name = 'Required';
@@ -297,11 +298,11 @@ const ComplianceChecksPage: React.FC = () => {
 
         {/* Validation summary */}
         <div className="cc-validation-summary">
-          <div className={`cc-val-item ${/^0x[0-9a-fA-F]{40}$/.test(form.from_address) ? 'val-ok' : 'val-pending'}`}>
-            {/^0x[0-9a-fA-F]{40}$/.test(form.from_address) ? '✅' : '⬜'} Valid from address
+          <div className={`cc-val-item ${ETH_ADDRESS_REGEX.test(form.from_address) ? 'val-ok' : 'val-pending'}`}>
+            {ETH_ADDRESS_REGEX.test(form.from_address) ? '✅' : '⬜'} Valid from address
           </div>
-          <div className={`cc-val-item ${/^0x[0-9a-fA-F]{40}$/.test(form.to_address) ? 'val-ok' : 'val-pending'}`}>
-            {/^0x[0-9a-fA-F]{40}$/.test(form.to_address) ? '✅' : '⬜'} Valid to address
+          <div className={`cc-val-item ${ETH_ADDRESS_REGEX.test(form.to_address) ? 'val-ok' : 'val-pending'}`}>
+            {ETH_ADDRESS_REGEX.test(form.to_address) ? '✅' : '⬜'} Valid to address
           </div>
           <div className={`cc-val-item ${parseFloat(form.amount) >= 1 ? 'val-ok' : 'val-pending'}`}>
             {parseFloat(form.amount) >= 1 ? '✅' : '⬜'} Amount ≥ 1

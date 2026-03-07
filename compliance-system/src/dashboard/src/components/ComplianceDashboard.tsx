@@ -311,6 +311,8 @@ const JurisdictionPieChart: React.FC<JurisdictionPieChartProps> = ({ data, onJur
               onMouseEnter={() => setHovered(s.jurisdiction)}
               onMouseLeave={() => setHovered(null)}
               onClick={() => onJurisdictionClick?.(s.jurisdiction)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onJurisdictionClick?.(s.jurisdiction); } }}
+              tabIndex={0}
               role="button"
               aria-label={`${s.jurisdiction}: ${s.count} checks (${s.percentage}%)`}
             >
