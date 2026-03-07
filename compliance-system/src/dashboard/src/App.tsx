@@ -7,11 +7,12 @@ import RegisterPage from './components/RegisterPage'
 import ApiKeysPage from './components/ApiKeysPage'
 import TenantOnboardingPage from './components/TenantOnboardingPage'
 import ComplianceDashboard from './components/ComplianceDashboard'
+import ComplianceChecksPage from './components/ComplianceChecksPage'
 import ArchitecturePage from './components/ArchitecturePage'
 import AdminApprovalPage from './components/AdminApprovalPage'
 import { authAPI, TokenClaims, getStoredClaims, isTokenExpired } from './services/authAPI'
 
-type PageType = 'dashboard' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture' | 'user-approvals' | 'alerts' | 'reports' | 'settings'
+type PageType = 'dashboard' | 'checks' | 'workflows' | 'api-keys' | 'tenant-onboarding' | 'architecture' | 'user-approvals' | 'alerts' | 'reports' | 'settings'
 type AuthView = 'login' | 'register'
 
 /** Extracts a short display name from JWT claims (uses local part of email or sub). */
@@ -200,7 +201,7 @@ function App() {
   }
   const navItems: NavItem[] = [
     { icon: '📊', label: 'Home',               page: 'dashboard',         visible: true,             shortcut: 'Ctrl+H' },
-    { icon: '✅', label: 'Compliance Checks',  page: 'dashboard',         visible: true,             shortcut: 'Ctrl+K' },
+    { icon: '✅', label: 'Compliance Checks',  page: 'checks',            visible: true,             shortcut: 'Ctrl+K' },
     { icon: '🔔', label: 'Real-Time Alerts',   page: 'alerts',            visible: true,             shortcut: 'Ctrl+A' },
     { icon: '🔧', label: 'Workflow Builder',   page: 'workflows',         visible: canEditWorkflows,  shortcut: 'Ctrl+W' },
     { icon: '📈', label: 'Reports & Analytics',page: 'reports',           visible: true,             shortcut: 'Ctrl+R' },
@@ -424,7 +425,9 @@ function App() {
             </div>
           )}
 
-          {currentPage === 'dashboard' && <ComplianceDashboard claims={claims} />}
+          {currentPage === 'dashboard' && <ComplianceDashboard claims={claims} onNavigateToChecks={() => setCurrentPage('checks')} />}
+
+          {currentPage === 'checks' && <ComplianceChecksPage />}
 
           {currentPage === 'alerts' && (
             <section className="dashboard-section">

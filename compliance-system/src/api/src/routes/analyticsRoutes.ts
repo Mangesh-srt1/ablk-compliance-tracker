@@ -152,17 +152,19 @@ router.get(
 
 /**
  * GET /api/analytics/dashboard
- * Dashboard summary: metrics + top risk factors.
+ * Dashboard summary: metrics + top risk factors + trends + jurisdiction distribution + recent alerts.
  */
 router.get(
   '/dashboard',
   requirePermission('compliance:read'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const [metrics, topFactors, trends] = await Promise.all([
+      const [metrics, topFactors, trends, jurisdictions, recentAlerts] = await Promise.all([
         analyticsService.getComplianceMetrics(),
         analyticsService.getTopRiskFactors(5),
         analyticsService.getRiskTrends(7),
+        analyticsService.getJurisdictionDistribution(),
+        analyticsService.getRecentAlerts(5),
       ]);
 
       res.json({
@@ -171,6 +173,8 @@ router.get(
           metrics,
           topRiskFactors: topFactors,
           recentTrends: trends,
+          jurisdictionDistribution: jurisdictions,
+          recentAlerts,
           generatedAt: new Date().toISOString(),
         },
       });

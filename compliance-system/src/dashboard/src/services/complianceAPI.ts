@@ -37,10 +37,28 @@ export interface RiskTrend {
   flaggedCount: number;
 }
 
+export interface JurisdictionDistribution {
+  jurisdiction: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RecentAlert {
+  id: string;
+  riskScore: number;
+  status: string;
+  entityId: string;
+  jurisdiction: string;
+  flags: string[];
+  createdAt: string;
+}
+
 export interface DashboardData {
   metrics: ComplianceMetrics;
   topRiskFactors: RiskFactor[];
   recentTrends: RiskTrend[];
+  jurisdictionDistribution: JurisdictionDistribution[];
+  recentAlerts: RecentAlert[];
   generatedAt: string;
 }
 
@@ -152,6 +170,37 @@ class ComplianceAPIClient {
   }): Promise<ComplianceCase> {
     const res = await this.client.post('/api/v1/cases', payload);
     return (res.data.case ?? res.data.data) as ComplianceCase;
+  }
+
+  /** POST /api/v1/compliance/transfer-check */
+  async submitTransferCheck(payload: {
+    from_address: string;
+    to_address: string;
+    amount: number;
+    currency: string;
+    jurisdiction: string;
+    from_name: string;
+    to_name: string;
+    notes?: string;
+  }): Promise<{
+    check_id: string;
+    status: string;
+    risk_score: number;
+    confidence: number;
+    reasoning: string;
+    flags?: string[];
+    timestamp: string;
+  }> {
+    const res = await this.client.post('/api/v1/compliance/transfer-check', payload);
+    return res.data as {
+      check_id: string;
+      status: string;
+      risk_score: number;
+      confidence: number;
+      reasoning: string;
+      flags?: string[];
+      timestamp: string;
+    };
   }
 }
 
