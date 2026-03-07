@@ -6,7 +6,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { Workflow, WorkflowTestResult, ExecutionContext } from '../types/workflow.types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
 
 class WorkflowAPIService {
   private apiClient: AxiosInstance;

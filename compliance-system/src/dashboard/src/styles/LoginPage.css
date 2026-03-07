@@ -83,6 +83,28 @@
   color: #999;
 }
 
+/* ── Forgot password row ─────────────────────────────────────────────────── */
+.forgot-pwd-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+}
+
+.forgot-pwd-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.forgot-pwd-link:hover {
+  color: #4f46e5;
+}
+
+/* ── Sign In button ──────────────────────────────────────────────────────── */
 .login-btn {
   width: 100%;
   padding: 0.8rem;
@@ -151,3 +173,149 @@
 .login-link-btn:hover {
   color: #4f46e5;
 }
+
+/* ── Forgot-password modal overlay ──────────────────────────────────────── */
+.fp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+  padding: 1rem;
+  animation: fp-fade-in 0.2s ease;
+}
+
+@keyframes fp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fp-modal {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: fp-scale-in 0.2s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes fp-scale-in {
+  from { transform: scale(0.93); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.fp-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.9rem;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+.fp-close:hover { color: #374151; }
+
+.fp-modal h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.fp-desc {
+  font-size: 0.88rem;
+  color: #6b7280;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+/* ── Password requirements ───────────────────────────────────────────────── */
+.fp-requirements {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.fp-req-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fp-req-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fp-req-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.83rem;
+  color: #374151;
+}
+
+.fp-req-icon {
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.fp-req-neutral { color: #9ca3af; }
+.fp-req-met     { color: #16a34a; font-weight: 600; }
+.fp-req-unmet   { color: #ef4444; }
+
+.fp-req-live { margin: 0.75rem 0; }
+
+/* ── Password match message ──────────────────────────────────────────────── */
+.fp-match-msg {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+.fp-match-ok  { color: #16a34a; }
+.fp-match-err { color: #ef4444; }
+
+/* ── Success icon ────────────────────────────────────────────────────────── */
+.fp-success-icon {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.fp-new-pwd-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.fp-back-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.83rem;
+  cursor: pointer;
+  padding: 0.75rem 0 0;
+  text-decoration: underline;
+  display: block;
+  text-align: center;
+}
+.fp-back-link:hover { color: #4f46e5; }
