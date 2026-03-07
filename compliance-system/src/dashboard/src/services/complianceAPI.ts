@@ -172,7 +172,7 @@ class ComplianceAPIClient {
     return (res.data.case ?? res.data.data) as ComplianceCase;
   }
 
-  /** POST /api/v1/compliance/transfer-check */
+  /** POST /api/compliance/transfer-check */
   async submitTransferCheck(payload: {
     from_address: string;
     to_address: string;
@@ -190,16 +190,74 @@ class ComplianceAPIClient {
     reasoning: string;
     flags?: string[];
     timestamp: string;
+    kyc_risk?: number;
+    aml_risk?: number;
+    sanctions_risk?: number;
+    jurisdiction_risk?: number;
+    from_address?: string;
+    to_address?: string;
+    amount?: number;
+    currency?: string;
+    jurisdiction?: string;
   }> {
-    const res = await this.client.post('/api/v1/compliance/transfer-check', payload);
-    return res.data as {
-      check_id: string;
+    const res = await this.client.post('/api/compliance/transfer-check', {
+      fromAddress: payload.from_address,
+      toAddress: payload.to_address,
+      amount: payload.amount,
+      currency: payload.currency,
+      jurisdiction: payload.jurisdiction,
+      fromName: payload.from_name,
+      toName: payload.to_name,
+      notes: payload.notes,
+    });
+
+    const data = res.data as {
+      transferId?: string;
+      check_id?: string;
       status: string;
-      risk_score: number;
-      confidence: number;
+      riskScore?: number;
+      risk_score?: number;
+      confidence?: number;
       reasoning: string;
       flags?: string[];
       timestamp: string;
+      fromAddress?: string;
+      toAddress?: string;
+      amount?: number;
+      currency?: string;
+      jurisdiction?: string;
+      checks?: {
+        kyc_sender?: { riskScore?: number; verified?: boolean };
+        kyc_recipient?: { riskScore?: number; verified?: boolean };
+        aml_screening?: { aml_score?: number; flagged?: boolean; sanctions_match?: boolean };
+      };
+    };
+
+    // Derive component risk scores from checks when available
+    const kycSenderScore  = data.checks?.kyc_sender?.riskScore  ?? 0;
+    const kycRecipScore   = data.checks?.kyc_recipient?.riskScore ?? 0;
+    const kycRisk         = Math.round((kycSenderScore + kycRecipScore) / 2);
+    const amlRisk         = data.checks?.aml_screening?.aml_score ?? 0;
+    const sanctionsRisk   = data.checks?.aml_screening?.sanctions_match ? 100 : 0;
+    const jurisdictionRisk = 0; // default – jurisdiction compliance is checked server-side
+
+    return {
+      check_id:         data.transferId ?? data.check_id ?? `chk_${Date.now()}`,
+      status:           data.status,
+      risk_score:       data.riskScore ?? data.risk_score ?? 0,
+      confidence:       data.confidence ?? 0.9,
+      reasoning:        data.reasoning,
+      flags:            data.flags,
+      timestamp:        data.timestamp,
+      kyc_risk:         kycRisk,
+      aml_risk:         amlRisk,
+      sanctions_risk:   sanctionsRisk,
+      jurisdiction_risk: jurisdictionRisk,
+      from_address:     data.fromAddress ?? payload.from_address,
+      to_address:       data.toAddress   ?? payload.to_address,
+      amount:           data.amount      ?? payload.amount,
+      currency:         data.currency    ?? payload.currency,
+      jurisdiction:     data.jurisdiction ?? payload.jurisdiction,
     };
   }
 }

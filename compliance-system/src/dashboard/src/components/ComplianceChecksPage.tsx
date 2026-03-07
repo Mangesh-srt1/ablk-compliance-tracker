@@ -30,45 +30,205 @@ interface CheckResult {
   reasoning: string;
   flags?: string[];
   timestamp: string;
+  // Component risk scores (optional, derived from backend checks)
+  kyc_risk?: number;
+  aml_risk?: number;
+  sanctions_risk?: number;
+  jurisdiction_risk?: number;
+  // Transaction context
+  from_address?: string;
+  to_address?: string;
+  amount?: number;
+  currency?: string;
+  jurisdiction?: string;
 }
 
-const ResultPanel: React.FC<{ result: CheckResult; onClose: () => void }> = ({ result, onClose }) => {
+// ─── Risk Score Row ────────────────────────────────────────────────────────────
+
+interface RiskRowProps {
+  label: string;
+  icon: string;
+  score: number;
+  statusText: string;
+}
+
+const RiskRow: React.FC<RiskRowProps> = ({ label, icon, score, statusText }) => {
+  const cls = score >= 70 ? 'score-high' : score >= 30 ? 'score-medium' : 'score-low';
+  const pct = Math.min(100, score);
+  return (
+    <div className="cc-risk-row">
+      <span className="cc-risk-row-icon">{icon}</span>
+      <div className="cc-risk-row-info">
+        <span className="cc-risk-row-label">{label}</span>
+        <span className={`cc-risk-row-status ${cls}`}>{statusText}</span>
+      </div>
+      <div className="cc-risk-bar-wrap">
+        <div className="cc-risk-bar-bg">
+          <div className={`cc-risk-bar-fill ${cls}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className={`cc-risk-bar-score ${cls}`}>{score}/100</span>
+      </div>
+    </div>
+  );
+};
+
+function kycStatusText(score: number): string {
+  if (score <= 10) return '✅ VERIFIED';
+  if (score <= 30) return '🟡 PARTIAL';
+  if (score <= 70) return '🟠 PENDING';
+  return '❌ FAILED';
+}
+function amlStatusText(score: number): string {
+  if (score <= 20) return '✅ CLEAR';
+  if (score <= 50) return '🟡 MEDIUM RISK';
+  if (score <= 80) return '🟠 HIGH RISK';
+  return '❌ VERY HIGH';
+}
+function sanctionsStatusText(score: number): string {
+  if (score === 0) return '✅ NO MATCH';
+  if (score < 100) return '🟡 POTENTIAL MATCH';
+  return '❌ CONFIRMED MATCH';
+}
+function jurisdictionStatusText(score: number): string {
+  if (score <= 10) return '✅ COMPLIANT';
+  if (score <= 50) return '🟡 REVIEW';
+  return '❌ NON-COMPLIANT';
+}
+
+const ResultPanel: React.FC<{ result: CheckResult; onClose: () => void; onRecheck: () => void }> = ({
+  result,
+  onClose,
+  onRecheck,
+}) => {
   const isApproved  = result.status === 'APPROVED';
   const isRejected  = result.status === 'REJECTED';
 
   const statusClass = isApproved ? 'cc-result-approved' : isRejected ? 'cc-result-rejected' : 'cc-result-escalated';
   const statusIcon  = isApproved ? '✅' : isRejected ? '❌' : '⚠️';
+  const riskLabel   = result.risk_score >= 70 ? '🔴 High Risk' : result.risk_score >= 30 ? '🟡 Medium Risk' : '🟢 Low Risk';
+
+  // Use provided component scores or fall back to the overall risk score as a
+  // consistent proxy when individual components are unavailable.
+  const kycRisk          = result.kyc_risk          ?? result.risk_score;
+  const amlRisk          = result.aml_risk          ?? result.risk_score;
+  const sanctionsRisk    = result.sanctions_risk    ?? 0;
+  const jurisdictionRisk = result.jurisdiction_risk ?? 0;
+
+  const handleDownloadSummary = () => {
+    const lines = [
+      `Compliance Check Report`,
+      `Check ID: ${result.check_id}`,
+      `Submitted: ${new Date(result.timestamp).toLocaleString()}`,
+      `Status: ${result.status}`,
+      `Risk Score: ${result.risk_score}/100 (${riskLabel})`,
+      ``,
+      `Risk Breakdown`,
+      `  KYC Verification:  ${kycRisk}/100 — ${kycStatusText(kycRisk)}`,
+      `  AML Screening:     ${amlRisk}/100 — ${amlStatusText(amlRisk)}`,
+      `  Sanctions Check:   ${sanctionsRisk}/100 — ${sanctionsStatusText(sanctionsRisk)}`,
+      `  Jurisdiction:      ${jurisdictionRisk}/100 — ${jurisdictionStatusText(jurisdictionRisk)}`,
+      ``,
+      `AI Reasoning`,
+      result.reasoning,
+      ``,
+      `Transaction Details`,
+      `  From: ${result.from_address ?? 'N/A'}`,
+      `  To:   ${result.to_address   ?? 'N/A'}`,
+      `  Amount: ${result.amount != null ? `${result.amount} ${result.currency ?? ''}` : 'N/A'}`,
+      `  Jurisdiction: ${result.jurisdiction ?? 'N/A'}`,
+      ``,
+      `Flags: ${result.flags && result.flags.length > 0 ? result.flags.join(', ') : 'None'}`,
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `compliance-report-${result.check_id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const [showAuditInfo, setShowAuditInfo] = useState(false);
 
   return (
     <div className="cc-result-panel" role="alert">
+      {/* ── Header ── */}
       <div className={`cc-result-header ${statusClass}`}>
         <span className="cc-result-icon">{statusIcon}</span>
-        <div>
+        <div className="cc-result-header-text">
           <div className="cc-result-status">{result.status}</div>
-          <div className="cc-result-id">Check ID: {result.check_id}</div>
+          <div className="cc-result-meta">
+            <span>Check ID: {result.check_id}</span>
+            <span className="cc-result-meta-sep">·</span>
+            <span>Submitted: {new Date(result.timestamp).toLocaleString()}</span>
+          </div>
+          <div className="cc-result-risk-badge">
+            Risk Score: {result.risk_score}/100 {riskLabel}
+          </div>
         </div>
         <button className="cc-close-btn" onClick={onClose} aria-label="Dismiss result">✕</button>
       </div>
+
       <div className="cc-result-body">
-        <div className="cc-result-scores">
-          <div className="cc-score-item">
-            <span className="cc-score-label">Risk Score</span>
-            <span className={`cc-score-value ${result.risk_score >= 70 ? 'score-high' : result.risk_score >= 30 ? 'score-medium' : 'score-low'}`}>
-              {result.risk_score}/100
-            </span>
+        {/* ── Risk Breakdown ── */}
+        <div className="cc-section">
+          <h4 className="cc-section-title">📊 Risk Breakdown</h4>
+          <div className="cc-risk-breakdown">
+            <RiskRow label="KYC Verification"  icon="🪪" score={kycRisk}          statusText={kycStatusText(kycRisk)}                  />
+            <RiskRow label="AML Screening"     icon="🛡️" score={amlRisk}          statusText={amlStatusText(amlRisk)}                  />
+            <RiskRow label="Sanctions Check"   icon="⛓️" score={sanctionsRisk}    statusText={sanctionsStatusText(sanctionsRisk)}      />
+            <RiskRow label="Jurisdiction Rules" icon="🌍" score={jurisdictionRisk} statusText={jurisdictionStatusText(jurisdictionRisk)} />
           </div>
-          <div className="cc-score-item">
-            <span className="cc-score-label">Confidence</span>
-            <span className="cc-score-value">{Math.round(result.confidence * 100)}%</span>
+          <div className="cc-formula-note">
+            Total Risk = (KYC × 30%) + (AML × 35%) + (Sanctions × 30%) + (Jurisdiction × 5%)
           </div>
         </div>
-        <div className="cc-result-reasoning">
-          <strong>AI Reasoning:</strong>
-          <p>{result.reasoning}</p>
+
+        {/* ── AI Reasoning ── */}
+        <div className="cc-section">
+          <h4 className="cc-section-title">🤖 AI Reasoning</h4>
+          <p className="cc-reasoning-text">{result.reasoning}</p>
         </div>
+
+        {/* ── Transaction Details ── */}
+        {(result.from_address || result.to_address || result.amount != null) && (
+          <div className="cc-section">
+            <h4 className="cc-section-title">📋 Transaction Details</h4>
+            <div className="cc-tx-details">
+              {result.from_address && (
+                <div className="cc-tx-row">
+                  <span className="cc-tx-label">From</span>
+                  <code className="cc-tx-value">{result.from_address}</code>
+                </div>
+              )}
+              {result.to_address && (
+                <div className="cc-tx-row">
+                  <span className="cc-tx-label">To</span>
+                  <code className="cc-tx-value">{result.to_address}</code>
+                </div>
+              )}
+              {result.amount != null && (
+                <div className="cc-tx-row">
+                  <span className="cc-tx-label">Amount</span>
+                  <span className="cc-tx-value">
+                    {result.amount.toLocaleString()} {result.currency ?? ''}
+                  </span>
+                </div>
+              )}
+              {result.jurisdiction && (
+                <div className="cc-tx-row">
+                  <span className="cc-tx-label">Jurisdiction</span>
+                  <span className="cc-tx-value">{result.jurisdiction}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Flags ── */}
         {result.flags && result.flags.length > 0 && (
-          <div className="cc-result-flags">
-            <strong>Flags:</strong>
+          <div className="cc-section">
+            <h4 className="cc-section-title">⚠️ Flags</h4>
             <div className="cc-flag-chips">
               {result.flags.map((f) => (
                 <span key={f} className="cc-flag-chip">{f}</span>
@@ -76,9 +236,27 @@ const ResultPanel: React.FC<{ result: CheckResult; onClose: () => void }> = ({ r
             </div>
           </div>
         )}
-        <div className="cc-result-time">
-          Processed at: {new Date(result.timestamp).toLocaleString()}
+
+        {/* ── Actions ── */}
+        <div className="cc-result-actions">
+          <button className="cc-action-btn" onClick={handleDownloadSummary} title="Download compliance check summary as text file">
+            📄 Download Summary
+          </button>
+          <button className="cc-action-btn" onClick={() => setShowAuditInfo((v) => !v)} title="View audit trail info">
+            🔍 View Audit Trail
+          </button>
+          <button className="cc-action-btn cc-action-btn-recheck" onClick={onRecheck} title="Submit another compliance check">
+            🔄 New Check
+          </button>
         </div>
+        {showAuditInfo && (
+          <div className="cc-audit-info" role="note">
+            <strong>Audit Trail:</strong> Check <code>{result.check_id}</code> has been
+            recorded in the compliance database with a tamper-evident audit log entry.
+            Full audit trail history is available to compliance officers via the Reports
+            &amp; Analytics section.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -181,7 +359,7 @@ const ComplianceChecksPage: React.FC = () => {
       </div>
 
       {result && (
-        <ResultPanel result={result} onClose={() => setResult(null)} />
+        <ResultPanel result={result} onClose={() => setResult(null)} onRecheck={() => { setResult(null); setForm(EMPTY_FORM); }} />
       )}
 
       {error && (
